@@ -1,0 +1,309 @@
+import { useState } from 'react'
+import { useParams, useLocation, Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  CheckCircle, XCircle, MinusCircle, Trophy, RotateCcw,
+  BarChart3, ChevronLeft, ChevronRight, X, BookOpen, Target
+} from 'lucide-react'
+import api from '../../api/axios'
+
+export default function QuizResult() {
+  const { attemptId } = useParams()
+  const location = useLocation()
+  const stateResult = location.state?.result
+
+  const [showAnalysis, setShowAnalysis] = useState(false)
+  const [currentQIndex, setCurrentQIndex] = useState(0)
+
+  const { data } = useQuery({
+    queryKey: ['attempt', attemptId],
+    queryFn: () => api.get(`/quiz/attempt/${attemptId}`).then(r => r.data),
+    enabled: !stateResult,
+  })
+
+  const result = stateResult || data?.attempt
+  if (!result) return (
+    <div className="flex justify-center py-20">
+      <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+
+  const scoreColor = result.score >= 75 ? 'text-emerald-400' : result.score >= 50 ? 'text-amber-400' : 'text-red-400'
+  const scoreLabel = result.score >= 75 ? 'Excellent! 🎉' : result.score >= 50 ? 'Good Job! 👍' : 'Keep Practicing! 💪'
+  const ringColor = result.score >= 75 ? '#10b981' : result.score >= 50 ? '#f59e0b' : '#ef4444'
+
+  const questions = result.results || []
+  const currentQ = questions[currentQIndex]
+
+  const goNext = () => {
+    if (currentQIndex < questions.length - 1) setCurrentQIndex(p => p + 1)
+  }
+  const goPrev = () => {
+    if (currentQIndex > 0) setCurrentQIndex(p => p - 1)
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-8 pb-12 relative">
+      
+      {/* ═══ HERO SCORE CARD ═══ */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1a1040] via-[#0f0f1e] to-[#0a1628] border border-white/[0.08] p-8 sm:p-10 text-center"
+      >
+        <div className={`absolute top-[-30%] left-1/2 -translate-x-1/2 w-64 h-64 rounded-full blur-[100px] opacity-30 ${
+          result.score >= 75 ? 'bg-emerald-500' : result.score >= 50 ? 'bg-amber-500' : 'bg-red-500'
+        }`} />
+
+        {/* Score Ring */}
+        <div className="relative z-10 w-40 h-40 mx-auto mb-6">
+          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 140 140">
+            <circle cx="70" cy="70" r="60" stroke="rgba(255,255,255,0.05)" strokeWidth="10" fill="none" />
+            <motion.circle
+              cx="70" cy="70" r="60"
+              stroke={ringColor}
+              strokeWidth="10"
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={2 * Math.PI * 60}
+              initial={{ strokeDashoffset: 2 * Math.PI * 60 }}
+              animate={{ strokeDashoffset: 2 * Math.PI * 60 * (1 - result.score / 100) }}
+              transition={{ duration: 2, ease: 'easeOut', delay: 0.3 }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <motion.span
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+              className={`text-5xl font-black ${scoreColor}`}
+            >
+              {result.score}%
+            </motion.span>
+          </div>
+        </div>
+
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
+          <h2 className="text-2xl font-black text-white mb-2">{scoreLabel}</h2>
+          <p className="text-gray-400 text-sm mb-8">
+            {result.score >= 75 ? 'Outstanding performance!' : result.score >= 50 ? 'You are improving!' : 'Practice makes perfect!'}
+          </p>
+        </motion.div>
+
+        {/* Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.9 }}
+          className="relative z-10 grid grid-cols-3 gap-3 max-w-sm mx-auto mb-6"
+        >
+          {[
+            { label: 'Correct', value: result.correct, icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
+            { label: 'Wrong', value: result.wrong, icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' },
+            { label: 'Skipped', value: result.skipped, icon: MinusCircle, color: 'text-gray-400', bg: 'bg-white/[0.03]', border: 'border-white/[0.08]' },
+          ].map((s) => (
+            <div key={s.label} className={`rounded-2xl border ${s.border} ${s.bg} p-3`}>
+              <s.icon size={18} className={`${s.color} mx-auto mb-1.5`} />
+              <div className="text-xl font-black text-white">{s.value}</div>
+              <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">{s.label}</div>
+            </div>
+          ))}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 1.1 }}
+          className="relative z-10 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-amber-500/10 border border-amber-500/20"
+        >
+          <Trophy size={16} className="text-amber-400" />
+          <span className="font-bold text-amber-400 text-sm">+{result.points} points earned</span>
+        </motion.div>
+      </motion.div>
+
+      {/* ═══ ACTION BUTTONS ═══ */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.2 }}
+        className="flex gap-3"
+      >
+        <Link to={`/quiz/${result.subject}`}
+          className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white text-sm font-bold transition-all active:scale-95 shadow-lg shadow-primary-500/25">
+          <RotateCcw size={16} /> Try Again
+        </Link>
+        <button
+          onClick={() => setShowAnalysis(true)}
+          className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] hover:border-primary-500/30 text-gray-200 text-sm font-bold transition-all"
+        >
+          <BarChart3 size={16} className="text-primary-400" /> Analysis
+        </button>
+      </motion.div>
+
+      {/* ═══ ANALYSIS MODAL ═══ */}
+      <AnimatePresence>
+        {showAnalysis && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowAnalysis(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 30 }}
+              transition={{ duration: 0.3 }}
+              className="relative w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-3xl bg-[#0a0a1a] border border-white/[0.1] shadow-2xl"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary-500/10 border border-primary-500/20 flex items-center justify-center">
+                    <Target size={20} className="text-primary-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Quiz Analysis</h3>
+                    <p className="text-xs text-gray-500">Question {currentQIndex + 1} of {questions.length}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAnalysis(false)}
+                  className="w-9 h-9 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.1] transition-all"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full h-1 bg-white/[0.05]">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-primary-500 to-primary-400"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${((currentQIndex + 1) / questions.length) * 100}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
+
+              {/* Question Content */}
+              <div className="p-6 overflow-y-auto max-h-[calc(85vh-180px)]">
+                <AnimatePresence mode="wait">
+                  {currentQ && (
+                    <motion.div
+                      key={currentQIndex}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.2 }}
+                      className="space-y-5"
+                    >
+                      {/* Status Badge */}
+                      <div className="flex items-center gap-2">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                          currentQ.isCorrect
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : currentQ.isSkipped
+                            ? 'bg-white/[0.05] text-gray-400 border-white/[0.1]'
+                            : 'bg-red-500/10 text-red-400 border-red-500/20'
+                        }`}>
+                          {currentQ.isCorrect ? '✓ Correct' : currentQ.isSkipped ? '− Skipped' : '✗ Incorrect'}
+                        </span>
+                        <span className="text-xs text-gray-600">Q{currentQIndex + 1}</span>
+                      </div>
+
+                      {/* Question */}
+                      <h4 className="text-base font-bold text-white leading-relaxed">
+                        {currentQ.question}
+                      </h4>
+
+                      {/* Options */}
+                      <div className="space-y-2">
+                        {currentQ.options.map((opt, j) => {
+                          const isCorrect = j === currentQ.correctAnswer
+                          const isSelected = j === currentQ.givenAnswer
+
+                          return (
+                            <div
+                              key={j}
+                              className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm transition-all ${
+                                isCorrect
+                                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                                  : isSelected && !currentQ.isCorrect
+                                  ? 'bg-red-500/10 border-red-500/20 text-red-300'
+                                  : 'bg-white/[0.02] border-white/[0.06] text-gray-400'
+                              }`}
+                            >
+                              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${
+                                isCorrect
+                                  ? 'bg-emerald-500/20 text-emerald-400'
+                                  : isSelected && !currentQ.isCorrect
+                                  ? 'bg-red-500/20 text-red-400'
+                                  : 'bg-white/[0.05] text-gray-500'
+                              }`}>
+                                {isCorrect ? <CheckCircle size={14} /> : isSelected && !currentQ.isCorrect ? <XCircle size={14} /> : ['A', 'B', 'C', 'D'][j]}
+                              </span>
+                              <span className="flex-1">{opt}</span>
+                              {isCorrect && <span className="text-[10px] font-bold text-emerald-400 uppercase">Correct</span>}
+                              {isSelected && !currentQ.isCorrect && <span className="text-[10px] font-bold text-red-400 uppercase">Your Answer</span>}
+                            </div>
+                          )
+                        })}
+                      </div>
+
+                      {/* Explanation */}
+                      {currentQ.explanation && (
+                        <div className="rounded-xl bg-amber-500/[0.05] border border-amber-500/15 p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <BookOpen size={14} className="text-amber-400" />
+                            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Explanation</span>
+                          </div>
+                          <p className="text-sm text-gray-400 leading-relaxed">{currentQ.explanation}</p>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Navigation Footer */}
+              <div className="flex items-center justify-between p-5 border-t border-white/[0.06] bg-white/[0.02]">
+                <button
+                  onClick={goPrev}
+                  disabled={currentQIndex === 0}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/[0.05] text-gray-300"
+                >
+                  <ChevronLeft size={16} /> Previous
+                </button>
+
+                {/* Dots */}
+                <div className="flex items-center gap-1.5">
+                  {questions.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentQIndex(i)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        i === currentQIndex ? 'w-6 bg-primary-400' : questions[i].isCorrect ? 'bg-emerald-500/40' : questions[i].isSkipped ? 'bg-gray-600' : 'bg-red-500/40'
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                <button
+                  onClick={goNext}
+                  disabled={currentQIndex === questions.length - 1}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 hover:bg-primary-400 text-white text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-primary-500/20"
+                >
+                  Next <ChevronRight size={16} />
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
