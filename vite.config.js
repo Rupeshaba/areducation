@@ -6,9 +6,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:5000', changeOrigin: true },
-      '/uploads': { target: 'http://localhost:5000', changeOrigin: true },
-      '/socket.io': { target: 'http://localhost:5000', changeOrigin: true, ws: true },
+      '/api': { target: 'https://areducation-backend.onrender.com', changeOrigin: true },
+      '/uploads': { target: 'https://areducation-backend.onrender.com', changeOrigin: true },
+      '/socket.io': { target: 'https://areducation-backend.onrender.com', changeOrigin: true, ws: true },
     },
   },
 })
