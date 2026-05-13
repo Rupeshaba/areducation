@@ -39,7 +39,8 @@ export default function MyCourses() {
         {purchases.map((purchase, i) => {
           const course = purchase.courseDetails || {}
           const courseId = course.id || course._id || purchase.courseId
-          const daysLeft = purchase.expiresAt ? Math.ceil((purchase.expiresAt - Date.now()) / 86400000) : null
+          const isFree = purchase.isFree || course.isFree
+          const daysLeft = (!isFree && purchase.expiresAt) ? Math.ceil((purchase.expiresAt - Date.now()) / 86400000) : null
           const isExpired = daysLeft !== null && daysLeft <= 0
           const isUrgent = daysLeft !== null && !isExpired && daysLeft <= 30
 
@@ -66,8 +67,12 @@ export default function MyCourses() {
                     </div>
                   )}
 
-                  {/* Expiry badge */}
-                  {daysLeft !== null && (
+                  {/* Free / Expiry badge */}
+                  {isFree ? (
+                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border bg-emerald-500/20 text-emerald-300 border-emerald-500/20">
+                      FREE
+                    </div>
+                  ) : daysLeft !== null && (
                     <div className={`absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border
                       ${isExpired
                         ? 'bg-red-500/20 text-red-300 border-red-500/20'
