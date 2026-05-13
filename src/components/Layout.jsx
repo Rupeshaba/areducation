@@ -101,7 +101,7 @@ export default function Layout() {
   useEffect(() => {
     const checkMaintenance = async () => {
       try {
-        await api.get('/user/heartbeat', { method: 'POST' })
+        await api.post('/user/heartbeat')
       } catch (e) {
         if (e.response?.status === 503 && e.response?.data?.error === 'maintenance') {
           const msg = e.response.data.message || 'Server is under maintenance.'
