@@ -35,7 +35,7 @@ export default function DoubtChat() {
     api.get('/chat/config').then(r => setAppConfig(r.data)).catch(() => {})
   }, [])
 
-  // Fetch messages on mount, populate userCache
+  // Fetch messages on mount + mark all as read (clears badge in navbar)
   useEffect(() => {
     const fetchMessages = async () => {
       try {
@@ -50,16 +50,16 @@ export default function DoubtChat() {
         toast.error('Failed to load messages')
       }
     }
+    // Mark chat as read immediately on open, then refresh badge
+    api.post('/chat/messages/read').catch(() => {})
+    qc.invalidateQueries(['chat-unread-count'])
     fetchMessages()
   }, [])
 
   // Socket
   useEffect(() => {
     if (!user?.uid) return
-    const SOCKET_URL = import.meta.env.VITE_API_URL
-      ? import.meta.env.VITE_API_URL.replace('/api', '')
-      : '/'
-    const socket = io(SOCKET_URL, { autoConnect: true, reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 2000 })
+    const socket = io('/', { autoConnect: true, reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 2000 })
     socketRef.current = socket
 
     socket.on('connect', () => {
@@ -81,7 +81,9 @@ export default function DoubtChat() {
         result.sort((a, b) => a.createdAt - b.createdAt)
         return result
       })
-      qc.invalidateQueries(['doubt-chat-unread'])
+      // Chat page is open => mark as read instantly so badge stays 0
+      api.post('/chat/messages/read').catch(() => {})
+      qc.invalidateQueries(['chat-unread-count'])
     })
 
     socket.on('doubt_chat_edited', (updated) => {
