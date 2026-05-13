@@ -25,17 +25,14 @@ export default function DoubtChat() {
   const fileInputRef = useRef(null)
   const userCache = useRef({}) // uid -> {name, avatarUrl, email}
 
-  const { data: unreadData } = useQuery({
-    queryKey: ['doubt-chat-unread'],
-    queryFn: () => api.get('/chat/unread-count').then(r => r.data),
-    refetchInterval: 10000,
-  })
+  // NOTE: unreadData query yahan zaruri nahi — Layout.jsx mein polling ho rahi hai
+  // Yahan sirf mark-as-read karte hain
 
   useEffect(() => {
     api.get('/chat/config').then(r => setAppConfig(r.data)).catch(() => {})
   }, [])
 
-  // Fetch messages on mount + mark all as read (clears badge in navbar)
+  // Fetch messages on mount + mark as read (badge clear ho jaata hai)
   useEffect(() => {
     const fetchMessages = async () => {
       try {
@@ -50,7 +47,7 @@ export default function DoubtChat() {
         toast.error('Failed to load messages')
       }
     }
-    // Mark chat as read immediately on open, then refresh badge
+    // Chat page khulte hi read mark karo → navbar badge turant 0 ho jaayega
     api.post('/chat/messages/read').catch(() => {})
     qc.invalidateQueries(['chat-unread-count'])
     fetchMessages()
@@ -59,7 +56,10 @@ export default function DoubtChat() {
   // Socket
   useEffect(() => {
     if (!user?.uid) return
-    const socket = io('/', { autoConnect: true, reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 2000 })
+    const SOCKET_URL = import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL.replace('/api', '')
+      : '/'
+    const socket = io(SOCKET_URL, { autoConnect: true, reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 2000 })
     socketRef.current = socket
 
     socket.on('connect', () => {
@@ -71,9 +71,7 @@ export default function DoubtChat() {
     socket.on('doubt_chat_message', (msg) => {
       if (msg.uid && msg.user && !msg.isAdmin) userCache.current[msg.uid] = msg.user
       setMessages(prev => {
-        // If exact id already exists (non-optimistic), skip
         if (prev.find(m => m.id === msg.id && !m._optimistic)) return prev
-        // Remove matching optimistic (same uid + content)
         const withoutOpt = prev.filter(
           m => !(m._optimistic && m.uid === msg.uid && m.content === msg.content)
         )
@@ -81,7 +79,7 @@ export default function DoubtChat() {
         result.sort((a, b) => a.createdAt - b.createdAt)
         return result
       })
-      // Chat page is open => mark as read instantly so badge stays 0
+      // Chat page already open hai → naya message aaya → turant read mark karo
       api.post('/chat/messages/read').catch(() => {})
       qc.invalidateQueries(['chat-unread-count'])
     })
@@ -118,13 +116,11 @@ export default function DoubtChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // ─── SEND: only socket, no API call ────────────────────────────────────────
   const handleSend = () => {
     if (!input.trim()) return
     const content = input.trim()
     setInput('')
 
-    // Optimistic insert
     const tempId = `temp_${Date.now()}_${Math.random()}`
     const optimistic = {
       id: tempId,
@@ -156,7 +152,6 @@ export default function DoubtChat() {
         },
       })
     } else {
-      // Socket not connected — remove optimistic and show error
       setMessages(prev => prev.filter(m => m.id !== tempId))
       toast.error('Not connected. Please wait and try again.')
     }
@@ -255,7 +250,6 @@ export default function DoubtChat() {
     }
   }
 
-  // Group by date (messages already sorted asc)
   const grouped = []
   let curDate = null
   messages.forEach(msg => {
@@ -315,7 +309,6 @@ export default function DoubtChat() {
             >
               <div className={`max-w-[80%] flex ${own ? 'flex-row-reverse' : 'flex-row'} gap-2 items-end`}>
 
-                {/* Avatar */}
                 <div
                   className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-[10px] font-bold text-white mb-1"
                   style={{ backgroundColor: sender.color }}
