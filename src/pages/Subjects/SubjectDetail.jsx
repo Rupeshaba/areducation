@@ -1,30 +1,25 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, memo } from 'react'
+import { useState, memo, useRef } from 'react'
 import {
   AlertCircle, BookOpen, Play, FileText, Video,
-  Clock, ChevronRight, ClipboardList, GraduationCap, Trophy, Zap
+  Clock, Trophy, Zap
 } from 'lucide-react'
 import api from '../../api/axios'
 
-// ── helpers ────────────────────────────────────────────────────────────────
-
+/* ═══ HELPERS ═══ */
 function ytId(url) {
   return url?.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1] ?? null
 }
-
 function isYT(url) { return !!ytId(url) }
-
 function fmtDuration(sec) {
   if (!sec) return ''
   const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60
   return h > 0
-    ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
-    : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+    : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
-
-// Determine type: pdf | hls | youtube | video
 function ctype(c) {
   const t = (c.type || '').toLowerCase().trim()
   if (t === 'pdf') return 'pdf'
@@ -32,39 +27,61 @@ function ctype(c) {
   if (isYT(c.url)) return 'youtube'
   return 'video'
 }
+function isVideoType(c) { const t = ctype(c); return t === 'video' || t === 'youtube' || t === 'hls' }
+function isPdfType(c) { return ctype(c) === 'pdf' }
 
-// ── type config ────────────────────────────────────────────────────────────
-const TYPE_CFG = {
-  youtube: {
-    label: 'Video', Icon: Play,
-    grad: 'from-red-700/40 to-red-950/60',
-    badge: 'bg-red-500/20 text-red-300 border-red-400/20',
-    iconColor: '#f87171',
-  },
-  video: {
-    label: 'Video', Icon: Play,
-    grad: 'from-indigo-700/40 to-indigo-950/60',
-    badge: 'bg-indigo-500/20 text-indigo-300 border-indigo-400/20',
-    iconColor: '#818cf8',
-  },
-  hls: {
-    label: 'Video', Icon: Video,
-    grad: 'from-cyan-700/40 to-cyan-950/60',
-    badge: 'bg-cyan-500/20 text-cyan-300 border-cyan-400/20',
-    iconColor: '#22d3ee',
-  },
-  pdf: {
-    label: 'PDF', Icon: FileText,
-    grad: 'from-amber-600/40 to-amber-950/60',
-    badge: 'bg-amber-500/20 text-amber-300 border-amber-400/20',
-    iconColor: '#fbbf24',
-  },
+/* ═══ YT THUMBNAIL — quality fallback chain ═══ */
+const YT_SIZES = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault']
+function YTThumb({ vid, alt, className }) {
+  const [idx, setIdx] = useState(0)
+  const [allFailed, setAllFailed] = useState(false)
+  if (allFailed) return null
+  return (
+    <img
+      src={`https://img.youtube.com/vi/${vid}/${YT_SIZES[idx]}.jpg`}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      className={className}
+      onError={() => {
+        if (idx < YT_SIZES.length - 1) setIdx(i => i + 1)
+        else setAllFailed(true)
+      }}
+    />
+  )
 }
 
-// ── ContentCard (memoised) ─────────────────────────────────────────────────
-const ContentCard = memo(function ContentCard({ content, courseId, subjectId, chapterId }) {
+/* ═══ TYPE CONFIG ═══ */
+const TYPE_CFG = {
+  youtube: { label: 'Video', Icon: Play,     grad: 'rgba(185,28,28,0.35)',  iconColor: '#f87171' },
+  video:   { label: 'Video', Icon: Play,     grad: 'rgba(67,56,202,0.35)',  iconColor: '#818cf8' },
+  hls:     { label: 'Video', Icon: Video,    grad: 'rgba(14,116,144,0.35)', iconColor: '#22d3ee' },
+  pdf:     { label: 'PDF',   Icon: FileText, grad: 'rgba(146,64,14,0.35)',  iconColor: '#fbbf24' },
+}
+
+/* ═══ SHIMMER ═══ */
+function Shimmer({ className = '' }) {
+  return (
+    <div className={`rounded-xl ${className}`}
+      style={{ background: 'rgba(255,255,255,0.05)', animation: 'shimmerPulse 1.8s ease-in-out infinite' }} />
+  )
+}
+function ShimmerCard() {
+  return (
+    <div className="rounded-2xl overflow-hidden"
+      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+      <Shimmer className="w-full aspect-[16/9]" style={{ borderRadius: 0 }} />
+      <div className="p-2.5 space-y-1.5">
+        <Shimmer className="h-3.5 w-4/5 rounded" />
+        <Shimmer className="h-3 w-2/5 rounded" />
+      </div>
+    </div>
+  )
+}
+
+/* ═══ CONTENT CARD ═══ */
+const ContentCard = memo(function ContentCard({ content, courseId, subjectId, chapterId, index }) {
   const [imgFailed, setImgFailed] = useState(false)
-  const [ytFailed, setYtFailed]   = useState(false)
 
   const type = ctype(content)
   const cfg  = TYPE_CFG[type]
@@ -76,134 +93,150 @@ const ContentCard = memo(function ContentCard({ content, courseId, subjectId, ch
     : `/courses/${courseId}/subjects/${subjectId}/content/${content.id}`
 
   const vid = type === 'youtube' ? ytId(content.url) : null
-
-  // Decide what to show in thumbnail area
   const showUploadedThumb = content.thumbnailUrl && !imgFailed
-  const showYTThumb = !showUploadedThumb && vid && !ytFailed
-  const showFallback = !showUploadedThumb && !showYTThumb
+  const showYTThumb       = !showUploadedThumb && !!vid
+  const showFallback      = !showUploadedThumb && !showYTThumb
 
   return (
-    <Link to={linkTo} className="group block focus:outline-none">
-      <div className="rounded-2xl overflow-hidden border border-white/[0.07] hover:border-primary-500/40 hover:shadow-xl hover:shadow-primary-900/20 transition-all duration-200 bg-[#13131f]">
+    <motion.div
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.04, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <Link to={linkTo} className="group block focus:outline-none">
+        <div className="rounded-2xl overflow-hidden transition-all duration-300 active:scale-[0.97]"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
 
-        {/* ── thumbnail ── */}
-        <div className="relative h-[108px] overflow-hidden">
-          {showUploadedThumb && (
-            <img
-              src={content.thumbnailUrl}
-              alt={content.title}
-              loading="lazy"
-              decoding="async"
-              className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300"
-              onError={() => setImgFailed(true)}
-            />
-          )}
+          {/* ── Thumbnail ── */}
+          <div className="relative aspect-[16/9] overflow-hidden">
+            {showUploadedThumb && (
+              <img
+                src={content.thumbnailUrl}
+                alt={content.title}
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                onError={() => setImgFailed(true)}
+              />
+            )}
+            {showYTThumb && (
+              <YTThumb
+                vid={vid}
+                alt={content.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+            )}
+            {showFallback && (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-1.5"
+                style={{ background: `radial-gradient(ellipse at center, ${cfg.grad}, rgba(10,10,26,0.97))` }}>
+                <Icon size={24} style={{ color: cfg.iconColor }} strokeWidth={1.5} />
+                <span className="text-[9px] font-bold uppercase tracking-widest opacity-50"
+                  style={{ color: cfg.iconColor }}>{cfg.label}</span>
+              </div>
+            )}
 
-          {showYTThumb && (
-            <img
-              src={`https://img.youtube.com/vi/${vid}/mqdefault.jpg`}
-              alt={content.title}
-              loading="lazy"
-              decoding="async"
-              className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300"
-              onError={() => setYtFailed(true)}
-            />
-          )}
+            {/* Bottom fade */}
+            <div className="absolute inset-x-0 bottom-0 h-8 pointer-events-none"
+              style={{ background: 'linear-gradient(to top, #0a0a1a, transparent)' }} />
 
-          {showFallback && (
-            <div className={`w-full h-full flex flex-col items-center justify-center gap-1.5 bg-gradient-to-br ${cfg.grad}`}>
-              <Icon size={30} style={{ color: cfg.iconColor }} strokeWidth={1.5} />
-              <span className="text-[10px] font-bold uppercase tracking-[0.15em] opacity-60"
-                    style={{ color: cfg.iconColor }}>
+            {/* Play overlay */}
+            {isVideo && !showFallback && (
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ background: 'rgba(99,102,241,0.85)', backdropFilter: 'blur(4px)' }}>
+                  <Play size={12} fill="white" color="white" />
+                </div>
+              </div>
+            )}
+
+            {/* Type badge */}
+            <div className="absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-md"
+              style={{
+                background: type === 'pdf' ? 'rgba(120,53,15,0.8)' : 'rgba(49,46,129,0.8)',
+                backdropFilter: 'blur(6px)',
+                border: `1px solid ${cfg.iconColor}25`,
+              }}>
+              <Icon size={8} style={{ color: cfg.iconColor }} />
+              <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: cfg.iconColor }}>
                 {cfg.label}
               </span>
             </div>
-          )}
+          </div>
 
-          {/* scrim for videos with thumbnail so play button pops */}
-          {isVideo && !showFallback && (
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
-              <div className="w-8 h-8 rounded-full bg-white/0 group-hover:bg-white/20 border border-transparent group-hover:border-white/30 flex items-center justify-center transition-all duration-200 scale-50 group-hover:scale-100 opacity-0 group-hover:opacity-100">
-                <Play size={14} className="text-white ml-0.5" />
-              </div>
-            </div>
-          )}
-
-          {/* type badge */}
-          <div className={`absolute top-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold border backdrop-blur-md ${cfg.badge}`}>
-            <Icon size={8} />
-            {cfg.label}
+          {/* ── Info ── */}
+          <div className="px-2.5 py-2">
+            <p className="text-[11.5px] font-semibold line-clamp-2 leading-snug"
+              style={{ color: 'rgba(255,255,255,0.75)' }}>
+              {content.title}
+            </p>
+            {content.duration > 0 && (
+              <p className="flex items-center gap-1 mt-1" style={{ color: 'rgba(255,255,255,0.28)', fontSize: '10px' }}>
+                <Clock size={9} />{fmtDuration(content.duration)}
+              </p>
+            )}
           </div>
         </div>
-
-        {/* ── info ── */}
-        <div className="px-3 py-2.5">
-          <p className="text-[12.5px] font-medium text-gray-100 group-hover:text-primary-300 transition-colors line-clamp-2 leading-snug">
-            {content.title}
-          </p>
-          {content.duration > 0 && (
-            <p className="flex items-center gap-1 mt-1 text-[11px] text-gray-600">
-              <Clock size={9} />{fmtDuration(content.duration)}
-            </p>
-          )}
-        </div>
-      </div>
-    </Link>
+      </Link>
+    </motion.div>
   )
 })
 
-// ── tab config ─────────────────────────────────────────────────────────────
-const TABS = [
-  { key: 'all',   label: 'All',    Icon: GraduationCap, active: 'bg-primary-500 shadow-primary-500/30' },
-  { key: 'video', label: 'Videos', Icon: Play,           active: 'bg-blue-500 shadow-blue-500/30' },
-  { key: 'pdf',   label: 'PDFs',   Icon: FileText,       active: 'bg-amber-500 shadow-amber-500/30' },
-]
+/* ═══ CONTENT GRID ═══ */
+function ContentGrid({ contents, tab, courseId, subjectId }) {
+  const filtered = tab === 'video' ? contents.filter(isVideoType) : contents.filter(isPdfType)
 
-function isVideoType(c) { const t = ctype(c); return t === 'video' || t === 'youtube' || t === 'hls' }
-function isPdfType(c)   { return ctype(c) === 'pdf' }
-
-function filterList(list, tab) {
-  if (tab === 'all')   return list
-  if (tab === 'video') return list.filter(isVideoType)
-  if (tab === 'pdf')   return list.filter(isPdfType)
-  return list
-}
-
-function typeCounts(list) {
-  return {
-    all:   list.length,
-    video: list.filter(isVideoType).length,
-    pdf:   list.filter(isPdfType).length,
-  }
-}
-
-// ── Grid ───────────────────────────────────────────────────────────────────
-function ContentGrid({ contents, tab, courseId, subjectId, chapterId }) {
-  const filtered = filterList(contents, tab)
   if (!filtered.length) return (
-    <p className="py-8 text-center text-sm text-gray-600">
-      No {tab === 'all' ? 'content' : tab + 's'} here yet.
-    </p>
+    <div className="flex flex-col items-center py-16 text-center">
+      <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
+        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+        {tab === 'video'
+          ? <Play size={20} className="text-white/20" />
+          : <FileText size={20} className="text-white/20" />}
+      </div>
+      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+        No {tab === 'video' ? 'videos' : 'PDFs'} here yet.
+      </p>
+    </div>
   )
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-      {filtered.map(c => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+      {filtered.map((c, i) => (
         <ContentCard
           key={c.id}
           content={c}
           courseId={courseId}
           subjectId={subjectId}
-          chapterId={chapterId}
+          chapterId={c._chapterId ?? null}
+          index={i}
         />
       ))}
     </div>
   )
 }
 
-// ── Main page ──────────────────────────────────────────────────────────────
+/* ═══ SWIPE HOOK ═══ */
+function useSwipeTabs(tab, setTab, order) {
+  const startX = useRef(null)
+  function onTouchStart(e) { startX.current = e.touches[0].clientX }
+  function onTouchEnd(e) {
+    if (startX.current === null) return
+    const dx = startX.current - e.changedTouches[0].clientX
+    if (Math.abs(dx) < 48) return
+    const cur = order.indexOf(tab)
+    if (dx > 0 && cur < order.length - 1) setTab(order[cur + 1])
+    if (dx < 0 && cur > 0) setTab(order[cur - 1])
+    startX.current = null
+  }
+  return { onTouchStart, onTouchEnd }
+}
+
+/* ═══ MAIN ═══ */
 export default function SubjectDetail() {
   const { courseId, subjectId } = useParams()
-  const [tab, setTab] = useState('all')
+  const [tab, setTab] = useState('video')
+
+  const swipe = useSwipeTabs(tab, setTab, ['video', 'pdf'])
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['subject-detail', subjectId],
@@ -214,170 +247,182 @@ export default function SubjectDetail() {
     retry: 2,
   })
 
-  const subject  = data?.subject ?? null
-  const chapters = subject?.chapters ?? []
-  const flat     = subject?.contents ?? []
+  const subject     = data?.subject ?? null
+  const chapters    = subject?.chapters ?? []
+  const flat        = subject?.contents ?? []
   const hasChapters = chapters.length > 0
 
-  const allContents = hasChapters ? chapters.flatMap(ch => ch.contents ?? []) : flat
-  const counts = typeCounts(allContents)
+  const allContents = hasChapters
+    ? chapters.flatMap(ch => (ch.contents ?? []).map(c => ({ ...c, _chapterId: ch.id })))
+    : flat
 
-  // Only show tabs that have content
-  const visibleTabs = TABS.filter(t => t.key === 'all' || counts[t.key] > 0)
+  const videosCount = allContents.filter(isVideoType).length
+  const pdfsCount   = allContents.filter(isPdfType).length
 
+  const TABS = [
+    { key: 'video', label: 'Videos', Icon: Play,     count: videosCount, accent: '#818cf8', accentBg: 'rgba(99,102,241,0.15)',  accentBorder: 'rgba(99,102,241,0.28)' },
+    { key: 'pdf',   label: 'PDFs',   Icon: FileText,  count: pdfsCount,   accent: '#fbbf24', accentBg: 'rgba(234,179,8,0.15)',   accentBorder: 'rgba(234,179,8,0.28)'  },
+  ]
+
+  /* ── Loading ── */
   if (isLoading) return (
-    <div className="flex justify-center py-20">
-      <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+    <div className="max-w-2xl">
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex items-center gap-3 flex-1">
+          <Shimmer className="w-10 h-10 rounded-xl flex-shrink-0" />
+          <div className="space-y-1.5 flex-1">
+            <Shimmer className="h-5 w-36 rounded" />
+            <Shimmer className="h-3 w-24 rounded" />
+          </div>
+        </div>
+        <Shimmer className="h-8 w-20 rounded-xl flex-shrink-0" />
+      </div>
+      <div className="flex gap-2 mb-4">
+        <Shimmer className="h-9 w-28 rounded-xl" />
+        <Shimmer className="h-9 w-24 rounded-xl" />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        {Array.from({ length: 6 }).map((_, i) => <ShimmerCard key={i} />)}
+      </div>
+      <style>{`@keyframes shimmerPulse{0%,100%{opacity:.4}50%{opacity:.9}}`}</style>
     </div>
   )
 
+  /* ── Error ── */
   if (isError) return (
-    <div className="flex flex-col items-center py-20 gap-3 text-center">
-      <AlertCircle size={36} className="text-red-400" />
-      <p className="text-gray-400">Could not load subject.</p>
-      <button onClick={() => refetch()} className="btn-primary text-sm">Retry</button>
+    <div className="flex flex-col items-center py-20 text-center">
+      <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+        style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)' }}>
+        <AlertCircle size={24} style={{ color: 'rgba(248,113,113,0.7)' }} />
+      </div>
+      <h3 className="text-sm font-black text-white mb-1">Failed to Load</h3>
+      <p className="text-xs mb-5" style={{ color: 'rgba(255,255,255,0.38)' }}>Something went wrong. Please try again.</p>
+      <button onClick={() => refetch()}
+        className="px-4 py-2 rounded-xl text-white text-xs font-bold active:scale-95"
+        style={{ background: 'rgba(99,102,241,0.85)' }}>
+        Retry
+      </button>
     </div>
   )
 
+  /* ── Not found ── */
   if (!subject) return (
-    <div className="flex flex-col items-center py-20 gap-3 text-center">
-      <BookOpen size={36} className="text-gray-600" />
-      <p className="text-gray-400">Subject not found.</p>
+    <div className="flex flex-col items-center py-20 text-center">
+      <BookOpen size={28} className="text-white/20 mb-3" />
+      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>Subject not found.</p>
     </div>
   )
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-2xl">
 
-      {/* ── header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
-        <div className="flex items-center gap-3">
+      {/* ── HEADER ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className="flex items-center justify-between gap-3 mb-5"
+      >
+        {/* Subject info */}
+        <div className="flex items-center gap-3 min-w-0">
           {subject.thumbnailUrl ? (
             <img src={subject.thumbnailUrl} alt={subject.name}
-                 className="w-11 h-11 rounded-xl object-cover flex-shrink-0" />
+              className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
           ) : (
-            <div className="w-11 h-11 rounded-xl bg-primary-500/15 border border-primary-500/20
-                            flex items-center justify-center flex-shrink-0 text-xl">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-lg"
+              style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)' }}>
               {subject.icon || '📚'}
             </div>
           )}
-          <div>
-            <h1 className="text-xl font-bold text-white leading-tight">{subject.name}</h1>
+          <div className="min-w-0">
+            <h1 className="text-base font-black text-white leading-tight line-clamp-1">{subject.name}</h1>
             {subject.description && (
-              <p className="text-gray-500 text-xs mt-0.5 line-clamp-1">{subject.description}</p>
+              <p className="text-[11px] mt-0.5 line-clamp-1" style={{ color: 'rgba(255,255,255,0.38)' }}>
+                {subject.description}
+              </p>
             )}
           </div>
         </div>
-        <Link to={`/courses/${courseId}/subjects`}
-              className="text-primary-400 hover:text-primary-300 text-sm flex items-center gap-1 shrink-0 self-start">
-          <ChevronRight size={14} /> Back to Subjects
-        </Link>
-      </div>
 
-      {/* ── tab bar + quiz button ── */}
-      {allContents.length > 0 && (
-        <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
-          {/* tabs */}
-          <div className="flex items-center gap-0.5 p-1 bg-[#0e0e1a] rounded-xl border border-white/[0.06]">
-            {visibleTabs.map(t => {
-              const active = tab === t.key
-              return (
-                <button
-                  key={t.key}
-                  onClick={() => setTab(t.key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium
-                              transition-all duration-150 shadow-md
-                              ${active ? `${t.active} text-white` : 'text-gray-500 hover:text-gray-300'}`}
-                >
-                  <t.Icon size={12} />
-                  {t.label}
-                  <span className={`text-[11px] px-1.5 py-px rounded-full min-w-[20px] text-center font-semibold
-                                   ${active ? 'bg-white/20 text-white' : 'bg-white/5 text-gray-600'}`}>
-                    {counts[t.key]}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* quiz button */}
-          <Link
-            to={`/quiz/${encodeURIComponent(subjectId)}`}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white
-                       bg-gradient-to-r from-violet-600 to-purple-600
-                       hover:from-violet-500 hover:to-purple-500
-                       shadow-lg shadow-violet-500/20 active:scale-95 transition-all duration-200"
-          >
-            <Trophy size={13} />
-            Take Quiz
-            <Zap size={11} className="opacity-70" />
-          </Link>
-        </div>
-      )}
-
-      {/* ── content ── */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={tab}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -4 }}
-          transition={{ duration: 0.15 }}
+        {/* Quiz button */}
+        <Link
+          to={`/quiz/${encodeURIComponent(subjectId)}`}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all duration-200 active:scale-95 flex-shrink-0"
+          style={{
+            background: 'linear-gradient(135deg, rgba(124,58,237,0.85), rgba(109,40,217,0.85))',
+            border: '1px solid rgba(167,139,250,0.25)',
+            boxShadow: '0 4px 16px rgba(124,58,237,0.2)',
+          }}
         >
-          {hasChapters ? (
-            <div className="space-y-8">
-              {chapters.map((ch, idx) => {
-                const chFiltered = filterList(ch.contents ?? [], tab)
-                if (!chFiltered.length && tab !== 'all') return null
-                return (
-                  <motion.div
-                    key={ch.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.04 }}
-                  >
-                    {/* chapter header */}
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-7 h-7 bg-primary-500/15 border border-primary-500/20 rounded-lg
-                                      flex items-center justify-center text-primary-400 text-xs font-bold flex-shrink-0">
-                        {idx + 1}
-                      </div>
-                      <h2 className="text-sm font-bold text-white">{ch.name}</h2>
-                      <div className="flex-1 h-px bg-white/[0.05]" />
-                      <span className="text-[11px] text-gray-600 shrink-0">{chFiltered.length} items</span>
-                    </div>
+          <Trophy size={12} />
+          Quiz
+          <Zap size={10} style={{ opacity: 0.7 }} />
+        </Link>
+      </motion.div>
 
-                    {ch.description && (
-                      <p className="text-gray-500 text-xs mb-4 ml-10">{ch.description}</p>
-                    )}
+      {/* ── TABS ── */}
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08, duration: 0.4 }}
+        className="flex items-center gap-1.5 p-1 rounded-xl mb-4 w-fit"
+        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+      >
+        {TABS.map(t => {
+          const active = tab === t.key
+          return (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 active:scale-95"
+              style={{
+                background: active ? t.accentBg : 'transparent',
+                border: active ? `1px solid ${t.accentBorder}` : '1px solid transparent',
+                color: active ? t.accent : 'rgba(255,255,255,0.35)',
+              }}
+            >
+              <t.Icon size={11} />
+              {t.label}
+              <span
+                className="text-[10px] font-bold px-1.5 py-px rounded-full min-w-[18px] text-center"
+                style={{
+                  background: active ? t.accentBorder : 'rgba(255,255,255,0.06)',
+                  color: active ? t.accent : 'rgba(255,255,255,0.3)',
+                }}
+              >
+                {t.count}
+              </span>
+            </button>
+          )
+        })}
+      </motion.div>
 
-                    <ContentGrid
-                      contents={ch.contents ?? []}
-                      tab={tab}
-                      courseId={courseId}
-                      subjectId={subjectId}
-                      chapterId={ch.id}
-                    />
-                  </motion.div>
-                )
-              })}
-            </div>
-          ) : flat.length > 0 ? (
+      {/* ── CONTENT (swipeable) ── */}
+      <div {...swipe} style={{ touchAction: 'pan-y' }}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, x: tab === 'pdf' ? 20 : -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: tab === 'pdf' ? -20 : 20 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+          >
             <ContentGrid
-              contents={flat}
+              contents={allContents}
               tab={tab}
               courseId={courseId}
               subjectId={subjectId}
-              chapterId={null}
             />
-          ) : (
-            <div className="text-center py-16 text-gray-600">
-              <FileText size={28} className="mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No content yet for this subject.</p>
-            </div>
-          )}
-        </motion.div>
-      </AnimatePresence>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      <style>{`
+        @keyframes shimmerPulse {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 0.9; }
+        }
+      `}</style>
     </div>
   )
 }
