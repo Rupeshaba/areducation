@@ -83,7 +83,7 @@ export default function Layout() {
   useEffect(() => {
     const checkMaintenance = async () => {
       try {
-        await api.get('/user/heartbeat', { method: 'POST' })
+        await api.post('/user/heartbeat')
       } catch (e) {
         if (e.response?.status === 503 && e.response?.data?.error === 'maintenance') {
           const msg = e.response.data.message || 'Server is under maintenance.'
@@ -112,7 +112,10 @@ export default function Layout() {
 
   useEffect(() => {
     if (!user?.uid) return
-    const socket = io('/', {
+    const SOCKET_URL = import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL.replace('/api', '')
+      : '/'
+    const socket = io(SOCKET_URL, {
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 10,
