@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   MessageSquare, Send, Loader2, CheckCircle, XCircle, Clock,
   Paperclip, FileText, Trash2, XCircle as XCircle2, Pin,
-  ChevronDown, X, Pencil,
+  ChevronDown, X, Pencil, Eye,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
@@ -27,6 +27,7 @@ export default function DoubtChat() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [socketConnected, setSocketConnected] = useState(false)
+  const [onlineCount, setOnlineCount] = useState(0)
   const [appConfig, setAppConfig] = useState({ logoUrl: null, appName: 'AR Education' })
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState('')
@@ -78,6 +79,7 @@ export default function DoubtChat() {
       socket.emit('join', { userId: user.uid })
     })
     socket.on('disconnect', () => setSocketConnected(false))
+    socket.on('online_count', (count) => setOnlineCount(count))
 
     socket.on('doubt_chat_message', (msg) => {
       if (msg.uid && msg.user && !msg.isAdmin) userCache.current[msg.uid] = msg.user
@@ -123,6 +125,13 @@ export default function DoubtChat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Format seen count: 1200 → 1.2k, 2000 → 2k
+  const fmtSeen = (n) => {
+    if (!n || n <= 0) return null
+    if (n >= 1000) return `${(n / 1000).toFixed(n % 1000 >= 100 ? 1 : 0)}k`
+    return String(n)
+  }
 
   const handleSend = () => {
     if (!input.trim()) return
@@ -267,7 +276,7 @@ export default function DoubtChat() {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] max-w-3xl mx-auto w-full relative overflow-hidden">
+    <div className="flex flex-col h-[100dvh] w-full relative overflow-hidden" style={{maxWidth: "768px", margin: "0 auto"}}>
       <style>{`
         .highlight-flash { animation: msgFlash 1.5s ease; }
         @keyframes msgFlash {
@@ -289,7 +298,16 @@ export default function DoubtChat() {
             <h3 className="font-bold text-white text-sm leading-tight">{appConfig?.appName || 'AR Education'}</h3>
             <p className="text-[11px] leading-tight">
               {socketConnected
-                ? <span className="flex items-center gap-1 text-emerald-400"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse inline-block" /> Online</span>
+                ? <span className="flex items-center gap-1.5 text-emerald-400">
+                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse inline-block" />
+                    Online
+                    {onlineCount > 0 && (
+                      <span className="flex items-center gap-0.5 text-emerald-300 text-[10px]">
+                        <Eye size={9} className="text-emerald-400" />
+                        {onlineCount > 999 ? `${(onlineCount/1000).toFixed(onlineCount >= 10000 ? 0 : 1)}k` : onlineCount}
+                      </span>
+                    )}
+                  </span>
                 : <span className="text-gray-600">Connecting…</span>}
             </p>
           </div>
@@ -445,6 +463,12 @@ export default function DoubtChat() {
                         {/* Timestamp row */}
                         <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           <span className="text-[10px] opacity-40">{fmt(item.createdAt)}</span>
+                          {item.seenBy > 0 && (
+                            <span className="flex items-center gap-0.5 text-[10px] text-gray-500">
+                              <Eye size={8} className="opacity-60" />
+                              {fmtSeen(item.seenBy)}
+                            </span>
+                          )}
                           {item._optimistic && <span className="text-[10px] text-gray-500">•</span>}
                           {item.status === 'pending' && !item._optimistic && (
                             <Clock size={9} className="text-amber-400 opacity-70" />
