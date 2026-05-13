@@ -18,10 +18,28 @@ const NAV = [
   { to: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
   { to: '/progress', icon: TrendingUp, label: 'Progress' },
   { to: '/store', icon: ShoppingBag, label: 'Store' },
-  { to: '/doubt-chat', icon: MessageSquare, label: 'Doubt Chat' },
   { to: '/about', icon: Info, label: 'About Us' },
   { to: '/contact', icon: Phone, label: 'Contact' },
 ]
+
+// ── Badge: count capped at 99+, hidden when 0 ────────────────────────────────
+function Badge({ count, position = 'sidebar' }) {
+  if (!count || count <= 0) return null
+  const label = count > 99 ? '99+' : String(count)
+  if (position === 'sidebar') {
+    return (
+      <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+        {label}
+      </span>
+    )
+  }
+  // position === 'icon' — absolute bubble on icon
+  return (
+    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold min-w-[16px] h-4 px-0.5 rounded-full flex items-center justify-center leading-none">
+      {label}
+    </span>
+  )
+}
 
 // Rich popup notification renderer
 function RichNotificationPopup({ notif, onClose }) {
@@ -83,7 +101,7 @@ export default function Layout() {
   useEffect(() => {
     const checkMaintenance = async () => {
       try {
-        await api.post('/user/heartbeat')
+        await api.get('/user/heartbeat', { method: 'POST' })
       } catch (e) {
         if (e.response?.status === 503 && e.response?.data?.error === 'maintenance') {
           const msg = e.response.data.message || 'Server is under maintenance.'
@@ -95,9 +113,18 @@ export default function Layout() {
     checkMaintenance()
   }, [])
 
+  // ── Notification unread count ─────────────────────────────────────────────
   const { data: countData } = useQuery({
     queryKey: ['notif-count'],
     queryFn: () => api.get('/notifications/count').then(r => r.data),
+    refetchInterval: 15000,
+    enabled: !isQuizPage,
+  })
+
+  // ── Doubt Chat unread count ───────────────────────────────────────────────
+  const { data: chatCountData } = useQuery({
+    queryKey: ['chat-unread-count'],
+    queryFn: () => api.get('/chat/unread-count').then(r => r.data),
     refetchInterval: 15000,
     enabled: !isQuizPage,
   })
@@ -112,10 +139,7 @@ export default function Layout() {
 
   useEffect(() => {
     if (!user?.uid) return
-    const SOCKET_URL = import.meta.env.VITE_API_URL
-      ? import.meta.env.VITE_API_URL.replace('/api', '')
-      : '/'
-    const socket = io(SOCKET_URL, {
+    const socket = io('/', {
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 10,
@@ -134,6 +158,11 @@ export default function Layout() {
       }
       qc.invalidateQueries(['notif-count'])
       qc.invalidateQueries(['notifications'])
+    })
+
+    // Refresh chat badge when new message arrives via socket
+    socket.on('doubt_chat_message', () => {
+      qc.invalidateQueries(['chat-unread-count'])
     })
 
     socket.on('voice_notification', (data) => {
@@ -185,6 +214,7 @@ export default function Layout() {
   }
 
   const unreadCount = countData?.count || 0
+  const chatUnread = chatCountData?.unreadCount || 0
 
   return (
     <div className="flex h-screen overflow-hidden bg-dark-900">
@@ -202,7 +232,7 @@ export default function Layout() {
         )}
       </AnimatePresence>
 
-      {/* MOBILE SIDEBAR */}
+      {/* ── MOBILE SIDEBAR ──────────────────────────────────────────────────── */}
       <aside className={`
         fixed lg:hidden inset-y-0 left-0 z-40 w-64 flex flex-col
         bg-dark-800/95 backdrop-blur-xl border-r border-white/5
@@ -252,14 +282,29 @@ export default function Layout() {
               <Icon size={18} />{label}
             </NavLink>
           ))}
+
+          {/* Doubt Chat — sidebar with badge */}
+          <NavLink
+            to="/doubt-chat"
+            onClick={() => setSidebarOpen(false)}
+            className={({ isActive }) => `
+              flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+              ${isActive ? 'bg-primary-500/15 text-primary-300 border border-primary-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}
+            `}
+          >
+            <MessageSquare size={18} />
+            Doubt Chat
+            <Badge count={chatUnread} position="sidebar" />
+          </NavLink>
         </nav>
 
         <div className="px-3 pb-4 space-y-1 border-t border-white/5 pt-3">
+          {/* Notifications — sidebar with badge */}
           <NavLink to="/notifications" onClick={() => setSidebarOpen(false)}
             className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all relative ${isActive ? 'bg-primary-500/15 text-primary-300' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
             <Bell size={18} />
             Notifications
-            {unreadCount > 0 && <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unreadCount}</span>}
+            <Badge count={unreadCount} position="sidebar" />
           </NavLink>
           <NavLink to="/profile" onClick={() => setSidebarOpen(false)}
             className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-primary-500/15 text-primary-300' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
@@ -272,7 +317,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* DESKTOP TOP NAVBAR */}
+      {/* ── DESKTOP TOP NAVBAR ───────────────────────────────────────────────── */}
       <div className="hidden lg:flex fixed top-0 left-0 right-0 z-30 h-14 bg-dark-800/95 backdrop-blur-xl border-b border-white/5 items-center px-6 gap-2">
         <Link to="/" className="flex items-center gap-2 mr-4">
           {logoUrl ? (
@@ -300,18 +345,28 @@ export default function Layout() {
               <span className="hidden xl:block">{label}</span>
             </NavLink>
           ))}
+
+          {/* Doubt Chat — desktop nav with badge */}
+          <NavLink
+            to="/doubt-chat"
+            className={({ isActive }) => `
+              relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all
+              ${isActive ? 'bg-primary-500/15 text-primary-300' : 'text-gray-400 hover:text-white hover:bg-white/5'}
+            `}
+          >
+            <MessageSquare size={15} />
+            <span className="hidden xl:block">Doubt Chat</span>
+            <Badge count={chatUnread} position="icon" />
+          </NavLink>
         </nav>
 
         <div className="flex items-center gap-2">
+          {/* Bell — desktop with badge */}
           <NavLink to="/notifications" className={({ isActive }) =>
             `relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${isActive ? 'bg-primary-500/15 text-primary-300' : 'text-gray-400 hover:text-white hover:bg-white/5'}`
           }>
             <Bell size={15} />
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
+            <Badge count={unreadCount} position="icon" />
           </NavLink>
           <NavLink to="/profile" className={({ isActive }) =>
             `flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-all ${isActive ? 'bg-primary-500/15' : 'hover:bg-white/5'}`
@@ -332,7 +387,7 @@ export default function Layout() {
         </div>
       </div>
 
-      {/* Main content */}
+      {/* ── Main content ─────────────────────────────────────────────────────── */}
       <main className="flex-1 overflow-y-auto lg:pt-14">
         {/* Mobile header */}
         <div className="lg:hidden sticky top-0 z-20 flex items-center justify-between px-4 h-14 bg-dark-900/95 backdrop-blur-xl border-b border-white/5">
@@ -349,14 +404,18 @@ export default function Layout() {
             )}
             <span className="font-bold text-white text-sm">AR Education</span>
           </Link>
-          <NavLink to="/notifications" className="relative text-gray-400 hover:text-white p-1">
-            <Bell size={20} />
-            {unreadCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
-          </NavLink>
+
+          {/* Mobile header: Doubt Chat + Bell icons with badges */}
+          <div className="flex items-center gap-1">
+            <NavLink to="/doubt-chat" className="relative text-gray-400 hover:text-white p-1">
+              <MessageSquare size={20} />
+              <Badge count={chatUnread} position="icon" />
+            </NavLink>
+            <NavLink to="/notifications" className="relative text-gray-400 hover:text-white p-1">
+              <Bell size={20} />
+              <Badge count={unreadCount} position="icon" />
+            </NavLink>
+          </div>
         </div>
 
         <div className="p-4 lg:p-6 max-w-7xl mx-auto">
