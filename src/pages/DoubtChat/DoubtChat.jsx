@@ -1,14 +1,25 @@
-import { useState, useEffect, useRef } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   MessageSquare, Send, Loader2, CheckCircle, XCircle, Clock,
-  ChevronDown, Paperclip, FileText, Edit3, Trash2, XCircle as XCircle2,
+  Paperclip, FileText, Trash2, XCircle as XCircle2, Pin,
+  ChevronDown, X, Pencil,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
 import { io } from 'socket.io-client'
+
+// Helper: resolve media URL (handles relative URLs from Render backend)
+const resolveUrl = (url) => {
+  if (!url) return url
+  if (url.startsWith('http')) return url
+  const base = import.meta.env.VITE_API_URL
+    ? import.meta.env.VITE_API_URL.replace('/api', '')
+    : ''
+  return `${base}${url}`
+}
 
 export default function DoubtChat() {
   const user = useAuthStore(s => s.user)
@@ -20,19 +31,18 @@ export default function DoubtChat() {
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState('')
   const [showOptionsId, setShowOptionsId] = useState(null)
+  const [showPinnedList, setShowPinnedList] = useState(false)
+  const [chatBg, setChatBg] = useState(() => localStorage.getItem('chatBg') || 'default')
   const messagesEndRef = useRef(null)
   const socketRef = useRef(null)
   const fileInputRef = useRef(null)
-  const userCache = useRef({}) // uid -> {name, avatarUrl, email}
-
-  // NOTE: unreadData query yahan zaruri nahi — Layout.jsx mein polling ho rahi hai
-  // Yahan sirf mark-as-read karte hain
+  const userCache = useRef({})
+  const msgRefs = useRef({})
 
   useEffect(() => {
     api.get('/chat/config').then(r => setAppConfig(r.data)).catch(() => {})
   }, [])
 
-  // Fetch messages on mount + mark as read (badge clear ho jaata hai)
   useEffect(() => {
     const fetchMessages = async () => {
       try {
@@ -43,23 +53,24 @@ export default function DoubtChat() {
         })
         msgs.sort((a, b) => a.createdAt - b.createdAt)
         setMessages(msgs)
-      } catch (err) {
+      } catch {
         toast.error('Failed to load messages')
       }
     }
-    // Chat page khulte hi read mark karo → navbar badge turant 0 ho jaayega
     api.post('/chat/messages/read').catch(() => {})
     qc.invalidateQueries(['chat-unread-count'])
     fetchMessages()
   }, [])
 
-  // Socket
   useEffect(() => {
     if (!user?.uid) return
     const SOCKET_URL = import.meta.env.VITE_API_URL
       ? import.meta.env.VITE_API_URL.replace('/api', '')
       : '/'
-    const socket = io(SOCKET_URL, { autoConnect: true, reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 2000 })
+    const socket = io(SOCKET_URL, {
+      autoConnect: true, reconnection: true,
+      reconnectionAttempts: 5, reconnectionDelay: 2000,
+    })
     socketRef.current = socket
 
     socket.on('connect', () => {
@@ -75,23 +86,18 @@ export default function DoubtChat() {
         const withoutOpt = prev.filter(
           m => !(m._optimistic && m.uid === msg.uid && m.content === msg.content)
         )
-        const result = [...withoutOpt, msg]
-        result.sort((a, b) => a.createdAt - b.createdAt)
-        return result
+        return [...withoutOpt, msg].sort((a, b) => a.createdAt - b.createdAt)
       })
-      // Chat page already open hai → naya message aaya → turant read mark karo
       api.post('/chat/messages/read').catch(() => {})
       qc.invalidateQueries(['chat-unread-count'])
     })
 
     socket.on('doubt_chat_edited', (updated) => {
-      setMessages(prev =>
-        prev.map(m =>
-          m.id === updated.id
-            ? { ...m, content: updated.content, editedAt: updated.editedAt, user: updated.user || m.user }
-            : m
-        )
-      )
+      setMessages(prev => prev.map(m =>
+        m.id === updated.id
+          ? { ...m, content: updated.content, editedAt: updated.editedAt }
+          : m
+      ))
     })
 
     socket.on('doubt_chat_moderated', ({ id, status }) => {
@@ -100,7 +106,9 @@ export default function DoubtChat() {
 
     socket.on('doubt_chat_deleted', ({ id, forEveryone }) => {
       if (forEveryone) setMessages(prev => prev.filter(m => m.id !== id))
-      else setMessages(prev => prev.map(m => m.id === id ? { ...m, selfDeleted: true, content: 'This message was deleted' } : m))
+      else setMessages(prev => prev.map(m =>
+        m.id === id ? { ...m, selfDeleted: true, content: 'This message was deleted' } : m
+      ))
     })
 
     socket.on('doubt_chat_pinned', ({ id, pinned }) => {
@@ -120,36 +128,19 @@ export default function DoubtChat() {
     if (!input.trim()) return
     const content = input.trim()
     setInput('')
-
     const tempId = `temp_${Date.now()}_${Math.random()}`
     const optimistic = {
-      id: tempId,
-      _optimistic: true,
-      uid: user.uid,
-      content,
-      type: 'text',
-      status: 'approved',
-      createdAt: Date.now(),
-      isAdmin: false,
-      pinned: false,
-      editedAt: null,
-      user: {
-        name: user.name || 'You',
-        avatarUrl: user.avatarUrl || null,
-        email: user.email || '',
-      },
+      id: tempId, _optimistic: true, uid: user.uid, content,
+      type: 'text', status: 'approved', createdAt: Date.now(),
+      isAdmin: false, pinned: false, editedAt: null,
+      user: { name: user.name || 'You', avatarUrl: user.avatarUrl || null, email: user.email || '' },
     }
     setMessages(prev => [...prev, optimistic])
 
     if (socketRef.current?.connected) {
       socketRef.current.emit('doubt_chat_send', {
-        content,
-        uid: user.uid,
-        userInfo: {
-          name: user.name || '',
-          email: user.email || '',
-          avatarUrl: user.avatarUrl || null,
-        },
+        content, uid: user.uid,
+        userInfo: { name: user.name || '', email: user.email || '', avatarUrl: user.avatarUrl || null },
       })
     } else {
       setMessages(prev => prev.filter(m => m.id !== tempId))
@@ -157,7 +148,7 @@ export default function DoubtChat() {
     }
   }
 
-  const handleKeyPress = (e) => {
+  const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
   }
 
@@ -198,17 +189,24 @@ export default function DoubtChat() {
     } catch (err) { toast.error(err.response?.data?.error || 'Failed to delete') }
   }
 
+  const scrollToMessage = (id) => {
+    setShowPinnedList(false)
+    const el = msgRefs.current[id]
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('highlight-flash')
+      setTimeout(() => el.classList.remove('highlight-flash'), 1500)
+    }
+  }
+
   const fmt = (ts) => {
     if (!ts) return ''
     const d = new Date(ts)
-    const dd = String(d.getDate()).padStart(2, '0')
-    const mm = String(d.getMonth() + 1).padStart(2, '0')
-    const yyyy = d.getFullYear()
     let h = d.getHours()
     const m = String(d.getMinutes()).padStart(2, '0')
     const ampm = h >= 12 ? 'pm' : 'am'
     h = h % 12 || 12
-    return `${dd}-${mm}-${yyyy} ${h}:${m} ${ampm}`
+    return `${h}:${m} ${ampm}`
   }
 
   const fmtDate = (ts) => {
@@ -225,7 +223,7 @@ export default function DoubtChat() {
     const re = /(https?:\/\/[^\s]+)/g
     return text.split(re).map((p, i) =>
       p.match(re)
-        ? <a key={i} href={p} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">{p.length > 50 ? p.slice(0, 50) + '…' : p}</a>
+        ? <a key={i} href={p} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline break-all">{p.length > 40 ? p.slice(0, 40) + '…' : p}</a>
         : <span key={i}>{p}</span>
     )
   }
@@ -243,13 +241,16 @@ export default function DoubtChat() {
       : (item.user || userCache.current[item.uid] || {})
     const name = info.name || (own ? 'You' : 'Unknown')
     return {
-      name,
-      initials: name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2),
+      name, initials: name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2),
       color: own ? '#6366f1' : '#3b82f6',
       avatarUrl: info.avatarUrl || null,
     }
   }
 
+  const pinnedMessages = messages.filter(m => m.pinned).sort((a, b) => b.createdAt - a.createdAt)
+  const latestPinned = pinnedMessages[0]
+
+  // Group by date
   const grouped = []
   let curDate = null
   messages.forEach(msg => {
@@ -258,37 +259,101 @@ export default function DoubtChat() {
     grouped.push(msg)
   })
 
+  const bgStyles = {
+    default: 'bg-dark-900',
+    dots: 'bg-dark-900 chat-bg-dots',
+    grid: 'bg-dark-900 chat-bg-grid',
+    waves: 'bg-dark-900 chat-bg-waves',
+  }
+
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] max-w-3xl mx-auto w-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-dark-800/50 sticky top-0 z-10">
-        <div className="flex items-center gap-3">
+    <div className="flex flex-col h-[100dvh] max-w-3xl mx-auto w-full relative overflow-hidden">
+      <style>{`
+        .highlight-flash { animation: msgFlash 1.5s ease; }
+        @keyframes msgFlash {
+          0%,100% { background-color: transparent; }
+          30% { background-color: rgba(245,158,11,0.25); border-radius: 12px; }
+        }
+        .chat-bg-dots { background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px); background-size: 24px 24px; }
+        .chat-bg-grid { background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 32px 32px; }
+        .chat-bg-waves { background-image: repeating-linear-gradient(45deg, rgba(99,102,241,0.04) 0px, rgba(99,102,241,0.04) 1px, transparent 1px, transparent 12px); }
+      `}</style>
+
+      {/* ── HEADER (fixed at top, never scrolls) ── */}
+      <div className="flex-shrink-0 flex items-center justify-between px-3 py-2 border-b border-white/5 bg-dark-800/90 backdrop-blur-sm z-20">
+        <div className="flex items-center gap-2.5">
           {appConfig?.logoUrl
-            ? <img src={appConfig.logoUrl} alt="Logo" className="w-10 h-10 rounded-lg object-cover" />
-            : <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center"><MessageSquare size={20} className="text-primary-400" /></div>}
+            ? <img src={resolveUrl(appConfig.logoUrl)} alt="Logo" className="w-9 h-9 rounded-xl object-cover" />
+            : <div className="w-9 h-9 rounded-xl bg-primary-500/20 flex items-center justify-center"><MessageSquare size={18} className="text-primary-400" /></div>}
           <div>
-            <h3 className="font-bold text-white text-sm">{appConfig?.appName || 'AR Education'} — Doubt Chat</h3>
-            <p className="text-xs">
+            <h3 className="font-bold text-white text-sm leading-tight">{appConfig?.appName || 'AR Education'}</h3>
+            <p className="text-[11px] leading-tight">
               {socketConnected
-                ? <span className="flex items-center gap-1 text-emerald-400"><span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" /> Online</span>
+                ? <span className="flex items-center gap-1 text-emerald-400"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse inline-block" /> Online</span>
                 : <span className="text-gray-600">Connecting…</span>}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-gray-400 hidden sm:block">{user?.name}</span>
+        <div className="flex items-center gap-1.5">
+          {/* BG picker */}
+          <div className="relative group">
+            <button className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/5 transition-all">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            </button>
+            <div className="absolute right-0 top-full mt-1 bg-dark-800 border border-white/10 rounded-xl p-2 flex gap-1.5 shadow-xl z-30 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
+              {Object.entries({ default: '⬛', dots: '•••', grid: '###', waves: '≈≈≈' }).map(([k, label]) => (
+                <button key={k} onClick={() => { setChatBg(k); localStorage.setItem('chatBg', k) }}
+                  className={`text-[10px] px-2 py-1 rounded-lg transition-all ${chatBg === k ? 'bg-primary-500 text-white' : 'text-gray-400 hover:bg-white/5'}`}
+                >{label}</button>
+              ))}
+            </div>
+          </div>
+          <span className="text-[11px] text-gray-500 hidden sm:block truncate max-w-[80px]">{user?.name}</span>
           {user?.avatarUrl
-            ? <img src={user.avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover border border-white/10" />
-            : <div className="w-7 h-7 rounded-full bg-primary-500/20 flex items-center justify-center text-[10px] font-bold text-primary-400">{(user?.name || 'U').charAt(0).toUpperCase()}</div>}
+            ? <img src={resolveUrl(user.avatarUrl)} alt="" className="w-7 h-7 rounded-full object-cover border border-white/10" />
+            : <div className="w-7 h-7 rounded-full bg-primary-500/20 flex items-center justify-center text-[11px] font-bold text-primary-400">{(user?.name || 'U').charAt(0).toUpperCase()}</div>}
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-1">
+      {/* ── PINNED MESSAGE BAR (Telegram style) ── */}
+      <AnimatePresence>
+        {latestPinned && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="flex-shrink-0 bg-dark-800/80 backdrop-blur-sm border-b border-amber-500/20 z-10 overflow-hidden"
+          >
+            <div className="flex items-center gap-2 px-3 py-1.5">
+              <div className="w-0.5 h-8 bg-amber-400 rounded-full flex-shrink-0" />
+              <button
+                className="flex-1 min-w-0 text-left"
+                onClick={() => pinnedMessages.length > 1 ? setShowPinnedList(true) : scrollToMessage(latestPinned.id)}
+              >
+                <div className="flex items-center gap-1 mb-0.5">
+                  <Pin size={9} className="text-amber-400" />
+                  <span className="text-[10px] text-amber-400 font-semibold">
+                    Pinned Message {pinnedMessages.length > 1 ? `(${pinnedMessages.length})` : ''}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-300 truncate">
+                  {latestPinned.type === 'image' ? '📷 Photo' : latestPinned.type === 'pdf' ? '📄 PDF' : latestPinned.content}
+                </p>
+              </button>
+              <button onClick={() => setShowPinnedList(false)} className="text-gray-600 hover:text-gray-400 p-1">
+                <ChevronDown size={14} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── MESSAGES AREA ── */}
+      <div className={`flex-1 overflow-y-auto px-3 py-2 space-y-0.5 ${bgStyles[chatBg] || bgStyles.default}`}>
         {grouped.map((item, i) => {
           if (item.type === 'date') return (
-            <div key={`d${i}`} className="flex justify-center my-4">
-              <span className="text-xs text-gray-600 bg-dark-700/60 px-3 py-1 rounded-full">{item.date}</span>
+            <div key={`d${i}`} className="flex justify-center my-2">
+              <span className="text-[10px] text-gray-500 bg-dark-800/70 px-2.5 py-0.5 rounded-full">{item.date}</span>
             </div>
           )
 
@@ -298,50 +363,55 @@ export default function DoubtChat() {
           const sender = getSender(item)
 
           return (
-            <motion.div
+            <div
               key={item.id}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.15 }}
-              className={`flex ${own ? 'justify-end' : 'justify-start'}`}
+              ref={el => { if (el) msgRefs.current[item.id] = el }}
+              className={`flex ${own ? 'justify-end' : 'justify-start'} group px-1 py-0.5`}
               onMouseEnter={() => setShowOptionsId(item.id)}
               onMouseLeave={() => setShowOptionsId(null)}
             >
-              <div className={`max-w-[80%] flex ${own ? 'flex-row-reverse' : 'flex-row'} gap-2 items-end`}>
-
+              <div className={`max-w-[78%] flex ${own ? 'flex-row-reverse' : 'flex-row'} gap-1.5 items-end`}>
+                {/* Avatar */}
                 <div
-                  className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-[10px] font-bold text-white mb-1"
+                  className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-[9px] font-bold text-white mb-0.5 flex-none"
                   style={{ backgroundColor: sender.color }}
                 >
                   {sender.avatarUrl
-                    ? <img src={sender.avatarUrl} alt={sender.name} className="w-full h-full object-cover" onError={e => e.currentTarget.remove()} />
+                    ? <img src={resolveUrl(sender.avatarUrl)} alt="" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none' }} />
                     : sender.initials}
                 </div>
 
-                <div className={`flex flex-col ${own ? 'items-end' : 'items-start'}`}>
-                  <span className={`text-[10px] font-semibold mb-0.5 ${own ? 'text-primary-300' : isAdmin ? 'text-emerald-400' : 'text-gray-400'}`}>
-                    {sender.name}
-                  </span>
+                {/* Bubble */}
+                <div className={`flex flex-col ${own ? 'items-end' : 'items-start'} min-w-0`}>
+                  {/* Sender name (only non-own) */}
+                  {!own && (
+                    <span className={`text-[10px] font-semibold mb-0.5 ml-1 ${isAdmin ? 'text-emerald-400' : 'text-blue-400'}`}>
+                      {sender.name}
+                    </span>
+                  )}
 
-                  <div className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm max-w-full relative ${
+                  <div className={`rounded-2xl px-3 py-1.5 text-sm leading-snug shadow-sm max-w-full relative ${
                     own
-                      ? 'bg-primary-500/20 text-white border border-primary-500/20 rounded-br-sm'
+                      ? 'bg-primary-500/25 text-white border border-primary-500/20 rounded-br-sm'
                       : isAdmin
-                        ? 'bg-emerald-500/15 text-emerald-100 border border-emerald-500/20 rounded-bl-sm'
-                        : 'bg-dark-700/60 text-gray-200 border border-white/5 rounded-bl-sm'
-                  } ${item.pinned ? 'ring-2 ring-amber-500/50' : ''} ${item._optimistic ? 'opacity-60' : ''}`}>
+                        ? 'bg-emerald-500/15 text-emerald-50 border border-emerald-500/20 rounded-bl-sm'
+                        : 'bg-dark-700/70 text-gray-200 border border-white/5 rounded-bl-sm'
+                  } ${item.pinned ? 'ring-1 ring-amber-500/50' : ''} ${item._optimistic ? 'opacity-60' : ''}`}>
 
-                    {item.pinned && <div className="absolute -top-2 right-2"><ChevronDown size={12} className="text-amber-400" /></div>}
-                    {item.editedAt && <span className="text-[9px] opacity-40 block mb-0.5">(edited)</span>}
+                    {/* Edited pencil icon - tiny corner indicator */}
+                    {item.editedAt && !isEditing && (
+                      <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-dark-700 rounded-full flex items-center justify-center border border-white/10" title="Edited">
+                        <Pencil size={7} className="text-gray-500" />
+                      </span>
+                    )}
 
                     {isEditing ? (
-                      <div className="space-y-1.5 min-w-[180px]">
+                      <div className="space-y-1 min-w-[160px]">
                         <input
-                          type="text"
-                          value={editText}
+                          type="text" value={editText}
                           onChange={e => setEditText(e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit() }}
-                          className="w-full bg-dark-800 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-primary-500/50"
+                          className="w-full bg-dark-800 border border-white/10 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:border-primary-500/50"
                           autoFocus
                         />
                         <div className="flex gap-2">
@@ -353,74 +423,156 @@ export default function DoubtChat() {
                       <>
                         {item.type === 'image' && item.media && (
                           <img
-                            src={item.media.url}
-                            alt="shared"
-                            className="rounded-lg max-w-full mb-2 cursor-pointer"
-                            onClick={() => window.open(item.media.url, '_blank')}
+                            src={resolveUrl(item.media.url)} alt="shared"
+                            className="rounded-xl max-w-full mb-1.5 cursor-pointer max-h-48 object-cover"
+                            onClick={() => window.open(resolveUrl(item.media.url), '_blank')}
+                            onError={e => { e.currentTarget.src = ''; e.currentTarget.alt = '⚠ Image unavailable' }}
                           />
                         )}
                         {item.type === 'pdf' && item.media && (
-                          <a href={item.media.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-400 hover:text-blue-300 mb-2 text-sm">
-                            <FileText size={16} /> {item.media.filename || 'PDF'}
+                          <a href={resolveUrl(item.media.url)} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 mb-1.5 text-sm">
+                            <FileText size={14} /> <span className="truncate max-w-[160px]">{item.media.filename || 'PDF'}</span>
                           </a>
                         )}
-                        <div className="whitespace-pre-wrap break-words">{linkify(item.content)}</div>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+
+                        {(item.content || item.selfDeleted) && (
+                          <div className={`whitespace-pre-wrap break-words text-sm leading-snug ${item.selfDeleted ? 'italic text-gray-500' : ''}`}>
+                            {item.selfDeleted ? 'This message was deleted' : linkify(item.content)}
+                          </div>
+                        )}
+
+                        {/* Timestamp row */}
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                           <span className="text-[10px] opacity-40">{fmt(item.createdAt)}</span>
-                          {item._optimistic && <span className="text-[10px] text-gray-500">Sending…</span>}
-                          {item.status === 'pending' && !item._optimistic && <span className="text-[10px] text-amber-400 flex items-center gap-0.5"><Clock size={10} /> Pending</span>}
-                          {item.status === 'rejected' && <span className="text-[10px] text-red-400 flex items-center gap-0.5"><XCircle size={10} /> Rejected</span>}
-                          {item.selfDeleted && <span className="text-[10px] text-gray-500">(deleted)</span>}
-                          {item.pinned && <span className="text-[10px] text-amber-400">📌</span>}
+                          {item._optimistic && <span className="text-[10px] text-gray-500">•</span>}
+                          {item.status === 'pending' && !item._optimistic && (
+                            <Clock size={9} className="text-amber-400 opacity-70" />
+                          )}
+                          {item.status === 'rejected' && (
+                            <XCircle size={9} className="text-red-400 opacity-70" />
+                          )}
+                          {item.pinned && <Pin size={9} className="text-amber-400 opacity-70" />}
                         </div>
 
-                        {showOptionsId === item.id && own && !item._optimistic && (
-                          <div className="flex gap-2 mt-1.5 pt-1.5 border-t border-white/10">
-                            <button onClick={() => startEdit(item)} className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5"><Edit3 size={11} /> Edit</button>
-                            <button onClick={() => deleteMsg(item.id, false)} className="text-[10px] text-gray-500 hover:text-red-400 flex items-center gap-0.5"><Trash2 size={11} /> Delete (me)</button>
-                            <button onClick={() => deleteMsg(item.id, true)} className="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-0.5"><XCircle2 size={11} /> Delete (all)</button>
-                          </div>
+                        {/* Hover actions */}
+                        {showOptionsId === item.id && own && !item._optimistic && !item.selfDeleted && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="flex gap-1.5 mt-1 pt-1 border-t border-white/10"
+                          >
+                            <button onClick={() => startEdit(item)}
+                              className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5">
+                              <Pencil size={10} /> Edit
+                            </button>
+                            <button onClick={() => deleteMsg(item.id, false)}
+                              className="text-[10px] text-gray-500 hover:text-red-400 flex items-center gap-0.5">
+                              <Trash2 size={10} /> Me
+                            </button>
+                            <button onClick={() => deleteMsg(item.id, true)}
+                              className="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-0.5">
+                              <XCircle2 size={10} /> All
+                            </button>
+                          </motion.div>
                         )}
                       </>
                     )}
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )
         })}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="px-4 py-3 border-t border-white/5 bg-dark-800/50">
+      {/* ── INPUT BAR ── */}
+      <div className="flex-shrink-0 px-3 py-2 border-t border-white/5 bg-dark-800/90 backdrop-blur-sm">
         <input ref={fileInputRef} type="file" accept="image/*,.pdf" onChange={handleMediaUpload} className="hidden" />
         <div className="flex items-center gap-2">
           <button
             onClick={() => fileInputRef.current?.click()}
-            title="Attach image or PDF (max 10MB)"
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 border border-white/5 transition-all flex-shrink-0"
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/5 border border-white/5 transition-all flex-shrink-0"
           >
-            <Paperclip size={16} />
+            <Paperclip size={15} />
           </button>
           <input
-            type="text"
-            value={input}
+            type="text" value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Type your doubt..."
-            className="flex-1 bg-dark-700/50 border border-white/5 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all"
+            onKeyDown={handleKeyDown}
+            placeholder="Type your doubt…"
+            className="flex-1 bg-dark-700/60 border border-white/5 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500/40 focus:ring-1 focus:ring-primary-500/15 transition-all"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || !socketConnected}
-            className="w-10 h-10 rounded-xl bg-primary-500 hover:bg-primary-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-lg shadow-primary-500/20 flex-shrink-0"
+            className="w-9 h-9 rounded-xl bg-primary-500 hover:bg-primary-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-lg shadow-primary-500/20 flex-shrink-0"
           >
-            {socketConnected ? <Send size={18} className="text-white" /> : <Loader2 size={18} className="text-white animate-spin" />}
+            {socketConnected
+              ? <Send size={16} className="text-white" />
+              : <Loader2 size={16} className="text-white animate-spin" />}
           </button>
         </div>
-        <p className="text-[10px] text-gray-600 mt-1 text-center">Your doubts are answered by admin in real-time</p>
       </div>
+
+      {/* ── PINNED LIST MODAL ── */}
+      <AnimatePresence>
+        {showPinnedList && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-4"
+            onClick={() => setShowPinnedList(false)}
+          >
+            <motion.div
+              initial={{ y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 40, opacity: 0 }}
+              className="bg-dark-800 border border-white/10 rounded-2xl w-full max-w-sm max-h-80 flex flex-col overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+                <div className="flex items-center gap-2">
+                  <Pin size={14} className="text-amber-400" />
+                  <span className="text-sm font-semibold text-white">Pinned Messages</span>
+                  <span className="text-xs text-gray-500">({pinnedMessages.length})</span>
+                </div>
+                <button onClick={() => setShowPinnedList(false)} className="text-gray-500 hover:text-white">
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-2">
+                {pinnedMessages.map((msg) => {
+                  const s = getSender(msg)
+                  return (
+                    <button
+                      key={msg.id}
+                      onClick={() => scrollToMessage(msg.id)}
+                      className="w-full flex items-start gap-2.5 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-all text-left"
+                    >
+                      <div className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-[9px] font-bold text-white mt-0.5"
+                        style={{ backgroundColor: s.color }}>
+                        {s.avatarUrl ? <img src={resolveUrl(s.avatarUrl)} alt="" className="w-full h-full object-cover" /> : s.initials}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className="text-[11px] font-semibold text-gray-300">{s.name}</span>
+                          <span className="text-[10px] text-gray-600">{fmt(msg.createdAt)}</span>
+                        </div>
+                        <p className="text-xs text-gray-400 truncate">
+                          {msg.type === 'image' ? '📷 Photo' : msg.type === 'pdf' ? '📄 PDF' : msg.content}
+                        </p>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
