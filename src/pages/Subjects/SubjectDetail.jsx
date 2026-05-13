@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, memo, useRef } from 'react'
+import { useState, memo, useRef, useEffect } from 'react'
 import {
   AlertCircle, BookOpen, Play, FileText, Video,
   Clock, Trophy, Zap
@@ -30,23 +30,65 @@ function ctype(c) {
 function isVideoType(c) { const t = ctype(c); return t === 'video' || t === 'youtube' || t === 'hls' }
 function isPdfType(c) { return ctype(c) === 'pdf' }
 
-/* ═══ YT THUMBNAIL — quality fallback chain ═══ */
+/* ═══ YT THUMBNAIL — UPDATED: Always fetches highest available quality ═══ */
 const YT_SIZES = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault']
+
 function YTThumb({ vid, alt, className }) {
-  const [idx, setIdx] = useState(0)
-  const [allFailed, setAllFailed] = useState(false)
-  if (allFailed) return null
+  const [bestUrl, setBestUrl] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let isMounted = true
+    setLoading(true)
+    setFailed(false)
+    setBestUrl(null)
+
+    const checkImage = (url) => {
+      return new Promise((resolve) => {
+        const img = new Image()
+        img.onload = () => resolve(true)
+        img.onerror = () => resolve(false)
+        // Add cache-busting parameter to avoid stale failures
+        img.src = `${url}?t=${Date.now()}`
+      })
+    }
+
+    const findBestAvailable = async () => {
+      for (const size of YT_SIZES) {
+        if (!isMounted) return
+        const url = `https://img.youtube.com/vi/${vid}/${size}.jpg`
+        const isAvailable = await checkImage(url)
+        if (isAvailable && isMounted) {
+          setBestUrl(url)
+          setLoading(false)
+          return
+        }
+      }
+      // No quality available
+      if (isMounted) {
+        setFailed(true)
+        setLoading(false)
+      }
+    }
+
+    findBestAvailable()
+
+    return () => {
+      isMounted = false
+    }
+  }, [vid])
+
+  if (loading) return null
+  if (failed) return null
+  
   return (
     <img
-      src={`https://img.youtube.com/vi/${vid}/${YT_SIZES[idx]}.jpg`}
+      src={bestUrl}
       alt={alt}
       loading="lazy"
       decoding="async"
       className={className}
-      onError={() => {
-        if (idx < YT_SIZES.length - 1) setIdx(i => i + 1)
-        else setAllFailed(true)
-      }}
     />
   )
 }
@@ -66,6 +108,7 @@ function Shimmer({ className = '' }) {
       style={{ background: 'rgba(255,255,255,0.05)', animation: 'shimmerPulse 1.8s ease-in-out infinite' }} />
   )
 }
+
 function ShimmerCard() {
   return (
     <div className="rounded-2xl overflow-hidden"
