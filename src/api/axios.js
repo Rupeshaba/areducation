@@ -34,6 +34,29 @@ function processQueue(error, token = null) {
   refreshQueue = []
 }
 
+// ── Helper: kya yeh error refresh token ki actual expiry/invalidity hai? ──
+// Backend teen error messages bhejta hai refresh route pe:
+//   - 'Invalid refresh token'        → session mismatch (DB mein nahi mila)
+//   - 'Invalid or expired refresh token' → JWT verify fail / catch block
+// Dono cases mein logout karna sahi hai.
+// Network error (no response) mein logout NAHI karna chahiye.
+function isRefreshTokenInvalid(err) {
+  // Agar response hi nahi aaya (network down, timeout) → logout mat karo
+  if (!err?.response) return false
+
+  const status = err.response.status
+  const errMsg = err.response?.data?.error || ''
+
+  // Sirf tab logout karo jab server ne explicitly refresh token reject kiya ho
+  return (
+    status === 401 &&
+    (
+      errMsg === 'Invalid refresh token' ||
+      errMsg === 'Invalid or expired refresh token'
+    )
+  )
+}
+
 // Response interceptor
 api.interceptors.response.use(
   (res) => res,
@@ -57,7 +80,7 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    // 401 → try refresh (token_expired OR invalid token)
+    // 401 → try refresh
     // Skip if: already retried, or this IS the refresh call, or logout call
     const isRefreshCall = original.url?.includes('refresh-token')
     const isLogoutCall = original.url?.includes('logout')
@@ -105,15 +128,14 @@ api.interceptors.response.use(
       } catch (refreshErr) {
         processQueue(refreshErr)
 
-        // Only logout if refresh token itself is expired/invalid
-        const status = refreshErr?.response?.status
-        const errMsg = refreshErr?.response?.data?.error
-        if (status === 401 || errMsg === 'Invalid or expired refresh token') {
+        // Sirf tab logout karo jab refresh token genuinely invalid/expired ho.
+        // Network error ya server temporarily down ho toh user logged in rahe.
+        if (isRefreshTokenInvalid(refreshErr)) {
           const { default: useAuthStore } = await import('../store/authStore')
           useAuthStore.getState().logout()
           window.location.href = '/login'
         }
-        // Network error ya server down → don't logout, user stays logged in
+
         return Promise.reject(refreshErr)
 
       } finally {
