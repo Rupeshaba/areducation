@@ -3,13 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import Hls from 'hls.js'
 import {
-  Play, Pause, Volume2, VolumeX, Maximize, Minimize,
+  ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   SkipBack, SkipForward, Settings, CheckCircle, AlertCircle,
-  PictureInPicture2, X, Check
+  PictureInPicture2, X
 } from 'lucide-react'
 import api from '../../api/axios'
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 function fmtTime(s) {
   if (!s || isNaN(s)) return '0:00'
   const h   = Math.floor(s / 3600)
@@ -37,25 +37,29 @@ function extractYTId(url) {
   return null
 }
 
-function isYouTubeURL(url) { return /youtube\.com|youtu\.be/.test(url || '') }
+function isYouTubeURL(url) {
+  return /youtube\.com|youtu\.be/.test(url || '')
+}
 
 function isHLSURL(url) {
   if (!url) return false
-  return /\.m3u8(\?|#|$)/i.test(url) || /[?&]type=hls/i.test(url) || /\/hls\//i.test(url)
+  return /\.m3u8(\?|#|$)/i.test(url) ||
+    /[?&]type=hls/i.test(url) ||
+    /\/hls\//i.test(url)
 }
 
-const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3]
+const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3]
 
-// ─── Custom Player ────────────────────────────────────────────────────────────
-function CustomPlayer({ url, savedPos = 0, onProgress, onComplete }) {
+// ─── Custom Player ───────────────────────────────────────────────────────────
+function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
   const videoRef     = useRef(null)
   const hlsRef       = useRef(null)
   const containerRef = useRef(null)
   const hideTimer    = useRef(null)
   const lastSaved    = useRef(0)
-  const tapTimer     = useRef(null)
-  const tapCount     = useRef(0)
-  const seekDragging = useRef(false)
+  const seekbarRef   = useRef(null)
+  const touchStartRef = useRef(null)
+  const touchTimeoutRef = useRef(null)
 
   const [playing,      setPlaying]      = useState(false)
   const [currentTime,  setCurrentTime]  = useState(0)
@@ -75,26 +79,25 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete }) {
   const [error,        setError]        = useState(null)
   const [doneFired,    setDoneFired]    = useState(false)
   const [skipFlash,    setSkipFlash]    = useState(null)
-  const [seekPct,      setSeekPct]      = useState(0)
+
+  // Handle screen orientation for fullscreen
+  const handleFullscreenChange = useCallback(() => {
+    const isFullscreen = !!document.fullscreenElement
+    setFullscreen(isFullscreen)
+    
+    if (isFullscreen && window.screen?.orientation?.lock) {
+      window.screen.orientation.lock('landscape').catch(() => {})
+    } else if (!isFullscreen && window.screen?.orientation?.unlock) {
+      window.screen.orientation.unlock()
+    }
+  }, [])
 
   // ── HLS / native init ──────────────────────────────────────────────────
   useEffect(() => {
     const video = videoRef.current
     if (!video || !url) return
     setError(null); setLoading(true); setLevels([]); setCurrentLevel(-1)
-    setPlaying(false); setCurrentTime(0); setDuration(0); setSeekPct(0)
-
-    const attachNative = () => {
-      video.src = url
-      const onMeta = () => { setLoading(false); if (savedPos > 2) video.currentTime = savedPos }
-      const onErr  = () => setError('Video load nahi hua.')
-      video.addEventListener('loadedmetadata', onMeta)
-      video.addEventListener('error', onErr)
-      return () => {
-        video.removeEventListener('loadedmetadata', onMeta)
-        video.removeEventListener('error', onErr)
-      }
-    }
+    setPlaying(false); setCurrentTime(0); setDuration(0)
 
     if (isHLSURL(url)) {
       if (Hls.isSupported()) {
@@ -103,7 +106,8 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete }) {
         hls.loadSource(url)
         hls.attachMedia(video)
         hls.on(Hls.Events.MANIFEST_PARSED, (_, d) => {
-          setLevels(d.levels); setLoading(false)
+          setLevels(d.levels)
+          setLoading(false)
           if (savedPos > 2) video.currentTime = savedPos
         })
         hls.on(Hls.Events.LEVEL_SWITCHED, (_, d) => setCurrentLevel(d.level))
@@ -116,27 +120,42 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete }) {
         })
         return () => { hls.destroy(); hlsRef.current = null }
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        return attachNative()
+        video.src = url
+        const onMeta = () => { setLoading(false); if (savedPos > 2) video.currentTime = savedPos }
+        const onErr  = () => setError('Stream load nahi hua.')
+        video.addEventListener('loadedmetadata', onMeta)
+        video.addEventListener('error', onErr)
+        return () => {
+          video.removeEventListener('loadedmetadata', onMeta)
+          video.removeEventListener('error', onErr)
+        }
       } else {
         setError('Is browser mein HLS supported nahi hai.')
         setLoading(false)
       }
     } else {
-      return attachNative()
+      video.src = url
+      const onMeta = () => { setLoading(false); if (savedPos > 2) video.currentTime = savedPos }
+      const onErr  = () => setError('Video load nahi hua.')
+      video.addEventListener('loadedmetadata', onMeta)
+      video.addEventListener('error', onErr)
+      return () => {
+        video.removeEventListener('loadedmetadata', onMeta)
+        video.removeEventListener('error', onErr)
+      }
     }
   }, [url])
 
   // ── Video event listeners ──────────────────────────────────────────────
   useEffect(() => {
-    const v = videoRef.current; if (!v) return
+    const v = videoRef.current
+    if (!v) return
     const onTime = () => {
-      const ct = v.currentTime
-      setCurrentTime(ct)
+      setCurrentTime(v.currentTime)
       if (v.buffered.length) setBuffered(v.buffered.end(v.buffered.length - 1))
-      if (!seekDragging.current && v.duration) setSeekPct((ct / v.duration) * 100)
-      if (ct - lastSaved.current >= 8) {
-        lastSaved.current = ct
-        onProgress?.(Math.floor(ct))
+      if (v.currentTime - lastSaved.current >= 8) {
+        lastSaved.current = v.currentTime
+        onProgress?.(Math.floor(v.currentTime))
       }
     }
     const onDur   = () => setDuration(v.duration || 0)
@@ -175,12 +194,11 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete }) {
     }
   }, [doneFired])
 
-  // ── Fullscreen change ──────────────────────────────────────────────────
+  // ── Fullscreen ─────────────────────────────────────────────────────────
   useEffect(() => {
-    const onFS = () => setFullscreen(!!document.fullscreenElement)
-    document.addEventListener('fullscreenchange', onFS)
-    return () => document.removeEventListener('fullscreenchange', onFS)
-  }, [])
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [handleFullscreenChange])
 
   // ── Keyboard shortcuts ─────────────────────────────────────────────────
   useEffect(() => {
@@ -204,119 +222,107 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete }) {
   }, [])
 
   // ── Controls auto-hide ─────────────────────────────────────────────────
-  const scheduleHide = useCallback((isPlaying) => {
-    clearTimeout(hideTimer.current)
-    if (isPlaying) {
-      hideTimer.current = setTimeout(() => setShowCtrl(false), 2800)
-    }
-  }, [])
-
   const resetHide = useCallback(() => {
     setShowCtrl(true)
-    scheduleHide(playing)
-  }, [playing, scheduleHide])
+    clearTimeout(hideTimer.current)
+    if (playing) {
+      hideTimer.current = setTimeout(() => setShowCtrl(false), 2500)
+    }
+  }, [playing])
+
+  // ── Touch/Double-click handlers ────────────────────────────────────────────
+  const handleVideoClick = (e) => {
+    e.stopPropagation()
+    if (touchTimeoutRef.current) {
+      clearTimeout(touchTimeoutRef.current)
+      touchTimeoutRef.current = null
+      // Double click detected
+      const rect = e.currentTarget.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      if (x < rect.width / 2) {
+        doSkip(-10)
+      } else {
+        doSkip(10)
+      }
+    } else {
+      touchTimeoutRef.current = setTimeout(() => {
+        togglePlay()
+        touchTimeoutRef.current = null
+      }, 200)
+    }
+  }
 
   // ── Actions ────────────────────────────────────────────────────────────
-  const togglePlay = useCallback(() => {
+  const togglePlay = () => {
     const v = videoRef.current; if (!v) return
-    if (v.paused) { v.play(); scheduleHide(true) }
-    else { v.pause(); clearTimeout(hideTimer.current) }
-    setShowCtrl(true)
-  }, [scheduleHide])
+    v.paused ? v.play() : v.pause()
+    resetHide()
+  }
 
-  const toggleMute = () => { const v = videoRef.current; if (v) v.muted = !v.muted }
-  const changeVol  = (val) => {
+  const toggleMute = () => {
+    const v = videoRef.current; if (!v) return
+    v.muted = !v.muted
+  }
+
+  const changeVol = (val) => {
     const v = videoRef.current; if (!v) return
     v.volume = val; v.muted = val === 0
   }
 
-  const doSkip = useCallback((secs) => {
+  const doSkip = (secs) => {
     const v = videoRef.current; if (!v) return
     v.currentTime = Math.max(0, Math.min(v.currentTime + secs, v.duration || 0))
     setSkipFlash({ dir: secs > 0 ? 'right' : 'left', ts: Date.now() })
-    setTimeout(() => setSkipFlash(null), 700)
-    resetHide()
-  }, [resetHide])
+    setTimeout(() => setSkipFlash(null), 650)
+  }
 
-  // ── Seek — shared logic ────────────────────────────────────────────────
-  const applySeek = useCallback((clientX, rect) => {
-    const v = videoRef.current; if (!v || !v.duration) return
-    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
-    v.currentTime = pct * v.duration
-    setSeekPct(pct * 100)
-  }, [])
-
-  // Mouse seek
-  const onSeekMouseDown = (e) => {
+  const onSeekStart = (e) => {
     e.preventDefault()
-    seekDragging.current = true
-    const rect = e.currentTarget.getBoundingClientRect()
-    applySeek(e.clientX, rect)
-    const move = (me) => applySeek(me.clientX, rect)
-    const up   = ()   => { seekDragging.current = false; window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
-    window.addEventListener('mousemove', move)
-    window.addEventListener('mouseup', up)
+    touchStartRef.current = true
   }
 
-  // Touch seek
-  const onSeekTouchStart = (e) => {
-    e.stopPropagation()
-    seekDragging.current = true
-    const rect = e.currentTarget.getBoundingClientRect()
-    applySeek(e.touches[0].clientX, rect)
-    const move = (te) => { te.preventDefault(); applySeek(te.touches[0].clientX, rect) }
-    const end  = ()   => { seekDragging.current = false; window.removeEventListener('touchmove', move); window.removeEventListener('touchend', end) }
-    window.addEventListener('touchmove', move, { passive: false })
-    window.addEventListener('touchend', end)
-  }
-
-  // ── Touch gestures on video area ───────────────────────────────────────
-  // Single tap = toggle controls / play-pause when controls visible
-  // Double tap left = -10s, right = +10s
-  const onVideoTouchEnd = useCallback((e) => {
-    if (showSettings) { setShowSettings(false); return }
-    tapCount.current += 1
-    if (tapCount.current === 1) {
-      tapTimer.current = setTimeout(() => {
-        tapCount.current = 0
-        if (!showCtrl) {
-          // First tap: just show controls
-          setShowCtrl(true)
-          clearTimeout(hideTimer.current)
-          scheduleHide(playing)
-        } else {
-          togglePlay()
-        }
-      }, 220)
-    } else if (tapCount.current >= 2) {
-      clearTimeout(tapTimer.current)
-      tapCount.current = 0
-      const container = containerRef.current
-      if (!container) return
-      const rect  = container.getBoundingClientRect()
-      const touchX = e.changedTouches[0].clientX - rect.left
-      doSkip(touchX < rect.width / 2 ? -10 : 10)
+  const onSeekMove = (e) => {
+    if (!touchStartRef.current) return
+    e.preventDefault()
+    const rect = seekbarRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+    if (videoRef.current && duration) {
+      videoRef.current.currentTime = pct * duration
     }
-  }, [showCtrl, showSettings, playing, togglePlay, doSkip, scheduleHide])
+  }
 
-  // ── Settings ───────────────────────────────────────────────────────────
+  const onSeekEnd = () => {
+    touchStartRef.current = null
+    resetHide()
+  }
+
+  const onSeekClick = (e) => {
+    const rect = seekbarRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    if (videoRef.current) videoRef.current.currentTime = pct * duration
+  }
+
   const changeSpeed = (s) => {
-    setSpeed(s); if (videoRef.current) videoRef.current.playbackRate = s
+    setSpeed(s)
+    if (videoRef.current) videoRef.current.playbackRate = s
     setShowSettings(false)
   }
+
   const changeQuality = (level) => {
     if (hlsRef.current) hlsRef.current.currentLevel = level
-    setCurrentLevel(level); setShowSettings(false)
+    setCurrentLevel(level)
+    setShowSettings(false)
   }
 
-  // ── Fullscreen with orientation lock ──────────────────────────────────
-  const toggleFS = async () => {
+  const toggleFS = () => {
+    const el = containerRef.current
     if (!document.fullscreenElement) {
-      await containerRef.current?.requestFullscreen?.()
-      try { await screen.orientation?.lock?.('landscape') } catch {}
+      el?.requestFullscreen?.()
     } else {
-      await document.exitFullscreen?.()
-      try { screen.orientation?.unlock?.() } catch {}
+      document.exitFullscreen?.()
     }
   }
 
@@ -329,7 +335,8 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete }) {
   }
 
   const pipSupported = typeof document !== 'undefined' && 'pictureInPictureEnabled' in document
-  const buffPct = duration ? (buffered / duration) * 100 : 0
+  const pct     = duration ? (currentTime / duration) * 100 : 0
+  const buffPct = duration ? (buffered   / duration) * 100 : 0
 
   const qualityLabel = (l) => {
     if (l === -1) return 'Auto'
@@ -343,180 +350,463 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete }) {
   return (
     <div
       ref={containerRef}
-      className="vp-container"
+      className="relative bg-black w-full select-none touch-none"
+      style={{ aspectRatio: '16/9', borderRadius: '14px', overflow: 'hidden' }}
       onMouseMove={resetHide}
       onMouseLeave={() => { if (videoRef.current && !videoRef.current.paused) setShowCtrl(false) }}
+      onTouchStart={resetHide}
     >
-      <video ref={videoRef} className="vp-video" playsInline preload="metadata" />
-
-      {/* Spinner */}
-      {loading && !error && (
-        <div className="vp-abs-center"><div className="vp-spinner" /></div>
-      )}
-
-      {/* Error */}
-      {error && (
-        <div className="vp-abs-center vp-err-bg">
-          <AlertCircle size={28} color="#f87171" />
-          <p className="vp-err-txt">{error}</p>
-          <button className="vp-retry" onClick={() => window.location.reload()}>Retry</button>
-        </div>
-      )}
-
-      {/* Skip flash */}
-      {skipFlash && (
-        <div key={skipFlash.ts} className={`vp-skip ${skipFlash.dir}`}>
-          <span className="vp-skip-arr">{skipFlash.dir === 'right' ? '▶▶' : '◀◀'}</span>
-          <span className="vp-skip-lbl">10s</span>
-        </div>
-      )}
-
-      {/* Touch layer — sits below controls */}
-      <div
-        className="vp-touch"
-        onTouchEnd={onVideoTouchEnd}
-        onClick={typeof window !== 'undefined' && !('ontouchstart' in window) ? togglePlay : undefined}
+      {/* Video element */}
+      <video
+        ref={videoRef}
+        className="w-full h-full object-contain"
+        playsInline
+        preload="metadata"
+        onClick={handleVideoClick}
+        onDoubleClick={toggleFS}
       />
 
-      {/* Gradient + controls */}
-      <div className={`vp-ctrl-wrap ${showCtrl || !playing ? 'on' : 'off'}`}>
-
-        {/* Seek */}
-        <div className="vp-seek-area">
+      {/* Buffering spinner */}
+      {loading && !error && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div
-            className="vp-seek-track"
-            onMouseDown={onSeekMouseDown}
-            onTouchStart={onSeekTouchStart}
+            className="rounded-full animate-spin"
+            style={{
+              width: 44, height: 44,
+              border: '2.5px solid rgba(255,255,255,0.12)',
+              borderTopColor: 'white',
+            }}
+          />
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3"
+          style={{ background: 'rgba(0,0,0,0.88)' }}>
+          <AlertCircle size={30} style={{ color: '#f87171' }} />
+          <p className="text-white text-sm text-center px-6 leading-relaxed">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              fontSize: 12, color: 'white',
+              background: 'rgba(255,255,255,0.1)',
+              border: '0.5px solid rgba(255,255,255,0.2)',
+              borderRadius: 10, padding: '6px 16px',
+            }}
+          >Retry</button>
+        </div>
+      )}
+
+      {/* Skip flash overlay */}
+      {skipFlash && (
+        <div
+          key={skipFlash.ts}
+          className="absolute pointer-events-none flex flex-col items-center"
+          style={{
+            top: '50%', transform: 'translateY(-50%)',
+            [skipFlash.dir === 'right' ? 'right' : 'left']: '10%',
+            gap: 2, animation: 'skipfadeout 0.65s forwards',
+          }}
+        >
+          <span style={{ fontSize: 24, fontWeight: 900, color: 'white', lineHeight: 1 }}>
+            {skipFlash.dir === 'right' ? '▶▶' : '◀◀'}
+          </span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>10s</span>
+        </div>
+      )}
+
+      {/* Controls gradient + UI */}
+      <div
+        className="absolute inset-0 flex flex-col justify-end pointer-events-none"
+        style={{
+          background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.25) 40%, transparent 68%)',
+          opacity: showCtrl || !playing ? 1 : 0,
+          transition: 'opacity 0.22s ease',
+        }}
+      >
+        {/* ── Seek bar ── */}
+        <div className="pointer-events-auto" style={{ padding: '0 14px 4px' }}>
+          <div
+            ref={seekbarRef}
+            style={{ padding: '8px 0', cursor: 'pointer' }}
+            onClick={onSeekClick}
+            onTouchStart={onSeekStart}
+            onTouchMove={onSeekMove}
+            onTouchEnd={onSeekEnd}
+            onMouseDown={onSeekStart}
+            onMouseMove={onSeekMove}
+            onMouseUp={onSeekEnd}
+            role="slider"
+            aria-label="Seek"
+            aria-valuenow={Math.round(currentTime)}
+            aria-valuemin={0}
+            aria-valuemax={Math.round(duration)}
           >
-            <div className="vp-seek-bg" />
-            <div className="vp-seek-buf" style={{ width: `${buffPct}%` }} />
-            <div className="vp-seek-prog" style={{ width: `${seekPct}%` }} />
-            <div className="vp-seek-thumb" style={{ left: `${seekPct}%` }} />
-          </div>
-          <div className="vp-times">
-            <span>{fmtTime(currentTime)}</span>
-            <span>{fmtTime(duration)}</span>
+            <div
+              className="relative rounded-full"
+              style={{ height: 4, background: 'rgba(255,255,255,0.2)' }}
+            >
+              {/* Buffer */}
+              <div
+                className="absolute inset-y-0 left-0 rounded-full"
+                style={{ width: `${buffPct}%`, background: 'rgba(255,255,255,0.22)' }}
+              />
+              {/* Progress */}
+              <div
+                className="absolute inset-y-0 left-0 rounded-full"
+                style={{ width: `${pct}%`, background: '#818cf8', transition: 'width 0.05s linear' }}
+              />
+              {/* Thumb */}
+              <div
+                className="absolute rounded-full"
+                style={{
+                  width: 14, height: 14,
+                  background: 'white',
+                  top: '50%', transform: 'translate(-50%, -50%)',
+                  left: `${pct}%`,
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
+                  transition: 'left 0.05s linear',
+                }}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Buttons */}
-        <div className="vp-row">
-          <button className="vpb" onClick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}>
-            {playing ? <Pause size={18} style={{ fill: 'currentColor' }} /> : <Play size={18} style={{ fill: 'currentColor', marginLeft: 2 }} />}
+        {/* ── Controls row ── */}
+        <div
+          className="pointer-events-auto flex items-center flex-wrap"
+          style={{ padding: '0 8px 12px', gap: 2 }}
+        >
+          {/* Play / Pause */}
+          <button onClick={togglePlay} className="vp-btn" aria-label={playing ? 'Pause' : 'Play'}>
+            {playing
+              ? <Pause size={18} style={{ fill: 'currentColor', flexShrink: 0 }} />
+              : <Play  size={18} style={{ fill: 'currentColor', marginLeft: 2, flexShrink: 0 }} />}
           </button>
-          <button className="vpb" onClick={() => doSkip(-10)} aria-label="Rewind 10s"><SkipBack size={16} /></button>
-          <button className="vpb" onClick={() => doSkip(10)}  aria-label="Forward 10s"><SkipForward size={16} /></button>
 
-          {/* Desktop volume */}
-          <button className="vpb vp-d" onClick={toggleMute}>
-            {muted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+          {/* Skip */}
+          <button onClick={() => doSkip(-10)} className="vp-btn" aria-label="Rewind 10s">
+            <SkipBack size={16} />
           </button>
-          <input type="range" min="0" max="1" step="0.05" value={muted ? 0 : volume}
-            onChange={e => changeVol(parseFloat(e.target.value))}
-            className="vp-vol vp-d" onClick={e => e.stopPropagation()} />
+          <button onClick={() => doSkip(10)} className="vp-btn" aria-label="Forward 10s">
+            <SkipForward size={16} />
+          </button>
 
-          {/* Mobile mute */}
-          <button className="vpb vp-m" onClick={toggleMute}>
-            {muted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+          {/* Volume control */}
+          <button onClick={toggleMute} className="vp-btn" aria-label={muted ? 'Unmute' : 'Mute'}>
+            {muted || volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
           </button>
+          
+          {/* Volume slider - desktop only */}
+          <div className="hidden sm:block">
+            <input
+              type="range" min="0" max="1" step="0.05"
+              value={muted ? 0 : volume}
+              onChange={e => changeVol(parseFloat(e.target.value))}
+              aria-label="Volume"
+              style={{ width: 64, accentColor: '#818cf8', cursor: 'pointer' }}
+              onClick={e => e.stopPropagation()}
+            />
+          </div>
+
+          {/* Time */}
+          <span
+            style={{
+              fontSize: 11, fontFamily: 'var(--font-mono, monospace)',
+              color: 'rgba(255,255,255,0.9)', marginLeft: 4,
+              whiteSpace: 'nowrap', flexShrink: 0, tabularNums: true,
+            }}
+          >
+            {fmtTime(currentTime)}
+            {duration > 0 && (
+              <span style={{ color: 'rgba(255,255,255,0.38)' }}> / {fmtTime(duration)}</span>
+            )}
+          </span>
 
           <div style={{ flex: 1 }} />
 
-          {speed !== 1 && <span className="vp-spbadge">{speed}x</span>}
+          {/* Speed badge */}
+          {speed !== 1 && (
+            <span
+              className="hidden sm:inline-block"
+              style={{
+                fontSize: 10, fontFamily: 'var(--font-mono, monospace)',
+                background: 'rgba(129,140,248,0.2)', color: '#a5b4fc',
+                padding: '2px 6px', borderRadius: 5, marginRight: 2, flexShrink: 0,
+              }}
+            >{speed}x</span>
+          )}
 
+          {/* PiP */}
           {pipSupported && (
-            <button className={`vpb ${pip ? 'vpa' : ''}`} onClick={togglePip}><PictureInPicture2 size={14} /></button>
+            <button
+              onClick={togglePip}
+              className="vp-btn hidden sm:inline-flex"
+              aria-label="Picture in Picture"
+              style={pip ? { color: '#a5b4fc' } : {}}
+            >
+              <PictureInPicture2 size={14} />
+            </button>
           )}
 
           {/* Settings */}
           <div style={{ position: 'relative' }}>
             <button
-              className={`vpb ${showSettings ? 'vpa' : ''}`}
               onClick={e => { e.stopPropagation(); setShowSettings(v => !v) }}
-              aria-label="Settings" aria-expanded={showSettings}
-            ><Settings size={14} /></button>
+              className="vp-btn"
+              aria-label="Settings"
+              aria-expanded={showSettings}
+              style={showSettings ? { color: '#a5b4fc' } : {}}
+            >
+              <Settings size={15} />
+            </button>
 
             {showSettings && (
-              <div
-                className="vp-spanel"
-                onClick={e => e.stopPropagation()}
-                onTouchStart={e => e.stopPropagation()}
-              >
-                <div className="vp-stabs">
-                  <button className={`vp-stab ${settingsTab === 'speed' ? 'on' : ''}`}
-                    onClick={() => setSettingsTab('speed')}>Speed</button>
-                  {levels.length > 0 && (
-                    <button className={`vp-stab ${settingsTab === 'quality' ? 'on' : ''}`}
-                      onClick={() => setSettingsTab('quality')}>Quality</button>
+              <>
+                {/* Backdrop */}
+                <div 
+                  className="fixed inset-0 z-40 sm:hidden"
+                  onClick={() => setShowSettings(false)}
+                  style={{ background: 'rgba(0,0,0,0.6)' }}
+                />
+                
+                {/* Settings Panel */}
+                <div
+                  onClick={e => e.stopPropagation()}
+                  className="fixed bottom-0 left-0 right-0 z-50 sm:absolute sm:bottom-full sm:right-0 sm:left-auto sm:top-auto sm:mb-2"
+                  style={{
+                    background: 'rgba(10,10,18,0.98)',
+                    backdropFilter: 'blur(20px)',
+                    borderTopLeftRadius: '20px',
+                    borderTopRightRadius: '20px',
+                    border: '0.5px solid rgba(255,255,255,0.12)',
+                    overflow: 'hidden',
+                    maxHeight: '80vh',
+                    ...(window.innerWidth >= 640 && {
+                      width: 260,
+                      borderRadius: 16,
+                      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)',
+                    })
+                  }}
+                >
+                  {/* Header */}
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    padding: '16px 16px',
+                    borderBottom: '0.5px solid rgba(255,255,255,0.1)'
+                  }}>
+                    <div style={{ display: 'flex', gap: 20 }}>
+                      <button
+                        onClick={() => setSettingsTab('speed')}
+                        style={{
+                          fontSize: 15, fontWeight: 600,
+                          color: settingsTab === 'speed' ? '#a5b4fc' : 'rgba(255,255,255,0.5)',
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          padding: '4px 0',
+                        }}
+                      >Speed</button>
+                      {levels.length > 0 && (
+                        <button
+                          onClick={() => setSettingsTab('quality')}
+                          style={{
+                            fontSize: 15, fontWeight: 600,
+                            color: settingsTab === 'quality' ? '#a5b4fc' : 'rgba(255,255,255,0.5)',
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            padding: '4px 0',
+                          }}
+                        >Quality</button>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setShowSettings(false)}
+                      aria-label="Close settings"
+                      style={{
+                        color: 'rgba(255,255,255,0.5)',
+                        background: 'none', border: 'none',
+                        cursor: 'pointer', padding: 4,
+                      }}
+                    ><X size={18} /></button>
+                  </div>
+
+                  {settingsTab === 'speed' && (
+                    <div style={{ 
+                      padding: 16,
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', 
+                      gap: 8,
+                      maxHeight: '60vh',
+                      overflowY: 'auto'
+                    }}>
+                      {SPEEDS.map(s => (
+                        <button
+                          key={s}
+                          onClick={() => changeSpeed(s)}
+                          style={{
+                            padding: '12px 0', borderRadius: 12, fontSize: 14, fontWeight: 500,
+                            background: speed === s ? '#4f46e5' : 'rgba(255,255,255,0.06)',
+                            color: speed === s ? 'white' : 'rgba(255,255,255,0.7)',
+                            border: 'none', cursor: 'pointer',
+                            transition: 'all 0.15s',
+                          }}
+                        >{s}x</button>
+                      ))}
+                    </div>
                   )}
-                  <button className="vp-sclose" onClick={() => setShowSettings(false)}><X size={12} /></button>
+
+                  {settingsTab === 'quality' && levels.length > 0 && (
+                    <div style={{ 
+                      padding: 8, 
+                      maxHeight: '60vh', 
+                      overflowY: 'auto' 
+                    }}>
+                      {[-1, ...levels.map((_, i) => i)].map(l => (
+                        <button
+                          key={l}
+                          onClick={() => changeQuality(l)}
+                          style={{
+                            width: '100%', display: 'flex',
+                            alignItems: 'center', justifyContent: 'space-between',
+                            padding: '12px 16px', borderRadius: 12,
+                            fontSize: 14, fontWeight: 500,
+                            background: currentLevel === l ? '#4f46e5' : 'transparent',
+                            color: currentLevel === l ? 'white' : 'rgba(255,255,255,0.7)',
+                            border: 'none', cursor: 'pointer',
+                            transition: 'all 0.12s',
+                            marginBottom: 4,
+                          }}
+                        >
+                          <span>{qualityLabel(l)}</span>
+                          {l === -1 && (
+                            <span style={{
+                              fontSize: 11,
+                              color: currentLevel === l ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.3)',
+                            }}>Auto</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-
-                {settingsTab === 'speed' && (
-                  <div className="vp-sgrid">
-                    {SPEEDS.map(s => (
-                      <button key={s} className={`vp-sbtn ${speed === s ? 'on' : ''}`}
-                        onClick={() => changeSpeed(s)}>{s}x</button>
-                    ))}
-                  </div>
-                )}
-
-                {settingsTab === 'quality' && levels.length > 0 && (
-                  <div className="vp-sqlist">
-                    {[-1, ...levels.map((_, i) => i)].map(l => (
-                      <button key={l} className={`vp-sqitem ${currentLevel === l ? 'on' : ''}`}
-                        onClick={() => changeQuality(l)}>
-                        <span>{qualityLabel(l)}</span>
-                        {l === -1 && <span className="vp-sqrec">recommended</span>}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              </>
             )}
           </div>
 
-          <button className="vpb" onClick={toggleFS}>
-            {fullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
+          {/* Fullscreen */}
+          <button onClick={toggleFS} className="vp-btn" aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
+            {fullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
           </button>
         </div>
       </div>
 
-      {pip && <div className="vp-pip">PiP</div>}
+      {/* PiP indicator */}
+      {pip && (
+        <div
+          style={{
+            position: 'absolute', top: 10, left: 10,
+            background: 'rgba(79,70,229,0.8)',
+            backdropFilter: 'blur(6px)',
+            color: 'white', fontSize: 11, fontWeight: 500,
+            padding: '3px 10px', borderRadius: 8,
+            pointerEvents: 'none',
+          }}
+        >PiP active</div>
+      )}
+
+      <style>{`
+        .vp-btn {
+          width: 40px; height: 40px; min-width: 40px;
+          display: flex; align-items: center; justify-content: center;
+          color: white; border-radius: 10px; cursor: pointer;
+          border: none; background: transparent; flex-shrink: 0;
+          transition: all 0.15s;
+        }
+        .vp-btn:active { 
+          background: rgba(255,255,255,0.15);
+          transform: scale(0.95);
+        }
+        @media(min-width:640px){
+          .vp-btn:hover { color: #a5b4fc; background: rgba(255,255,255,0.08); }
+          .vp-btn:active { transform: scale(0.87); }
+        }
+        @keyframes skipfadeout { 
+          0%{ opacity: 1; transform: translateY(-50%) scale(1); } 
+          50%{ opacity: 1; transform: translateY(-50%) scale(1.1); }
+          100%{ opacity: 0; transform: translateY(-50%) scale(1); }
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .animate-spin { animation: spin 0.8s linear infinite; }
+      `}</style>
     </div>
   )
 }
 
-// ─── YouTube Player ───────────────────────────────────────────────────────────
+// ─── YouTube Player ──────────────────────────────────────────────────────────
 function YouTubePlayer({ url, title }) {
-  const ytId = extractYTId(url)
+  const ytId    = extractYTId(url)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState(false)
 
   const embedSrc = ytId
-    ? `https://www.youtube.com/embed/${ytId}?autoplay=0&rel=0&modestbranding=1&enablejsapi=1&origin=${typeof window !== 'undefined' ? window.location.origin : ''}`
+    ? `https://www.youtube.com/embed/${ytId}?autoplay=0&rel=0&modestbranding=1&enablejsapi=1&origin=${window.location.origin}`
     : null
+
   const liveSrc = !ytId && url
 
-  if (!embedSrc && !liveSrc) return (
-    <div className="yt-err">
-      <AlertCircle size={24} color="#f87171" />
-      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>YouTube URL parse nahi hua</p>
-    </div>
-  )
+  if (!embedSrc && !liveSrc) {
+    return (
+      <div
+        style={{ aspectRatio: '16/9', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 8,
+          background: '#0a0a0a', borderRadius: 14, padding: '0 16px' }}
+      >
+        <AlertCircle size={26} style={{ color: '#f87171' }} />
+        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, textAlign: 'center' }}>
+          YouTube URL parse nahi hua
+        </p>
+        <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11, wordBreak: 'break-all', maxWidth: 280, textAlign: 'center' }}>
+          {url}
+        </p>
+      </div>
+    )
+  }
 
   return (
-    <div className="yt-shell">
+    <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: 14, overflow: 'hidden', background: '#0a0a0a' }}>
       {loading && (
-        <div className="vp-abs-center" style={{ zIndex: 10, background: '#0d0d0d' }}>
-          <div className="vp-spinner" style={{ borderTopColor: '#ff4444', borderColor: 'rgba(255,68,68,0.12)' }} />
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+          background: '#0a0a0a', zIndex: 10,
+        }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: '50%',
+            border: '2.5px solid rgba(129,140,248,0.2)',
+            borderTopColor: '#818cf8',
+            animation: 'spin 0.8s linear infinite',
+          }} />
         </div>
       )}
       {error && (
-        <div className="vp-abs-center vp-err-bg" style={{ zIndex: 10 }}>
-          <AlertCircle size={26} color="#f87171" />
-          <p className="vp-err-txt">Video load nahi hua</p>
-          <button className="vp-retry" onClick={() => { setError(false); setLoading(true) }}>Retry</button>
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 10,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 10,
+          background: '#0a0a0a',
+        }}>
+          <AlertCircle size={30} style={{ color: '#f87171' }} />
+          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>Video load nahi hua</p>
+          <button
+            onClick={() => { setError(false); setLoading(true) }}
+            style={{
+              fontSize: 12, color: 'white',
+              background: 'rgba(255,255,255,0.08)',
+              border: '0.5px solid rgba(255,255,255,0.15)',
+              borderRadius: 10, padding: '6px 16px', cursor: 'pointer',
+            }}
+          >Retry</button>
         </div>
       )}
       <iframe
@@ -533,26 +823,80 @@ function YouTubePlayer({ url, title }) {
   )
 }
 
-// ─── Mark Complete ────────────────────────────────────────────────────────────
-function MarkCompleteBtn({ onClick }) {
-  const [done, setDone] = useState(false)
-  const handle = () => {
-    if (done) return
-    setDone(true)
-    onClick?.()
+// ─── Animated Button Component ───────────────────────────────────────────────
+function AnimatedButton({ onClick, icon: Icon, label, variant = 'primary' }) {
+  const [isAnimating, setIsAnimating] = useState(false)
+
+  const handleClick = (e) => {
+    setIsAnimating(true)
+    onClick(e)
+    setTimeout(() => setIsAnimating(false), 300)
   }
+
+  const variants = {
+    primary: {
+      bg: 'linear-gradient(135deg, #10b981, #059669)',
+      hoverBg: 'linear-gradient(135deg, #059669, #047857)',
+      color: 'white',
+      border: 'none'
+    },
+    secondary: {
+      bg: 'rgba(52,211,153,0.08)',
+      hoverBg: 'rgba(52,211,153,0.15)',
+      color: '#34d399',
+      border: '0.5px solid rgba(52,211,153,0.3)'
+    }
+  }
+
+  const currentVariant = variants[variant]
+
   return (
-    <button className={`mc-btn ${done ? 'mc-done' : ''}`} onClick={handle}>
-      <span className="mc-icon">
-        {done ? <Check size={16} strokeWidth={2.5} /> : <CheckCircle size={16} />}
-      </span>
-      <span>{done ? 'Completed!' : 'Mark as Complete'}</span>
-      {done && <span className="mc-pop" aria-hidden="true">🎉</span>}
+    <button
+      onClick={handleClick}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 8,
+        fontSize: 14, fontWeight: 600,
+        background: currentVariant.bg,
+        color: currentVariant.color,
+        border: currentVariant.border,
+        padding: '10px 24px', borderRadius: 12,
+        cursor: 'pointer', position: 'relative', overflow: 'hidden',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        transform: isAnimating ? 'scale(0.96)' : 'scale(1)',
+      }}
+      onMouseEnter={(e) => {
+        if (variant === 'primary') {
+          e.currentTarget.style.background = variants.primary.hoverBg
+        } else {
+          e.currentTarget.style.background = variants.secondary.hoverBg
+        }
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = currentVariant.bg
+      }}
+    >
+      {isAnimating && (
+        <div
+          style={{
+            position: 'absolute', inset: 0,
+            background: 'rgba(255,255,255,0.2)',
+            animation: 'ripple 0.3s ease-out',
+          }}
+        />
+      )}
+      <Icon size={16} />
+      <span>{label}</span>
+      <style>{`
+        @keyframes ripple {
+          0% { transform: scale(0); opacity: 1; }
+          100% { transform: scale(4); opacity: 0; }
+        }
+      `}</style>
     </button>
   )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Page ────────────────────────────────────────────────────────────────────
 export function VideoPlayer() {
   const { contentId } = useParams()
   const navigate = useNavigate()
@@ -561,425 +905,163 @@ export function VideoPlayer() {
     queryKey: ['content', contentId],
     queryFn: () => api.get(`/content/${contentId}`).then(r => r.data),
   })
+
   const { data: progressData } = useQuery({
     queryKey: ['content-progress', contentId],
     queryFn: () => api.get(`/user/content/${contentId}/progress`).then(r => r.data),
   })
+
   const saveProg = useMutation({
     mutationFn: (d) => api.post(`/user/content/${contentId}/progress`, d),
   })
 
   const content  = data?.content
   const savedPos = progressData?.progress?.position || 0
+  const isCompleted = progressData?.progress?.completed
 
   if (isLoading) return (
-    <div className="vp-pgload"><div className="vp-spinner" style={{ width: 38, height: 38 }} /></div>
+    <div className="flex justify-center items-center py-32">
+      <div
+        style={{
+          width: 40, height: 40, borderRadius: '50%',
+          border: '3px solid rgba(129,140,248,0.2)',
+          borderTopColor: '#818cf8',
+          animation: 'spin 0.8s linear infinite',
+        }}
+      />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
   )
+
   if (!content) return (
-    <div className="vp-pgload">
-      <AlertCircle size={28} color="#f87171" />
-      <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14, marginTop: 10 }}>Content nahi mila.</p>
+    <div className="flex flex-col items-center py-32 gap-4">
+      <AlertCircle size={40} style={{ color: '#f87171' }} />
+      <p style={{ color: 'rgba(var(--color-text-secondary))', fontSize: 15 }}>Content nahi mila.</p>
+      <button
+        onClick={() => navigate(-1)}
+        style={{ fontSize: 14, color: '#818cf8', cursor: 'pointer', background: 'none', border: 'none' }}
+      >Wapas jao</button>
     </div>
   )
 
   const isYT = isYouTubeURL(content.url)
 
   return (
-    <div className="vp-page">
-      {/* Background */}
-      <div className="vp-bg" aria-hidden="true">
-        <div className="vp-bg-dots" />
-        <div className="vp-orb vp-o1" />
-        <div className="vp-orb vp-o2" />
-        <div className="vp-orb vp-o3" />
-      </div>
+    <div style={{
+      minHeight: '100vh',
+      background: 'radial-gradient(circle at 0% 0%, rgba(129,140,248,0.03) 0%, transparent 50%), radial-gradient(circle at 100% 100%, rgba(52,211,153,0.03) 0%, transparent 50%)',
+    }}>
+      <div style={{ maxWidth: 860, margin: '0 auto', width: '100%', padding: '16px' }}>
+        
+        {/* Title - Below Player on Mobile */}
+        <div style={{ marginBottom: 16, order: 2 }}>
+          <h1 style={{
+            fontSize: 'clamp(18px, 5vw, 24px)',
+            fontWeight: 600,
+            color: 'var(--color-text-primary)',
+            lineHeight: 1.3,
+            marginBottom: 8,
+          }}>
+            {content.title}
+          </h1>
+          
+          {/* Metadata */}
+          <div style={{
+            display: 'flex', gap: 12, alignItems: 'center',
+            flexWrap: 'wrap', marginTop: 8
+          }}>
+            {content.duration && (
+              <span style={{
+                fontSize: 12, color: 'var(--color-text-secondary)',
+                background: 'var(--color-background-secondary)',
+                padding: '2px 8px', borderRadius: 6,
+              }}>
+                {fmtTime(content.duration)}
+              </span>
+            )}
+            {isCompleted && (
+              <span style={{
+                fontSize: 12, color: '#34d399',
+                background: 'rgba(52,211,153,0.1)',
+                padding: '2px 8px', borderRadius: 6,
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+              }}>
+                <CheckCircle size={12} /> Completed
+              </span>
+            )}
+          </div>
+        </div>
 
-      <div className="vp-wrap">
         {/* Player */}
-        <div className="vp-card">
+        <div style={{ 
+          borderRadius: 16, 
+          overflow: 'hidden', 
+          background: '#0a0a0a', 
+          marginBottom: 20,
+          boxShadow: '0 10px 40px -10px rgba(0,0,0,0.3)'
+        }}>
           {isYT
             ? <YouTubePlayer url={content.url} title={content.title} />
-            : <CustomPlayer
-                url={content.url} savedPos={savedPos}
+            : (
+              <CustomPlayer
+                url={content.url}
+                savedPos={savedPos}
+                title={content.title}
                 onProgress={pos => saveProg.mutate({ position: pos, subjectId: content.subjectId })}
                 onComplete={() => saveProg.mutate({ completed: true, position: 0, subjectId: content.subjectId })}
               />
+            )
           }
         </div>
 
-        {/* Title + description + actions */}
-        <div className="vp-meta">
-          <h1 className="vp-title">{content.title}</h1>
-          {content.description && <p className="vp-desc">{content.description}</p>}
-          <MarkCompleteBtn
-            onClick={() => saveProg.mutate({ completed: true, position: 0, subjectId: content.subjectId })}
-          />
+        {/* Description */}
+        {content.description && (
+          <div style={{
+            background: 'var(--color-background-secondary)',
+            borderRadius: 12,
+            padding: '16px',
+            marginBottom: 20,
+            border: '0.5px solid var(--color-border-tertiary)',
+          }}>
+            <p style={{
+              fontSize: 14, color: 'var(--color-text-secondary)',
+              lineHeight: 1.6, margin: 0,
+            }}>
+              {content.description}
+            </p>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div style={{
+          display: 'flex', gap: 12, flexWrap: 'wrap',
+          justifyContent: 'center',
+          marginTop: 8,
+        }}>
+          {!isCompleted && (
+            <AnimatedButton
+              onClick={() => saveProg.mutate({ completed: true, position: 0, subjectId: content.subjectId })}
+              icon={CheckCircle}
+              label="Mark as Complete"
+              variant="primary"
+            />
+          )}
+          
+          {isCompleted && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              fontSize: 14, fontWeight: 500,
+              color: '#34d399',
+              background: 'rgba(52,211,153,0.08)',
+              padding: '10px 24px', borderRadius: 12,
+              border: '0.5px solid rgba(52,211,153,0.3)',
+            }}>
+              <CheckCircle size={16} />
+              <span>Course Completed! 🎉</span>
+            </div>
+          )}
         </div>
       </div>
-
-      <style>{`
-        /* ─ Reset ─────────────────────────────────────────── */
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-        /* ─ Page & BG ─────────────────────────────────────── */
-        .vp-page {
-          min-height: 100vh;
-          background: #07090f;
-          font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
-          position: relative; overflow-x: hidden;
-        }
-        .vp-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-        .vp-bg-dots {
-          position: absolute; inset: -40px;
-          background-image: radial-gradient(rgba(99,102,241,0.18) 1px, transparent 1px);
-          background-size: 32px 32px;
-          mask-image: radial-gradient(ellipse 90% 90% at 50% 50%, black 20%, transparent 100%);
-        }
-        .vp-orb {
-          position: absolute; border-radius: 50%;
-          filter: blur(90px);
-          animation: orbF 14s ease-in-out infinite alternate;
-        }
-        .vp-o1 {
-          width: 640px; height: 640px; top: -180px; left: -180px;
-          background: radial-gradient(circle, rgba(79,70,229,0.28), transparent 70%);
-        }
-        .vp-o2 {
-          width: 520px; height: 520px; bottom: -120px; right: -100px;
-          background: radial-gradient(circle, rgba(14,165,233,0.2), transparent 70%);
-          animation-duration: 11s; animation-direction: alternate-reverse;
-        }
-        .vp-o3 {
-          width: 380px; height: 380px; top: 45%; left: 55%;
-          background: radial-gradient(circle, rgba(139,92,246,0.15), transparent 70%);
-          opacity: 0.8; animation-duration: 18s;
-        }
-        @keyframes orbF {
-          0%   { transform: translate(0,0) scale(1); }
-          100% { transform: translate(28px,36px) scale(1.1); }
-        }
-
-        /* ─ Layout ────────────────────────────────────────── */
-        .vp-wrap {
-          position: relative; z-index: 1;
-          max-width: 880px; margin: 0 auto;
-          padding: 24px 16px 48px;
-        }
-        .vp-card {
-          border-radius: 16px; overflow: hidden;
-          box-shadow: 0 0 0 1px rgba(255,255,255,0.06), 0 20px 60px rgba(0,0,0,0.7);
-          background: #0d0d0d; margin-bottom: 20px;
-        }
-        .vp-meta { padding: 0 2px; }
-        .vp-title {
-          font-size: clamp(15px, 2.8vw, 21px);
-          font-weight: 600; color: #e8eaf0;
-          line-height: 1.35; letter-spacing: -0.015em;
-          margin-bottom: 10px;
-        }
-        .vp-desc {
-          font-size: 13.5px; color: rgba(255,255,255,0.35);
-          line-height: 1.65; margin-bottom: 20px;
-        }
-
-        /* ─ Mark complete ─────────────────────────────────── */
-        .mc-btn {
-          position: relative; overflow: hidden;
-          display: inline-flex; align-items: center; gap: 9px;
-          padding: 12px 24px;
-          border-radius: 12px;
-          border: 1px solid rgba(52,211,153,0.3);
-          background: rgba(52,211,153,0.07);
-          color: #34d399;
-          font-size: 14px; font-weight: 600;
-          cursor: pointer;
-          transition: background 0.2s, border-color 0.2s, transform 0.15s, color 0.2s, box-shadow 0.2s;
-        }
-        .mc-btn::before {
-          content: ''; position: absolute; inset: 0;
-          background: linear-gradient(135deg, transparent 40%, rgba(52,211,153,0.12));
-          opacity: 0; transition: opacity 0.2s;
-        }
-        .mc-btn:hover:not(.mc-done)::before { opacity: 1; }
-        .mc-btn:hover:not(.mc-done) {
-          background: rgba(52,211,153,0.13);
-          border-color: rgba(52,211,153,0.5);
-          box-shadow: 0 0 24px rgba(52,211,153,0.12);
-          transform: translateY(-1px);
-        }
-        .mc-btn:active { transform: scale(0.97) !important; }
-        .mc-btn.mc-done {
-          background: rgba(52,211,153,0.15);
-          border-color: rgba(52,211,153,0.45);
-          color: #6ee7b7;
-          animation: mcPop 0.45s cubic-bezier(0.34,1.56,0.64,1);
-        }
-        .mc-icon { display: flex; align-items: center; }
-        .mc-btn.mc-done .mc-icon {
-          animation: iconIn 0.45s cubic-bezier(0.34,1.56,0.64,1);
-        }
-        .mc-pop {
-          position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-          animation: popFly 0.7s ease forwards; font-size: 18px;
-        }
-        @keyframes mcPop {
-          0%   { transform: scale(1); }
-          40%  { transform: scale(1.07); }
-          100% { transform: scale(1); }
-        }
-        @keyframes iconIn {
-          0%   { transform: rotate(-120deg) scale(0.5); opacity: 0; }
-          100% { transform: rotate(0deg) scale(1); opacity: 1; }
-        }
-        @keyframes popFly {
-          0%   { transform: translateY(-50%) scale(0.5); opacity: 1; }
-          100% { transform: translateY(calc(-50% - 30px)) scale(1.3); opacity: 0; }
-        }
-
-        /* ─ Page loading ──────────────────────────────────── */
-        .vp-pgload {
-          min-height: 100vh; display: flex; flex-direction: column;
-          align-items: center; justify-content: center;
-          background: #07090f; gap: 12px;
-        }
-
-        /* ─ Player container ──────────────────────────────── */
-        .vp-container {
-          position: relative; width: 100%; aspect-ratio: 16/9;
-          background: #0d0d0d;
-          user-select: none; -webkit-user-select: none;
-          touch-action: none;
-        }
-        .vp-video { width: 100%; height: 100%; display: block; object-fit: contain; }
-
-        /* Fullscreen + auto-rotate */
-        .vp-container:fullscreen,
-        .vp-container:-webkit-full-screen {
-          width: 100vw; height: 100vh; aspect-ratio: unset;
-        }
-
-        /* ─ Shared utils ──────────────────────────────────── */
-        .vp-abs-center {
-          position: absolute; inset: 0;
-          display: flex; flex-direction: column;
-          align-items: center; justify-content: center; gap: 12px;
-        }
-        .vp-err-bg { background: rgba(0,0,0,0.9); }
-        .vp-err-txt { color: rgba(255,255,255,0.55); font-size: 13px; text-align: center; padding: 0 20px; line-height: 1.5; }
-        .vp-retry {
-          font-size: 12px; color: white;
-          background: rgba(255,255,255,0.1);
-          border: 0.5px solid rgba(255,255,255,0.18);
-          border-radius: 9px; padding: 6px 18px; cursor: pointer;
-          transition: background 0.15s;
-        }
-        .vp-retry:hover { background: rgba(255,255,255,0.16); }
-
-        /* ─ Spinner ───────────────────────────────────────── */
-        .vp-spinner {
-          width: 44px; height: 44px; border-radius: 50%;
-          border: 2.5px solid rgba(255,255,255,0.1);
-          border-top-color: white;
-          animation: spin 0.82s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ─ Skip flash ────────────────────────────────────── */
-        .vp-skip {
-          position: absolute; top: 50%; transform: translateY(-50%);
-          display: flex; flex-direction: column; align-items: center; gap: 2px;
-          pointer-events: none; z-index: 5;
-          animation: skipFade 0.7s forwards;
-        }
-        .vp-skip.right { right: 10%; }
-        .vp-skip.left  { left: 10%;  }
-        .vp-skip-arr { font-size: 28px; font-weight: 900; color: white; line-height: 1; text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
-        .vp-skip-lbl { font-size: 11px; color: rgba(255,255,255,0.75); font-weight: 600; }
-        @keyframes skipFade { 0%{opacity:1} 55%{opacity:1} 100%{opacity:0} }
-
-        /* ─ Touch layer ───────────────────────────────────── */
-        .vp-touch { position: absolute; inset: 0; z-index: 1; }
-
-        /* ─ Controls ──────────────────────────────────────── */
-        .vp-ctrl-wrap {
-          position: absolute; inset: 0; z-index: 2;
-          display: flex; flex-direction: column; justify-content: flex-end;
-          background: linear-gradient(to top, rgba(0,0,0,0.94) 0%, rgba(0,0,0,0.22) 40%, transparent 68%);
-          transition: opacity 0.22s ease;
-          pointer-events: none;
-        }
-        .vp-ctrl-wrap.on  { opacity: 1; }
-        .vp-ctrl-wrap.off { opacity: 0; }
-        .vp-ctrl-wrap.on > * { pointer-events: auto; }
-
-        /* ─ Seek ──────────────────────────────────────────── */
-        .vp-seek-area { padding: 0 14px 2px; }
-        .vp-seek-track {
-          position: relative; height: 24px; cursor: pointer; touch-action: none;
-          display: flex; align-items: center;
-        }
-        .vp-seek-bg {
-          position: absolute; inset: 0; margin: auto;
-          height: 4px; border-radius: 4px;
-          background: rgba(255,255,255,0.18);
-        }
-        .vp-seek-buf {
-          position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-          height: 4px; border-radius: 4px;
-          background: rgba(255,255,255,0.22);
-          pointer-events: none;
-        }
-        .vp-seek-prog {
-          position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-          height: 4px; border-radius: 4px;
-          background: linear-gradient(90deg, #818cf8, #6366f1);
-          pointer-events: none;
-        }
-        .vp-seek-thumb {
-          position: absolute; top: 50%;
-          width: 16px; height: 16px; border-radius: 50%;
-          background: white;
-          transform: translate(-50%, -50%);
-          box-shadow: 0 1px 8px rgba(0,0,0,0.5);
-          pointer-events: none;
-          transition: transform 0.12s;
-        }
-        .vp-seek-track:hover .vp-seek-thumb,
-        .vp-seek-track:active .vp-seek-thumb { transform: translate(-50%,-50%) scale(1.3); }
-        .vp-times {
-          display: flex; justify-content: space-between; padding: 3px 2px 0;
-          font-size: 11px; font-family: 'Courier New', monospace;
-          color: rgba(255,255,255,0.45);
-        }
-
-        /* ─ Controls row ──────────────────────────────────── */
-        .vp-row {
-          display: flex; align-items: center; gap: 2px;
-          padding: 0 8px 12px;
-        }
-        .vpb {
-          width: 36px; height: 36px; min-width: 36px;
-          display: flex; align-items: center; justify-content: center;
-          color: white; border-radius: 8px;
-          border: none; background: transparent;
-          cursor: pointer; flex-shrink: 0;
-          transition: color 0.15s, background 0.15s, transform 0.1s;
-        }
-        .vpb:hover { color: #a5b4fc; background: rgba(255,255,255,0.09); }
-        .vpb:active { transform: scale(0.85); }
-        .vpa { color: #a5b4fc !important; }
-        .vp-vol {
-          width: 68px; accent-color: #818cf8; cursor: pointer;
-        }
-        .vp-spbadge {
-          font-size: 10px; font-family: monospace;
-          background: rgba(129,140,248,0.22); color: #a5b4fc;
-          padding: 2px 7px; border-radius: 5px; margin-right: 2px; flex-shrink: 0;
-        }
-
-        /* Desktop/mobile visibility */
-        .vp-d { display: none !important; }
-        @media (min-width: 580px) {
-          .vp-d { display: flex !important; }
-          .vp-m { display: none !important; }
-          .vp-vol { display: block !important; }
-        }
-        .vp-m { display: flex !important; }
-
-        /* ─ Settings panel ────────────────────────────────── */
-        .vp-spanel {
-          position: absolute; bottom: 48px; right: 0;
-          width: min(240px, 88vw);
-          background: rgba(8,8,16,0.98);
-          border: 0.5px solid rgba(255,255,255,0.12);
-          border-radius: 14px; overflow: hidden;
-          z-index: 50; box-shadow: 0 8px 40px rgba(0,0,0,0.8);
-          animation: spOpen 0.18s cubic-bezier(0.34,1.56,0.64,1);
-        }
-        @keyframes spOpen {
-          from { opacity: 0; transform: scale(0.9) translateY(10px); }
-          to   { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        .vp-stabs {
-          display: flex; position: relative;
-          border-bottom: 0.5px solid rgba(255,255,255,0.1);
-        }
-        .vp-stab {
-          flex: 1; padding: 12px 0; font-size: 12px; font-weight: 600;
-          color: rgba(255,255,255,0.35);
-          background: none; border: none; cursor: pointer;
-          transition: color 0.15s;
-        }
-        .vp-stab.on { color: #a5b4fc; }
-        .vp-sclose {
-          position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-          color: rgba(255,255,255,0.3); background: none; border: none;
-          cursor: pointer; display: flex; align-items: center; padding: 5px;
-          border-radius: 6px; transition: background 0.15s;
-        }
-        .vp-sclose:hover { background: rgba(255,255,255,0.08); }
-        .vp-sgrid {
-          display: grid; grid-template-columns: repeat(3, 1fr);
-          gap: 6px; padding: 10px;
-        }
-        .vp-sbtn {
-          padding: 11px 0; border-radius: 10px;
-          font-size: 12px; font-weight: 600;
-          background: rgba(255,255,255,0.06);
-          color: rgba(255,255,255,0.6);
-          border: none; cursor: pointer;
-          transition: background 0.15s, color 0.15s, transform 0.1s;
-        }
-        .vp-sbtn:hover { background: rgba(255,255,255,0.1); color: white; }
-        .vp-sbtn:active { transform: scale(0.93); }
-        .vp-sbtn.on { background: #4f46e5; color: white; }
-        .vp-sqlist { padding: 8px; max-height: 200px; overflow-y: auto; }
-        .vp-sqitem {
-          width: 100%; display: flex; align-items: center; justify-content: space-between;
-          padding: 9px 12px; border-radius: 9px;
-          font-size: 13px; font-weight: 500;
-          color: rgba(255,255,255,0.6);
-          background: transparent; border: none; cursor: pointer;
-          transition: background 0.12s, color 0.12s;
-          text-align: left;
-        }
-        .vp-sqitem.on { background: #4f46e5; color: white; }
-        .vp-sqitem:not(.on):hover { background: rgba(255,255,255,0.07); }
-        .vp-sqrec { font-size: 10px; color: rgba(255,255,255,0.28); }
-        .vp-sqitem.on .vp-sqrec { color: rgba(255,255,255,0.55); }
-
-        /* ─ PiP badge ─────────────────────────────────────── */
-        .vp-pip {
-          position: absolute; top: 10px; left: 10px; z-index: 10;
-          background: rgba(79,70,229,0.9); color: white;
-          font-size: 11px; font-weight: 700;
-          padding: 3px 10px; border-radius: 7px;
-          pointer-events: none; letter-spacing: 0.04em;
-        }
-
-        /* ─ YouTube shell ─────────────────────────────────── */
-        .yt-shell {
-          position: relative; width: 100%; aspect-ratio: 16/9; background: #0d0d0d;
-        }
-        .yt-err {
-          width: 100%; aspect-ratio: 16/9; background: #0d0d0d;
-          display: flex; flex-direction: column;
-          align-items: center; justify-content: center; gap: 8px;
-        }
-
-        /* ─ Mobile tweaks ─────────────────────────────────── */
-        @media (max-width: 380px) {
-          .vp-row { padding: 0 4px 10px; gap: 0; }
-          .vpb { width: 30px; height: 30px; min-width: 30px; }
-          .vp-wrap { padding: 12px 10px 32px; }
-          .vp-title { font-size: 15px; }
-        }
-
-        /* ─ Scrollbar for quality list ────────────────────── */
-        .vp-sqlist::-webkit-scrollbar { width: 3px; }
-        .vp-sqlist::-webkit-scrollbar-track { background: transparent; }
-        .vp-sqlist::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
-      `}</style>
     </div>
   )
 }
