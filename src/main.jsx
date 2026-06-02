@@ -4,6 +4,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import App from './App.jsx'
 import './index.css'
+import useAuthStore from './store/authStore'
+
+// ── FIX: axios interceptor ko live Zustand store access dena ────────────
+// axios.js mein request interceptor window.__authStore se seedha
+// accessToken padhta hai — isse localStorage race condition fix hoti hai
+// jo refresh ke baad "unauthorized" cause karti thi.
+window.__authStore = useAuthStore
 
 // Dynamically set favicon from app logo API
 fetch('/api/public/logo')
