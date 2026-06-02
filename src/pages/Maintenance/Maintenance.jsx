@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export default function Maintenance() {
   const [message] = useState(
@@ -7,28 +7,28 @@ export default function Maintenance() {
   const [dots, setDots] = useState('')
   const [progress, setProgress] = useState(0)
 
-  // ── FIXED: Removed auto-polling that was causing redirect loops
-  // Instead: Show maintenance page, user can manually refresh
-  // When admin turns off maintenance, user's next API call will work
-  // and they'll be redirected back automatically by axios interceptor
+  useEffect(() => {
+    document.title = 'Under Maintenance | AR Education'
 
-  // Just animate the dots and progress bar
-  const dotsInterval = setInterval(() => {
-    setDots(d => d.length >= 3 ? '' : d + '.')
-  }, 500)
+    // Animate dots
+    const dotsInterval = setInterval(() => {
+      setDots(d => d.length >= 3 ? '' : d + '.')
+    }, 500)
 
-  let p = 0
-  const progressInterval = setInterval(() => {
-    p += Math.random() * 1.5
-    if (p >= 100) p = 0
-    setProgress(Math.min(p, 100))
-  }, 80)
+    // Animate progress bar
+    let p = 0
+    const progressInterval = setInterval(() => {
+      p += Math.random() * 1.5
+      if (p >= 100) p = 0
+      setProgress(Math.min(p, 100))
+    }, 80)
 
-  // Cleanup intervals on unmount
-  return () => {
-    clearInterval(dotsInterval)
-    clearInterval(progressInterval)
-  }
+    // Cleanup
+    return () => {
+      clearInterval(dotsInterval)
+      clearInterval(progressInterval)
+    }
+  }, [])
 
   return (
     <div
