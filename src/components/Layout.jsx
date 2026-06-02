@@ -22,6 +22,21 @@ const NAV = [
   { to: '/contact', icon: Phone, label: 'Contact' },
 ]
 
+// ── FIX: Query config for polling queries (notif-count, chat-unread-count)
+// Don't retry on 403 (blocked) or 503 (maintenance) — these are terminal states
+// For other errors, retry max 2 times with exponential backoff
+const POLL_QUERY_CONFIG = {
+  retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  retry: (failureCount, error) => {
+    // Terminal states: 403 = blocked, 503 = maintenance
+    if (error?.response?.status === 403 || error?.response?.status === 503) {
+      return false  // Don't retry — let axios interceptor handle redirect
+    }
+    // Other errors (network, 500): retry with backoff (max 2 times)
+    return failureCount < 2
+  }
+}
+
 // ── Badge: count capped at 99+, hidden when 0 ────────────────────────────────
 function Badge({ count, position = 'sidebar' }) {
   if (!count || count <= 0) return null
@@ -114,19 +129,23 @@ export default function Layout() {
   }, [])
 
   // ── Notification unread count ─────────────────────────────────────────────
+  // FIX: Added POLL_QUERY_CONFIG to stop retrying on 403/503 errors
   const { data: countData } = useQuery({
     queryKey: ['notif-count'],
     queryFn: () => api.get('/notifications/count').then(r => r.data),
     refetchInterval: 15000,
     enabled: !isQuizPage,
+    ...POLL_QUERY_CONFIG,  // Apply the fix
   })
 
   // ── Doubt Chat unread count ───────────────────────────────────────────────
+  // FIX: Added POLL_QUERY_CONFIG to stop retrying on 403/503 errors
   const { data: chatCountData } = useQuery({
     queryKey: ['chat-unread-count'],
     queryFn: () => api.get('/chat/unread-count').then(r => r.data),
     refetchInterval: 15000,
     enabled: !isQuizPage,
+    ...POLL_QUERY_CONFIG,  // Apply the fix
   })
 
   const { data: appConfig } = useQuery({
