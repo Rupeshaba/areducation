@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import api from '../../api/axios'
+import { useState } from 'react'
 
 export default function Maintenance() {
   const [message] = useState(
@@ -8,66 +6,29 @@ export default function Maintenance() {
   )
   const [dots, setDots] = useState('')
   const [progress, setProgress] = useState(0)
-  const navigate = useNavigate()
 
-  useEffect(() => {
-    document.title = 'Under Maintenance | AR Education'
+  // ── FIXED: Removed auto-polling that was causing redirect loops
+  // Instead: Show maintenance page, user can manually refresh
+  // When admin turns off maintenance, user's next API call will work
+  // and they'll be redirected back automatically by axios interceptor
 
-    // On load — check if maintenance is still ON
-    // If OFF, redirect to home
-    const checkMaintenance = async () => {
-      try {
-        await api.get('/public/logo') // public route, not blocked by maintenance
-        // If we reach here without 503, check heartbeat
-        const res = await fetch('/api/user/heartbeat', { method: 'POST' })
-        if (res.status !== 503) {
-          sessionStorage.removeItem('maintenanceMessage')
-          navigate('/', { replace: true })
-        }
-      } catch (e) {
-        if (e.response?.status !== 503) {
-          sessionStorage.removeItem('maintenanceMessage')
-          navigate('/', { replace: true })
-        }
-      }
-    }
-    checkMaintenance()
+  // Just animate the dots and progress bar
+  const dotsInterval = setInterval(() => {
+    setDots(d => d.length >= 3 ? '' : d + '.')
+  }, 500)
 
-    // Poll every 30s to auto-redirect when maintenance ends
-    const pollInterval = setInterval(async () => {
-      try {
-        const res = await fetch('/api/health')
-        const data = await res.json()
-        // Try a non-public route to check if maintenance is off
-        const check = await fetch('/api/public/logo')
-        if (check.ok) {
-          // Also check a protected route
-          const protected_check = await fetch('/api/store/featured')
-          if (protected_check.status !== 503) {
-            sessionStorage.removeItem('maintenanceMessage')
-            navigate('/', { replace: true })
-          }
-        }
-      } catch (e) {}
-    }, 30000)
+  let p = 0
+  const progressInterval = setInterval(() => {
+    p += Math.random() * 1.5
+    if (p >= 100) p = 0
+    setProgress(Math.min(p, 100))
+  }, 80)
 
-    const dotsInterval = setInterval(() => {
-      setDots(d => d.length >= 3 ? '' : d + '.')
-    }, 500)
-
-    let p = 0
-    const progressInterval = setInterval(() => {
-      p += Math.random() * 1.5
-      if (p >= 100) p = 0
-      setProgress(Math.min(p, 100))
-    }, 80)
-
-    return () => {
-      clearInterval(pollInterval)
-      clearInterval(dotsInterval)
-      clearInterval(progressInterval)
-    }
-  }, [navigate])
+  // Cleanup intervals on unmount
+  return () => {
+    clearInterval(dotsInterval)
+    clearInterval(progressInterval)
+  }
 
   return (
     <div
@@ -110,7 +71,7 @@ export default function Maintenance() {
             <div style={{ height: 4, borderRadius: 100, background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
               <div style={{ height: '100%', borderRadius: 100, background: 'linear-gradient(90deg, #6366f1, #818cf8)', width: `${progress}%`, transition: 'width 0.08s linear', boxShadow: '0 0 12px rgba(99,102,241,0.6)' }} />
             </div>
-            <p style={{ fontSize: 11, color: 'rgba(129,140,248,0.6)', marginTop: 8, fontFamily: 'Sora, system-ui, sans-serif' }}>Maintenance in progress • Auto-refreshing every 30s</p>
+            <p style={{ fontSize: 11, color: 'rgba(129,140,248,0.6)', marginTop: 8, fontFamily: 'Sora, system-ui, sans-serif' }}>Maintenance in progress • Click refresh to check status</p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left' }}>
@@ -132,6 +93,34 @@ export default function Maintenance() {
               </div>
             ))}
           </div>
+
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              marginTop: 28,
+              padding: '12px 28px',
+              background: 'linear-gradient(135deg, #6366f1, #818cf8)',
+              border: 'none',
+              borderRadius: 10,
+              color: '#fff',
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'Sora, system-ui, sans-serif',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 4px 20px rgba(99,102,241,0.3)',
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.boxShadow = '0 6px 30px rgba(99,102,241,0.5)'
+              e.target.style.transform = 'translateY(-2px)'
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.boxShadow = '0 4px 20px rgba(99,102,241,0.3)'
+              e.target.style.transform = 'translateY(0)'
+            }}
+          >
+            🔄 Check Status
+          </button>
         </div>
         <p style={{ textAlign: 'center', marginTop: 24, fontSize: 12, color: 'rgba(107,114,128,0.7)', fontFamily: 'Sora, system-ui, sans-serif' }}>AR Education • Thank you for your patience</p>
       </div>
