@@ -5,20 +5,50 @@ const api = axios.create({
   timeout: 30000,
 })
 
-// Request interceptor - attach token
-api.interceptors.request.use((config) => {
+// ── FIX: localStorage race condition fix ──────────────────────────────────
+// Problem: Zustand persist middleware localStorage pe async write karta hai.
+// Token refresh ke baad naya accessToken store mein hota hai lekin
+// localStorage mein thodi der baad aata hai — is beech interceptor
+// purana expired token bhej deta tha → unauthorized aa jaata tha.
+// Solution: Pehle live Zustand store check karo, fallback localStorage.
+function getAuthToken() {
   try {
+    if (window.__authStore) {
+      const token = window.__authStore.getState().accessToken
+      if (token) return token
+    }
     const stored = localStorage.getItem('ar-edu-auth')
     if (stored) {
       const parsed = JSON.parse(stored)
-      const accessToken = parsed?.state?.accessToken
-      if (accessToken) {
-        config.headers.Authorization = `Bearer ${accessToken}`
-      }
+      return parsed?.state?.accessToken || null
     }
   } catch (e) {
-    console.error('Error parsing auth from localStorage:', e)
+    console.error('Error parsing auth token:', e)
     localStorage.removeItem('ar-edu-auth')
+  }
+  return null
+}
+
+function getRefreshToken() {
+  try {
+    if (window.__authStore) {
+      const token = window.__authStore.getState().refreshToken
+      if (token) return token
+    }
+    const stored = localStorage.getItem('ar-edu-auth')
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      return parsed?.state?.refreshToken || null
+    }
+  } catch (e) {}
+  return null
+}
+
+// Request interceptor - attach token
+api.interceptors.request.use((config) => {
+  const accessToken = getAuthToken()
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`
   }
   return config
 })
@@ -106,11 +136,7 @@ api.interceptors.response.use(
       isRefreshing = true
 
       try {
-        const stored = localStorage.getItem('ar-edu-auth')
-        if (!stored) throw new Error('No stored auth')
-
-        const parsed = JSON.parse(stored)
-        const refreshToken = parsed?.state?.refreshToken
+        const refreshToken = getRefreshToken()
         if (!refreshToken) throw new Error('No refresh token')
 
         const { data } = await axios.post(
