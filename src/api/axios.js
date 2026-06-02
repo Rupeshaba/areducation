@@ -72,6 +72,7 @@ api.interceptors.response.use(
     }
 
     // Blocked account → force logout immediately
+    // FIXED: Stop all polling queries from retrying
     if (error.response?.status === 403 && error.response?.data?.error === 'blocked') {
       const { default: useAuthStore } = await import('../store/authStore')
       useAuthStore.getState().logout()
