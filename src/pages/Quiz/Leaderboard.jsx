@@ -53,17 +53,20 @@ function ShimmerPodium() {
 function PodiumCard({ entry, position, delay }) {
   if (!entry) return null
 
-  const heights = ['h-28', 'h-40', 'h-32']
+  // NOTE: these arrays are indexed by `idx = position - 1`, i.e. RANK order
+  // (rank1/gold, rank2/silver, rank3/bronze) — NOT by visual left-to-right order.
+  // (Visual placement is handled separately below by the `positions` array.)
+  const heights = ['h-40', 'h-32', 'h-28']
   const positions = ['order-2', 'order-1', 'order-3']
   const gradients = [
-    'from-gray-400/20 to-gray-500/5 border-gray-400/30',
     'from-amber-500/25 to-yellow-500/10 border-amber-500/40',
+    'from-gray-400/20 to-gray-500/5 border-gray-400/30',
     'from-orange-700/20 to-orange-800/5 border-orange-600/30'
   ]
-  const badges = ['🥈', '🥇', '🥉']
-  const textColors = ['text-gray-300', 'text-amber-400', 'text-orange-400']
-  const iconSizes = ['w-14 h-14', 'w-18 h-18', 'w-14 h-14']
-  const crownSizes = ['top-[-10px]', 'top-[-16px]', 'top-[-10px]']
+  const badges = ['🥇', '🥈', '🥉']
+  const textColors = ['text-amber-400', 'text-gray-300', 'text-orange-400']
+  const iconSizes = ['w-18 h-18', 'w-14 h-14', 'w-14 h-14']
+  const crownSizes = ['top-[-16px]', 'top-[-10px]', 'top-[-10px]']
 
   const idx = position - 1
 
@@ -105,7 +108,7 @@ function PodiumCard({ entry, position, delay }) {
       </div>
 
       {/* Points */}
-      <div className="text-xs text-gray-500 font-medium mb-3">{entry.points.toLocaleString()} pts</div>
+      <div className="text-xs text-gray-500 font-medium mb-3">{(entry.points || 0).toLocaleString()} pts</div>
 
       {/* Podium Bar */}
       <div className={`w-20 sm:w-24 ${heights[idx]} rounded-t-2xl bg-gradient-to-b ${gradients[idx]} border-t border-x flex items-end justify-center pb-3 relative overflow-hidden`}>
@@ -181,7 +184,7 @@ function ListRow({ entry, index, isMe }) {
         {/* Points */}
         <div className="flex-shrink-0 text-right">
           <div className={`font-black text-base ${isMe ? 'text-primary-400' : rankStyle ? rankStyle.text : 'text-white'}`}>
-            {entry.points.toLocaleString()}
+            {(entry.points || 0).toLocaleString()}
           </div>
           <div className="text-[10px] text-gray-600 uppercase tracking-wider font-medium">points</div>
         </div>
