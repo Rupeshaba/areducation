@@ -350,8 +350,7 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
   return (
     <div
       ref={containerRef}
-      className="relative bg-black w-full select-none touch-none"
-      style={{ aspectRatio: '16/9', borderRadius: '14px', overflow: 'hidden' }}
+      className="relative bg-black w-full select-none touch-none aspect-video overflow-hidden rounded-2xl"
       onMouseMove={resetHide}
       onMouseLeave={() => { if (videoRef.current && !videoRef.current.paused) setShowCtrl(false) }}
       onTouchStart={resetHide}
@@ -369,32 +368,21 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
       {/* Buffering spinner */}
       {loading && !error && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div
-            className="rounded-full animate-spin"
-            style={{
-              width: 44, height: 44,
-              border: '2.5px solid rgba(255,255,255,0.12)',
-              borderTopColor: 'white',
-            }}
-          />
+          <div className="w-10 h-10 rounded-full border-2 border-white/20 border-t-white animate-spin" />
         </div>
       )}
 
       {/* Error state */}
       {error && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3"
-          style={{ background: 'rgba(0,0,0,0.88)' }}>
-          <AlertCircle size={30} style={{ color: '#f87171' }} />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/90">
+          <AlertCircle size={30} className="text-red-400" />
           <p className="text-white text-sm text-center px-6 leading-relaxed">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            style={{
-              fontSize: 12, color: 'white',
-              background: 'rgba(255,255,255,0.1)',
-              border: '0.5px solid rgba(255,255,255,0.2)',
-              borderRadius: 10, padding: '6px 16px',
-            }}
-          >Retry</button>
+            className="text-xs text-white bg-white/10 border border-white/20 rounded-lg px-4 py-1.5"
+          >
+            Retry
+          </button>
         </div>
       )}
 
@@ -402,34 +390,31 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
       {skipFlash && (
         <div
           key={skipFlash.ts}
-          className="absolute pointer-events-none flex flex-col items-center"
-          style={{
-            top: '50%', transform: 'translateY(-50%)',
-            [skipFlash.dir === 'right' ? 'right' : 'left']: '10%',
-            gap: 2, animation: 'skipfadeout 0.65s forwards',
-          }}
+          className={`absolute top-1/2 -translate-y-1/2 pointer-events-none flex flex-col items-center gap-0.5 animate-skipFlash ${
+            skipFlash.dir === 'right' ? 'right-[10%]' : 'left-[10%]'
+          }`}
         >
-          <span style={{ fontSize: 24, fontWeight: 900, color: 'white', lineHeight: 1 }}>
+          <span className="text-2xl font-black text-white leading-none">
             {skipFlash.dir === 'right' ? '▶▶' : '◀◀'}
           </span>
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>10s</span>
+          <span className="text-[11px] font-semibold text-white/75">10s</span>
         </div>
       )}
 
-      {/* Controls gradient + UI */}
+      {/* Controls overlay */}
       <div
-        className="absolute inset-0 flex flex-col justify-end pointer-events-none"
+        className={`absolute inset-0 flex flex-col justify-end pointer-events-none transition-opacity duration-300 ${
+          showCtrl || !playing ? 'opacity-100' : 'opacity-0'
+        }`}
         style={{
-          background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.25) 40%, transparent 68%)',
-          opacity: showCtrl || !playing ? 1 : 0,
-          transition: 'opacity 0.22s ease',
+          background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 50%, transparent 75%)',
         }}
       >
         {/* ── Seek bar ── */}
-        <div className="pointer-events-auto" style={{ padding: '0 14px 4px' }}>
+        <div className="pointer-events-auto px-3 pb-1 sm:px-4">
           <div
             ref={seekbarRef}
-            style={{ padding: '8px 0', cursor: 'pointer' }}
+            className="py-2 cursor-pointer touch-none"
             onClick={onSeekClick}
             onTouchStart={onSeekStart}
             onTouchMove={onSeekMove}
@@ -443,301 +428,236 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
             aria-valuemin={0}
             aria-valuemax={Math.round(duration)}
           >
-            <div
-              className="relative rounded-full"
-              style={{ height: 4, background: 'rgba(255,255,255,0.2)' }}
-            >
+            <div className="relative h-1 sm:h-1.5 bg-white/20 rounded-full">
               {/* Buffer */}
               <div
-                className="absolute inset-y-0 left-0 rounded-full"
-                style={{ width: `${buffPct}%`, background: 'rgba(255,255,255,0.22)' }}
+                className="absolute inset-y-0 left-0 rounded-full bg-white/20 transition-all"
+                style={{ width: `${buffPct}%` }}
               />
               {/* Progress */}
               <div
-                className="absolute inset-y-0 left-0 rounded-full"
-                style={{ width: `${pct}%`, background: '#818cf8', transition: 'width 0.05s linear' }}
+                className="absolute inset-y-0 left-0 rounded-full bg-indigo-400 transition-all"
+                style={{ width: `${pct}%` }}
               />
               {/* Thumb */}
               <div
-                className="absolute rounded-full"
-                style={{
-                  width: 14, height: 14,
-                  background: 'white',
-                  top: '50%', transform: 'translate(-50%, -50%)',
-                  left: `${pct}%`,
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.5)',
-                  transition: 'left 0.05s linear',
-                }}
+                className="absolute top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-full shadow-lg transition-all"
+                style={{ left: `${pct}%` }}
               />
             </div>
           </div>
         </div>
 
         {/* ── Controls row ── */}
-        <div
-          className="pointer-events-auto flex items-center flex-wrap"
-          style={{ padding: '0 8px 12px', gap: 2 }}
-        >
+        <div className="pointer-events-auto flex items-center gap-1 px-2 pb-3 sm:px-3 sm:pb-4 flex-wrap">
           {/* Play / Pause */}
-          <button onClick={togglePlay} className="vp-btn" aria-label={playing ? 'Pause' : 'Play'}>
-            {playing
-              ? <Pause size={18} style={{ fill: 'currentColor', flexShrink: 0 }} />
-              : <Play  size={18} style={{ fill: 'currentColor', marginLeft: 2, flexShrink: 0 }} />}
+          <button
+            onClick={togglePlay}
+            className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors"
+            aria-label={playing ? 'Pause' : 'Play'}
+          >
+            {playing ? <Pause size={20} className="fill-current" /> : <Play size={20} className="fill-current ml-0.5" />}
           </button>
 
           {/* Skip */}
-          <button onClick={() => doSkip(-10)} className="vp-btn" aria-label="Rewind 10s">
-            <SkipBack size={16} />
+          <button onClick={() => doSkip(-10)} className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors">
+            <SkipBack size={18} />
           </button>
-          <button onClick={() => doSkip(10)} className="vp-btn" aria-label="Forward 10s">
-            <SkipForward size={16} />
+          <button onClick={() => doSkip(10)} className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors">
+            <SkipForward size={18} />
           </button>
 
           {/* Volume control */}
-          <button onClick={toggleMute} className="vp-btn" aria-label={muted ? 'Unmute' : 'Mute'}>
-            {muted || volume === 0 ? <VolumeX size={16} /> : <Volume2 size={16} />}
+          <button onClick={toggleMute} className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors">
+            {muted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
-          
-          {/* Volume slider - desktop only */}
-          <div className="hidden sm:block">
+
+          {/* Volume slider - desktop only, on mobile it's hidden but we can add a popover if needed */}
+          <div className="hidden sm:flex items-center w-20">
             <input
               type="range" min="0" max="1" step="0.05"
               value={muted ? 0 : volume}
               onChange={e => changeVol(parseFloat(e.target.value))}
               aria-label="Volume"
-              style={{ width: 64, accentColor: '#818cf8', cursor: 'pointer' }}
+              className="w-full h-1 bg-white/30 rounded-full appearance-none cursor-pointer accent-indigo-400"
               onClick={e => e.stopPropagation()}
             />
           </div>
 
           {/* Time */}
-          <span
-            style={{
-              fontSize: 11, fontFamily: 'var(--font-mono, monospace)',
-              color: 'rgba(255,255,255,0.9)', marginLeft: 4,
-              whiteSpace: 'nowrap', flexShrink: 0, tabularNums: true,
-            }}
-          >
+          <span className="text-xs sm:text-sm font-mono text-white/90 ml-1 whitespace-nowrap tabular-nums flex-shrink-0">
             {fmtTime(currentTime)}
             {duration > 0 && (
-              <span style={{ color: 'rgba(255,255,255,0.38)' }}> / {fmtTime(duration)}</span>
+              <span className="text-white/40"> / {fmtTime(duration)}</span>
             )}
           </span>
 
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
 
           {/* Speed badge */}
           {speed !== 1 && (
-            <span
-              className="hidden sm:inline-block"
-              style={{
-                fontSize: 10, fontFamily: 'var(--font-mono, monospace)',
-                background: 'rgba(129,140,248,0.2)', color: '#a5b4fc',
-                padding: '2px 6px', borderRadius: 5, marginRight: 2, flexShrink: 0,
-              }}
-            >{speed}x</span>
+            <span className="hidden sm:inline-block text-[10px] font-mono bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-md">
+              {speed}x
+            </span>
           )}
 
           {/* PiP */}
           {pipSupported && (
             <button
               onClick={togglePip}
-              className="vp-btn hidden sm:inline-flex"
+              className={`hidden sm:flex w-10 h-10 sm:w-12 sm:h-12 items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors ${pip ? 'text-indigo-400' : ''}`}
               aria-label="Picture in Picture"
-              style={pip ? { color: '#a5b4fc' } : {}}
             >
-              <PictureInPicture2 size={14} />
+              <PictureInPicture2 size={16} />
             </button>
           )}
 
           {/* Settings */}
-          <div style={{ position: 'relative' }}>
+          <div className="relative">
             <button
               onClick={e => { e.stopPropagation(); setShowSettings(v => !v) }}
-              className="vp-btn"
+              className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors ${showSettings ? 'text-indigo-400' : ''}`}
               aria-label="Settings"
               aria-expanded={showSettings}
-              style={showSettings ? { color: '#a5b4fc' } : {}}
             >
-              <Settings size={15} />
+              <Settings size={16} />
             </button>
 
             {showSettings && (
               <>
                 {/* Backdrop */}
-                <div 
-                  className="fixed inset-0 z-40 sm:hidden"
+                <div
+                  className="fixed inset-0 z-40 sm:hidden bg-black/60"
                   onClick={() => setShowSettings(false)}
-                  style={{ background: 'rgba(0,0,0,0.6)' }}
                 />
-                
                 {/* Settings Panel */}
                 <div
                   onClick={e => e.stopPropagation()}
-                  className="fixed bottom-0 left-0 right-0 z-50 sm:absolute sm:bottom-full sm:right-0 sm:left-auto sm:top-auto sm:mb-2"
+                  className="fixed bottom-0 left-0 right-0 z-50 sm:absolute sm:bottom-full sm:right-0 sm:left-auto sm:top-auto sm:mb-2 sm:w-72"
                   style={{
-                    background: 'rgba(10,10,18,0.98)',
+                    background: 'rgba(15,15,25,0.98)',
                     backdropFilter: 'blur(20px)',
                     borderTopLeftRadius: '20px',
                     borderTopRightRadius: '20px',
-                    border: '0.5px solid rgba(255,255,255,0.12)',
+                    border: '0.5px solid rgba(255,255,255,0.08)',
                     overflow: 'hidden',
                     maxHeight: '80vh',
-                    ...(window.innerWidth >= 640 && {
-                      width: 260,
-                      borderRadius: 16,
-                      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)',
-                    })
+                    boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)',
                   }}
                 >
                   {/* Header */}
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    padding: '16px 16px',
-                    borderBottom: '0.5px solid rgba(255,255,255,0.1)'
-                  }}>
-                    <div style={{ display: 'flex', gap: 20 }}>
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                    <div className="flex gap-4">
                       <button
                         onClick={() => setSettingsTab('speed')}
-                        style={{
-                          fontSize: 15, fontWeight: 600,
-                          color: settingsTab === 'speed' ? '#a5b4fc' : 'rgba(255,255,255,0.5)',
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          padding: '4px 0',
-                        }}
-                      >Speed</button>
+                        className={`text-sm font-semibold py-1 border-b-2 transition-colors ${
+                          settingsTab === 'speed'
+                            ? 'border-indigo-400 text-indigo-400'
+                            : 'border-transparent text-white/50'
+                        }`}
+                      >
+                        Speed
+                      </button>
                       {levels.length > 0 && (
                         <button
                           onClick={() => setSettingsTab('quality')}
-                          style={{
-                            fontSize: 15, fontWeight: 600,
-                            color: settingsTab === 'quality' ? '#a5b4fc' : 'rgba(255,255,255,0.5)',
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            padding: '4px 0',
-                          }}
-                        >Quality</button>
+                          className={`text-sm font-semibold py-1 border-b-2 transition-colors ${
+                            settingsTab === 'quality'
+                              ? 'border-indigo-400 text-indigo-400'
+                              : 'border-transparent text-white/50'
+                          }`}
+                        >
+                          Quality
+                        </button>
                       )}
                     </div>
                     <button
                       onClick={() => setShowSettings(false)}
-                      aria-label="Close settings"
-                      style={{
-                        color: 'rgba(255,255,255,0.5)',
-                        background: 'none', border: 'none',
-                        cursor: 'pointer', padding: 4,
-                      }}
-                    ><X size={18} /></button>
+                      className="text-white/50 hover:text-white p-1 rounded-lg transition-colors"
+                    >
+                      <X size={18} />
+                    </button>
                   </div>
 
-                  {settingsTab === 'speed' && (
-                    <div style={{ 
-                      padding: 16,
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', 
-                      gap: 8,
-                      maxHeight: '60vh',
-                      overflowY: 'auto'
-                    }}>
-                      {SPEEDS.map(s => (
-                        <button
-                          key={s}
-                          onClick={() => changeSpeed(s)}
-                          style={{
-                            padding: '12px 0', borderRadius: 12, fontSize: 14, fontWeight: 500,
-                            background: speed === s ? '#4f46e5' : 'rgba(255,255,255,0.06)',
-                            color: speed === s ? 'white' : 'rgba(255,255,255,0.7)',
-                            border: 'none', cursor: 'pointer',
-                            transition: 'all 0.15s',
-                          }}
-                        >{s}x</button>
-                      ))}
-                    </div>
-                  )}
+                  {/* Content */}
+                  <div className="p-4 max-h-[60vh] overflow-y-auto">
+                    {settingsTab === 'speed' && (
+                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                        {SPEEDS.map(s => (
+                          <button
+                            key={s}
+                            onClick={() => changeSpeed(s)}
+                            className={`py-2.5 rounded-xl text-sm font-medium transition-all ${
+                              speed === s
+                                ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
+                                : 'bg-white/5 text-white/70 hover:bg-white/10'
+                            }`}
+                          >
+                            {s}x
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
-                  {settingsTab === 'quality' && levels.length > 0 && (
-                    <div style={{ 
-                      padding: 8, 
-                      maxHeight: '60vh', 
-                      overflowY: 'auto' 
-                    }}>
-                      {[-1, ...levels.map((_, i) => i)].map(l => (
-                        <button
-                          key={l}
-                          onClick={() => changeQuality(l)}
-                          style={{
-                            width: '100%', display: 'flex',
-                            alignItems: 'center', justifyContent: 'space-between',
-                            padding: '12px 16px', borderRadius: 12,
-                            fontSize: 14, fontWeight: 500,
-                            background: currentLevel === l ? '#4f46e5' : 'transparent',
-                            color: currentLevel === l ? 'white' : 'rgba(255,255,255,0.7)',
-                            border: 'none', cursor: 'pointer',
-                            transition: 'all 0.12s',
-                            marginBottom: 4,
-                          }}
-                        >
-                          <span>{qualityLabel(l)}</span>
-                          {l === -1 && (
-                            <span style={{
-                              fontSize: 11,
-                              color: currentLevel === l ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.3)',
-                            }}>Auto</span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                    {settingsTab === 'quality' && levels.length > 0 && (
+                      <div className="space-y-1.5">
+                        {[-1, ...levels.map((_, i) => i)].map(l => (
+                          <button
+                            key={l}
+                            onClick={() => changeQuality(l)}
+                            className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                              currentLevel === l
+                                ? 'bg-indigo-500 text-white'
+                                : 'text-white/70 hover:bg-white/5'
+                            }`}
+                          >
+                            <span>{qualityLabel(l)}</span>
+                            {l === -1 && (
+                              <span className="text-[10px] text-white/40">Auto</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </>
             )}
           </div>
 
           {/* Fullscreen */}
-          <button onClick={toggleFS} className="vp-btn" aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}>
-            {fullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+          <button
+            onClick={toggleFS}
+            className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors"
+            aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          >
+            {fullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
           </button>
         </div>
       </div>
 
       {/* PiP indicator */}
       {pip && (
-        <div
-          style={{
-            position: 'absolute', top: 10, left: 10,
-            background: 'rgba(79,70,229,0.8)',
-            backdropFilter: 'blur(6px)',
-            color: 'white', fontSize: 11, fontWeight: 500,
-            padding: '3px 10px', borderRadius: 8,
-            pointerEvents: 'none',
-          }}
-        >PiP active</div>
+        <div className="absolute top-2 left-2 bg-indigo-500/80 backdrop-blur-sm text-white text-[10px] font-medium px-3 py-1 rounded-full pointer-events-none">
+          PiP
+        </div>
       )}
 
       <style>{`
-        .vp-btn {
-          width: 40px; height: 40px; min-width: 40px;
-          display: flex; align-items: center; justify-content: center;
-          color: white; border-radius: 10px; cursor: pointer;
-          border: none; background: transparent; flex-shrink: 0;
-          transition: all 0.15s;
+        @keyframes skipFlash {
+          0% { opacity: 1; transform: translateY(-50%) scale(1); }
+          50% { opacity: 1; transform: translateY(-50%) scale(1.1); }
+          100% { opacity: 0; transform: translateY(-50%) scale(1); }
         }
-        .vp-btn:active { 
-          background: rgba(255,255,255,0.15);
-          transform: scale(0.95);
+        .animate-skipFlash {
+          animation: skipFlash 0.65s ease-out forwards;
         }
-        @media(min-width:640px){
-          .vp-btn:hover { color: #a5b4fc; background: rgba(255,255,255,0.08); }
-          .vp-btn:active { transform: scale(0.87); }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
-        @keyframes skipfadeout { 
-          0%{ opacity: 1; transform: translateY(-50%) scale(1); } 
-          50%{ opacity: 1; transform: translateY(-50%) scale(1.1); }
-          100%{ opacity: 0; transform: translateY(-50%) scale(1); }
+        .animate-spin {
+          animation: spin 0.8s linear infinite;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .animate-spin { animation: spin 0.8s linear infinite; }
       `}</style>
     </div>
   )
@@ -757,61 +677,36 @@ function YouTubePlayer({ url, title }) {
 
   if (!embedSrc && !liveSrc) {
     return (
-      <div
-        style={{ aspectRatio: '16/9', display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', gap: 8,
-          background: '#0a0a0a', borderRadius: 14, padding: '0 16px' }}
-      >
-        <AlertCircle size={26} style={{ color: '#f87171' }} />
-        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, textAlign: 'center' }}>
-          YouTube URL parse nahi hua
-        </p>
-        <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11, wordBreak: 'break-all', maxWidth: 280, textAlign: 'center' }}>
-          {url}
-        </p>
+      <div className="aspect-video flex flex-col items-center justify-center gap-2 bg-[#0a0a0a] rounded-2xl p-4">
+        <AlertCircle size={26} className="text-red-400" />
+        <p className="text-white/45 text-sm text-center">YouTube URL parse nahi hua</p>
+        <p className="text-white/20 text-xs break-all max-w-xs text-center">{url}</p>
       </div>
     )
   }
 
   return (
-    <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: 14, overflow: 'hidden', background: '#0a0a0a' }}>
+    <div className="relative aspect-video bg-[#0a0a0a] rounded-2xl overflow-hidden">
       {loading && (
-        <div style={{
-          position: 'absolute', inset: 0, display: 'flex',
-          alignItems: 'center', justifyContent: 'center',
-          background: '#0a0a0a', zIndex: 10,
-        }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: '50%',
-            border: '2.5px solid rgba(129,140,248,0.2)',
-            borderTopColor: '#818cf8',
-            animation: 'spin 0.8s linear infinite',
-          }} />
+        <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a0a] z-10">
+          <div className="w-10 h-10 rounded-full border-2 border-indigo-400/20 border-t-indigo-400 animate-spin" />
         </div>
       )}
       {error && (
-        <div style={{
-          position: 'absolute', inset: 0, zIndex: 10,
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', gap: 10,
-          background: '#0a0a0a',
-        }}>
-          <AlertCircle size={30} style={{ color: '#f87171' }} />
-          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>Video load nahi hua</p>
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-[#0a0a0a]">
+          <AlertCircle size={30} className="text-red-400" />
+          <p className="text-white/45 text-sm">Video load nahi hua</p>
           <button
             onClick={() => { setError(false); setLoading(true) }}
-            style={{
-              fontSize: 12, color: 'white',
-              background: 'rgba(255,255,255,0.08)',
-              border: '0.5px solid rgba(255,255,255,0.15)',
-              borderRadius: 10, padding: '6px 16px', cursor: 'pointer',
-            }}
-          >Retry</button>
+            className="text-xs text-white bg-white/10 border border-white/20 rounded-lg px-4 py-1.5"
+          >
+            Retry
+          </button>
         </div>
       )}
       <iframe
         src={embedSrc || liveSrc}
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+        className="absolute inset-0 w-full h-full border-0"
         allowFullScreen
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         referrerPolicy="strict-origin-when-cross-origin"
@@ -853,16 +748,11 @@ function AnimatedButton({ onClick, icon: Icon, label, variant = 'primary' }) {
   return (
     <button
       onClick={handleClick}
+      className="relative inline-flex items-center gap-2 px-5 py-2.5 sm:px-6 sm:py-3 rounded-xl text-sm sm:text-base font-semibold transition-all duration-200 overflow-hidden active:scale-95"
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 8,
-        fontSize: 14, fontWeight: 600,
         background: currentVariant.bg,
         color: currentVariant.color,
         border: currentVariant.border,
-        padding: '10px 24px', borderRadius: 12,
-        cursor: 'pointer', position: 'relative', overflow: 'hidden',
-        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-        transform: isAnimating ? 'scale(0.96)' : 'scale(1)',
       }}
       onMouseEnter={(e) => {
         if (variant === 'primary') {
@@ -876,13 +766,7 @@ function AnimatedButton({ onClick, icon: Icon, label, variant = 'primary' }) {
       }}
     >
       {isAnimating && (
-        <div
-          style={{
-            position: 'absolute', inset: 0,
-            background: 'rgba(255,255,255,0.2)',
-            animation: 'ripple 0.3s ease-out',
-          }}
-        />
+        <div className="absolute inset-0 bg-white/20 animate-ripple" />
       )}
       <Icon size={16} />
       <span>{label}</span>
@@ -890,6 +774,9 @@ function AnimatedButton({ onClick, icon: Icon, label, variant = 'primary' }) {
         @keyframes ripple {
           0% { transform: scale(0); opacity: 1; }
           100% { transform: scale(4); opacity: 0; }
+        }
+        .animate-ripple {
+          animation: ripple 0.3s ease-out;
         }
       `}</style>
     </button>
@@ -920,72 +807,51 @@ export function VideoPlayer() {
   const isCompleted = progressData?.progress?.completed
 
   if (isLoading) return (
-    <div className="flex justify-center items-center py-32">
-      <div
-        style={{
-          width: 40, height: 40, borderRadius: '50%',
-          border: '3px solid rgba(129,140,248,0.2)',
-          borderTopColor: '#818cf8',
-          animation: 'spin 0.8s linear infinite',
-        }}
-      />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div className="flex justify-center items-center min-h-[60vh]">
+      <div className="w-10 h-10 rounded-full border-3 border-indigo-400/20 border-t-indigo-400 animate-spin" />
     </div>
   )
 
   if (!content) return (
-    <div className="flex flex-col items-center py-32 gap-4">
-      <AlertCircle size={40} style={{ color: '#f87171' }} />
-      <p style={{ color: 'rgba(var(--color-text-secondary))', fontSize: 15 }}>Content nahi mila.</p>
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+      <AlertCircle size={40} className="text-red-400" />
+      <p className="text-secondary text-sm">Content nahi mila.</p>
       <button
         onClick={() => navigate(-1)}
-        style={{ fontSize: 14, color: '#818cf8', cursor: 'pointer', background: 'none', border: 'none' }}
-      >Wapas jao</button>
+        className="text-indigo-400 text-sm font-medium hover:underline"
+      >
+        Wapas jao
+      </button>
     </div>
   )
 
   const isYT = isYouTubeURL(content.url)
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'radial-gradient(circle at 0% 0%, rgba(129,140,248,0.03) 0%, transparent 50%), radial-gradient(circle at 100% 100%, rgba(52,211,153,0.03) 0%, transparent 50%)',
-    }}>
-      <div style={{ maxWidth: 860, margin: '0 auto', width: '100%', padding: '16px' }}>
-        
-        {/* Title - Below Player on Mobile */}
-        <div style={{ marginBottom: 16, order: 2 }}>
-          <h1 style={{
-            fontSize: 'clamp(18px, 5vw, 24px)',
-            fontWeight: 600,
-            color: 'var(--color-text-primary)',
-            lineHeight: 1.3,
-            marginBottom: 8,
-          }}>
+    <div className="min-h-screen bg-gradient-to-b from-[#0a0a14] to-[#14141e] py-4 px-3 sm:py-6 sm:px-6">
+      <div className="max-w-3xl mx-auto w-full">
+        {/* Back button */}
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-1.5 text-white/60 hover:text-white text-sm mb-4 transition-colors"
+        >
+          <ArrowLeft size={18} />
+          <span>Back</span>
+        </button>
+
+        {/* Title & metadata - above player on mobile, below on desktop? We'll keep above for consistency */}
+        <div className="mb-3 sm:mb-4">
+          <h1 className="text-xl sm:text-2xl font-semibold text-white leading-tight">
             {content.title}
           </h1>
-          
-          {/* Metadata */}
-          <div style={{
-            display: 'flex', gap: 12, alignItems: 'center',
-            flexWrap: 'wrap', marginTop: 8
-          }}>
+          <div className="flex flex-wrap items-center gap-2 mt-1.5">
             {content.duration && (
-              <span style={{
-                fontSize: 12, color: 'var(--color-text-secondary)',
-                background: 'var(--color-background-secondary)',
-                padding: '2px 8px', borderRadius: 6,
-              }}>
+              <span className="text-xs text-white/50 bg-white/5 px-2 py-0.5 rounded-md">
                 {fmtTime(content.duration)}
               </span>
             )}
             {isCompleted && (
-              <span style={{
-                fontSize: 12, color: '#34d399',
-                background: 'rgba(52,211,153,0.1)',
-                padding: '2px 8px', borderRadius: 6,
-                display: 'inline-flex', alignItems: 'center', gap: 4,
-              }}>
+              <span className="flex items-center gap-1 text-xs text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-md">
                 <CheckCircle size={12} /> Completed
               </span>
             )}
@@ -993,13 +859,7 @@ export function VideoPlayer() {
         </div>
 
         {/* Player */}
-        <div style={{ 
-          borderRadius: 16, 
-          overflow: 'hidden', 
-          background: '#0a0a0a', 
-          marginBottom: 20,
-          boxShadow: '0 10px 40px -10px rgba(0,0,0,0.3)'
-        }}>
+        <div className="rounded-2xl overflow-hidden bg-black shadow-2xl shadow-indigo-500/5">
           {isYT
             ? <YouTubePlayer url={content.url} title={content.title} />
             : (
@@ -1016,28 +876,15 @@ export function VideoPlayer() {
 
         {/* Description */}
         {content.description && (
-          <div style={{
-            background: 'var(--color-background-secondary)',
-            borderRadius: 12,
-            padding: '16px',
-            marginBottom: 20,
-            border: '0.5px solid var(--color-border-tertiary)',
-          }}>
-            <p style={{
-              fontSize: 14, color: 'var(--color-text-secondary)',
-              lineHeight: 1.6, margin: 0,
-            }}>
+          <div className="mt-4 p-4 bg-white/5 rounded-xl border border-white/5">
+            <p className="text-sm text-white/70 leading-relaxed">
               {content.description}
             </p>
           </div>
         )}
 
         {/* Action Buttons */}
-        <div style={{
-          display: 'flex', gap: 12, flexWrap: 'wrap',
-          justifyContent: 'center',
-          marginTop: 8,
-        }}>
+        <div className="mt-6 flex flex-wrap gap-3 justify-center">
           {!isCompleted && (
             <AnimatedButton
               onClick={() => saveProg.mutate({ completed: true, position: 0, subjectId: content.subjectId })}
@@ -1046,16 +893,8 @@ export function VideoPlayer() {
               variant="primary"
             />
           )}
-          
           {isCompleted && (
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              fontSize: 14, fontWeight: 500,
-              color: '#34d399',
-              background: 'rgba(52,211,153,0.08)',
-              padding: '10px 24px', borderRadius: 12,
-              border: '0.5px solid rgba(52,211,153,0.3)',
-            }}>
+            <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-400/10 border border-emerald-400/20 text-emerald-400 text-sm font-semibold">
               <CheckCircle size={16} />
               <span>Course Completed! 🎉</span>
             </div>
