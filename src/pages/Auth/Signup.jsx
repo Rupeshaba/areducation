@@ -10,7 +10,9 @@ const EXAMS = ['UPSC', 'SSC CGL', 'SSC CHSL', 'State PCS', 'Bank PO', 'Railway',
 
 export default function Signup() {
   const [form, setForm] = useState({ name: '', email: '', mobile: '', password: '', exam: '', address: '' })
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
+  const [showConfirmPass, setShowConfirmPass] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState(null)
   const [avatarBase64, setAvatarBase64] = useState(null)
   const avatarInputRef = useRef(null)
@@ -32,6 +34,13 @@ export default function Signup() {
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
 
+  // FIX: mobile field had no format validation before — any text/length
+  // could be submitted. Strip non-digits and cap at 10 chars as the user types.
+  const setMobile = (e) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 10)
+    setForm(f => ({ ...f, mobile: digits }))
+  }
+
   const handleAvatarChange = (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -47,9 +56,34 @@ export default function Signup() {
     }
     const reader = new FileReader()
     reader.onload = (ev) => {
-      setAvatarPreview(ev.target.result)
-      setAvatarBase64(ev.target.result)
+      // FIX: previously the raw file (up to 3MB -> ~4MB base64) was sent
+      // straight in the signup JSON body, which can exceed typical backend
+      // body-size limits and make signup fail. Resize/compress it first.
+      const img = new Image()
+      img.onload = () => {
+        const MAX_DIM = 480
+        let { width, height } = img
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width)
+            width = MAX_DIM
+          } else {
+            width = Math.round((width * MAX_DIM) / height)
+            height = MAX_DIM
+          }
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height)
+        const compressed = canvas.toDataURL('image/jpeg', 0.82)
+        setAvatarPreview(compressed)
+        setAvatarBase64(compressed)
+      }
+      img.onerror = () => toast.error('Could not read image, please try another file')
+      img.src = ev.target.result
     }
+    reader.onerror = () => toast.error('Could not read image, please try another file')
     reader.readAsDataURL(file)
     e.target.value = ''
   }
@@ -61,6 +95,18 @@ export default function Signup() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (mutation.isPending) return // FIX: guard against double-submit (e.g. pressing Enter repeatedly)
+
+    // FIX: mobile number had no format validation before
+    if (!/^[6-9]\d{9}$/.test(form.mobile)) {
+      return toast.error('Enter a valid 10-digit mobile number')
+    }
+    // FIX: there was no confirm-password field — a typo in the password
+    // went uncaught until the user tried to log in
+    if (form.password !== confirmPassword) {
+      return toast.error('Passwords do not match')
+    }
+
     mutation.mutate({ ...form, avatarBase64: avatarBase64 || null })
   }
 
@@ -143,7 +189,18 @@ export default function Signup() {
               </div>
               <div>
                 <label className="text-xs text-gray-400 mb-1 block">Mobile *</label>
-                <input type="tel" placeholder="9876543210" value={form.mobile} onChange={set('mobile')} className="input-field" required />
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  placeholder="9876543210"
+                  value={form.mobile}
+                  onChange={setMobile}
+                  pattern="[6-9][0-9]{9}"
+                  maxLength={10}
+                  title="Enter a valid 10-digit mobile number"
+                  className="input-field"
+                  required
+                />
               </div>
             </div>
 
@@ -160,6 +217,27 @@ export default function Signup() {
                   {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">Confirm Password *</label>
+              <div className="relative">
+                <input
+                  type={showConfirmPass ? 'text' : 'password'}
+                  placeholder="Re-enter your password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  className="input-field pr-10"
+                  required
+                  minLength={8}
+                />
+                <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500">
+                  {showConfirmPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {confirmPassword && form.password !== confirmPassword && (
+                <p className="text-red-400 text-[11px] mt-1">Passwords do not match</p>
+              )}
             </div>
 
             <div>
