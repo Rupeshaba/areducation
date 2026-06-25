@@ -5,7 +5,7 @@ import Hls from 'hls.js'
 import {
   ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   SkipBack, SkipForward, Settings, CheckCircle, AlertCircle,
-  PictureInPicture2, X
+  PictureInPicture2, X, Gauge, Monitor
 } from 'lucide-react'
 import api from '../../api/axios'
 
@@ -70,8 +70,8 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
   const [fullscreen,   setFullscreen]   = useState(false)
   const [pip,          setPip]          = useState(false)
   const [showCtrl,     setShowCtrl]     = useState(true)
-  const [showSettings, setShowSettings] = useState(false)
-  const [settingsTab,  setSettingsTab]  = useState('speed')
+  const [showSpeed,    setShowSpeed]    = useState(false)
+  const [showQuality,  setShowQuality]  = useState(false)
   const [speed,        setSpeed]        = useState(1)
   const [levels,       setLevels]       = useState([])
   const [currentLevel, setCurrentLevel] = useState(-1)
@@ -84,9 +84,12 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
   const handleFullscreenChange = useCallback(() => {
     const isFullscreen = !!document.fullscreenElement
     setFullscreen(isFullscreen)
-    
+    // Lock to landscape when entering fullscreen on mobile
     if (isFullscreen && window.screen?.orientation?.lock) {
-      window.screen.orientation.lock('landscape').catch(() => {})
+      // Check if we are on a mobile device (portrait mode likely)
+      if (window.innerHeight > window.innerWidth) {
+        window.screen.orientation.lock('landscape').catch(() => {})
+      }
     } else if (!isFullscreen && window.screen?.orientation?.unlock) {
       window.screen.orientation.unlock()
     }
@@ -308,19 +311,23 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
   const changeSpeed = (s) => {
     setSpeed(s)
     if (videoRef.current) videoRef.current.playbackRate = s
-    setShowSettings(false)
+    setShowSpeed(false)
   }
 
   const changeQuality = (level) => {
     if (hlsRef.current) hlsRef.current.currentLevel = level
     setCurrentLevel(level)
-    setShowSettings(false)
+    setShowQuality(false)
   }
 
   const toggleFS = () => {
     const el = containerRef.current
     if (!document.fullscreenElement) {
       el?.requestFullscreen?.()
+      // Also try to lock orientation immediately (some browsers may need this)
+      if (window.screen?.orientation?.lock && window.innerHeight > window.innerWidth) {
+        window.screen.orientation.lock('landscape').catch(() => {})
+      }
     } else {
       document.exitFullscreen?.()
     }
@@ -346,6 +353,13 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
     if (lvl.bitrate) return `${Math.round(lvl.bitrate / 1000)}k`
     return `L${l}`
   }
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const close = () => { setShowSpeed(false); setShowQuality(false) }
+    window.addEventListener('click', close)
+    return () => window.removeEventListener('click', close)
+  }, [])
 
   return (
     <div
@@ -472,7 +486,7 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
             {muted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
 
-          {/* Volume slider - desktop only, on mobile it's hidden but we can add a popover if needed */}
+          {/* Volume slider - desktop only */}
           <div className="hidden sm:flex items-center w-20">
             <input
               type="range" min="0" max="1" step="0.05"
@@ -494,11 +508,86 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
 
           <div className="flex-1" />
 
-          {/* Speed badge */}
-          {speed !== 1 && (
-            <span className="hidden sm:inline-block text-[10px] font-mono bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-md">
-              {speed}x
-            </span>
+          {/* Speed button */}
+          <div className="relative" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => { setShowSpeed(v => !v); setShowQuality(false) }}
+              className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors ${showSpeed ? 'text-indigo-400' : ''}`}
+              aria-label="Playback Speed"
+            >
+              <Gauge size={18} />
+              {speed !== 1 && (
+                <span className="absolute -top-0.5 -right-0.5 text-[8px] font-bold bg-indigo-500 text-white px-1 rounded-full">
+                  {speed}
+                </span>
+              )}
+            </button>
+            {showSpeed && (
+              <div
+                className="absolute bottom-full right-0 mb-2 w-48 sm:w-56 bg-[#0f0f1a]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
+                style={{ maxHeight: '60vh' }}
+              >
+                <div className="p-2">
+                  <div className="text-xs text-white/50 px-2 py-1 font-medium uppercase tracking-wider">Speed</div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {SPEEDS.map(s => (
+                      <button
+                        key={s}
+                        onClick={() => changeSpeed(s)}
+                        className={`py-2 rounded-lg text-sm font-medium transition-colors ${
+                          speed === s
+                            ? 'bg-indigo-500 text-white'
+                            : 'text-white/70 hover:bg-white/10'
+                        }`}
+                      >
+                        {s}x
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quality button (only if HLS has levels) */}
+          {levels.length > 0 && (
+            <div className="relative" onClick={e => e.stopPropagation()}>
+              <button
+                onClick={() => { setShowQuality(v => !v); setShowSpeed(false) }}
+                className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors ${showQuality ? 'text-indigo-400' : ''}`}
+                aria-label="Quality"
+              >
+                <Monitor size={18} />
+              </button>
+              {showQuality && (
+                <div
+                  className="absolute bottom-full right-0 mb-2 w-48 sm:w-56 bg-[#0f0f1a]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
+                  style={{ maxHeight: '60vh' }}
+                >
+                  <div className="p-2">
+                    <div className="text-xs text-white/50 px-2 py-1 font-medium uppercase tracking-wider">Quality</div>
+                    <div className="space-y-1">
+                      {[-1, ...levels.map((_, i) => i)].map(l => (
+                        <button
+                          key={l}
+                          onClick={() => changeQuality(l)}
+                          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            currentLevel === l
+                              ? 'bg-indigo-500 text-white'
+                              : 'text-white/70 hover:bg-white/10'
+                          }`}
+                        >
+                          <span>{qualityLabel(l)}</span>
+                          {l === -1 && (
+                            <span className="text-[10px] text-white/40">Auto</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* PiP */}
@@ -511,119 +600,6 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
               <PictureInPicture2 size={16} />
             </button>
           )}
-
-          {/* Settings */}
-          <div className="relative">
-            <button
-              onClick={e => { e.stopPropagation(); setShowSettings(v => !v) }}
-              className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors ${showSettings ? 'text-indigo-400' : ''}`}
-              aria-label="Settings"
-              aria-expanded={showSettings}
-            >
-              <Settings size={16} />
-            </button>
-
-            {showSettings && (
-              <>
-                {/* Backdrop */}
-                <div
-                  className="fixed inset-0 z-40 sm:hidden bg-black/60"
-                  onClick={() => setShowSettings(false)}
-                />
-                {/* Settings Panel */}
-                <div
-                  onClick={e => e.stopPropagation()}
-                  className="fixed bottom-0 left-0 right-0 z-50 sm:absolute sm:bottom-full sm:right-0 sm:left-auto sm:top-auto sm:mb-2 sm:w-72"
-                  style={{
-                    background: 'rgba(15,15,25,0.98)',
-                    backdropFilter: 'blur(20px)',
-                    borderTopLeftRadius: '20px',
-                    borderTopRightRadius: '20px',
-                    border: '0.5px solid rgba(255,255,255,0.08)',
-                    overflow: 'hidden',
-                    maxHeight: '80vh',
-                    boxShadow: '0 10px 30px -10px rgba(0,0,0,0.5)',
-                  }}
-                >
-                  {/* Header */}
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-                    <div className="flex gap-4">
-                      <button
-                        onClick={() => setSettingsTab('speed')}
-                        className={`text-sm font-semibold py-1 border-b-2 transition-colors ${
-                          settingsTab === 'speed'
-                            ? 'border-indigo-400 text-indigo-400'
-                            : 'border-transparent text-white/50'
-                        }`}
-                      >
-                        Speed
-                      </button>
-                      {levels.length > 0 && (
-                        <button
-                          onClick={() => setSettingsTab('quality')}
-                          className={`text-sm font-semibold py-1 border-b-2 transition-colors ${
-                            settingsTab === 'quality'
-                              ? 'border-indigo-400 text-indigo-400'
-                              : 'border-transparent text-white/50'
-                          }`}
-                        >
-                          Quality
-                        </button>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => setShowSettings(false)}
-                      className="text-white/50 hover:text-white p-1 rounded-lg transition-colors"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-4 max-h-[60vh] overflow-y-auto">
-                    {settingsTab === 'speed' && (
-                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                        {SPEEDS.map(s => (
-                          <button
-                            key={s}
-                            onClick={() => changeSpeed(s)}
-                            className={`py-2.5 rounded-xl text-sm font-medium transition-all ${
-                              speed === s
-                                ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
-                                : 'bg-white/5 text-white/70 hover:bg-white/10'
-                            }`}
-                          >
-                            {s}x
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {settingsTab === 'quality' && levels.length > 0 && (
-                      <div className="space-y-1.5">
-                        {[-1, ...levels.map((_, i) => i)].map(l => (
-                          <button
-                            key={l}
-                            onClick={() => changeQuality(l)}
-                            className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                              currentLevel === l
-                                ? 'bg-indigo-500 text-white'
-                                : 'text-white/70 hover:bg-white/5'
-                            }`}
-                          >
-                            <span>{qualityLabel(l)}</span>
-                            {l === -1 && (
-                              <span className="text-[10px] text-white/40">Auto</span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
 
           {/* Fullscreen */}
           <button
@@ -839,7 +815,7 @@ export function VideoPlayer() {
           <span>Back</span>
         </button>
 
-        {/* Title & metadata - above player on mobile, below on desktop? We'll keep above for consistency */}
+        {/* Title & metadata */}
         <div className="mb-3 sm:mb-4">
           <h1 className="text-xl sm:text-2xl font-semibold text-white leading-tight">
             {content.title}
