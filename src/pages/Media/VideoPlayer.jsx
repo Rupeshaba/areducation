@@ -4,8 +4,8 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import Hls from 'hls.js'
 import {
   ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Minimize,
-  SkipBack, SkipForward, Settings, CheckCircle, AlertCircle,
-  PictureInPicture2, X, Gauge, Monitor
+  SkipBack, SkipForward, CheckCircle, AlertCircle,
+  PictureInPicture2, Monitor
 } from 'lucide-react'
 import api from '../../api/axios'
 
@@ -84,15 +84,6 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
   const handleFullscreenChange = useCallback(() => {
     const isFullscreen = !!document.fullscreenElement
     setFullscreen(isFullscreen)
-    // Lock to landscape when entering fullscreen on mobile
-    if (isFullscreen && window.screen?.orientation?.lock) {
-      // Check if we are on a mobile device (portrait mode likely)
-      if (window.innerHeight > window.innerWidth) {
-        window.screen.orientation.lock('landscape').catch(() => {})
-      }
-    } else if (!isFullscreen && window.screen?.orientation?.unlock) {
-      window.screen.orientation.unlock()
-    }
   }, [])
 
   // ── HLS / native init ──────────────────────────────────────────────────
@@ -229,7 +220,7 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
     setShowCtrl(true)
     clearTimeout(hideTimer.current)
     if (playing) {
-      hideTimer.current = setTimeout(() => setShowCtrl(false), 2500)
+      hideTimer.current = setTimeout(() => setShowCtrl(false), 3000)
     }
   }, [playing])
 
@@ -239,7 +230,6 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
     if (touchTimeoutRef.current) {
       clearTimeout(touchTimeoutRef.current)
       touchTimeoutRef.current = null
-      // Double click detected
       const rect = e.currentTarget.getBoundingClientRect()
       const x = e.clientX - rect.left
       if (x < rect.width / 2) {
@@ -320,16 +310,29 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
     setShowQuality(false)
   }
 
-  const toggleFS = () => {
+  const toggleFS = async () => {
     const el = containerRef.current
     if (!document.fullscreenElement) {
-      el?.requestFullscreen?.()
-      // Also try to lock orientation immediately (some browsers may need this)
-      if (window.screen?.orientation?.lock && window.innerHeight > window.innerWidth) {
-        window.screen.orientation.lock('landscape').catch(() => {})
+      try {
+        await el?.requestFullscreen?.()
+        // Try to lock orientation after fullscreen is active
+        if (window.screen?.orientation?.lock) {
+          setTimeout(() => {
+            window.screen.orientation.lock('landscape').catch(() => {})
+          }, 200)
+        }
+      } catch (err) {
+        console.log('Fullscreen failed:', err)
       }
     } else {
-      document.exitFullscreen?.()
+      try {
+        await document.exitFullscreen?.()
+        if (window.screen?.orientation?.unlock) {
+          window.screen.orientation.unlock()
+        }
+      } catch (err) {
+        console.log('Exit fullscreen failed:', err)
+      }
     }
   }
 
@@ -364,7 +367,8 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
   return (
     <div
       ref={containerRef}
-      className="relative bg-black w-full select-none touch-none aspect-video overflow-hidden rounded-2xl"
+      className="relative bg-black w-full select-none touch-none"
+      style={{ aspectRatio: '16/9' }}
       onMouseMove={resetHide}
       onMouseLeave={() => { if (videoRef.current && !videoRef.current.paused) setShowCtrl(false) }}
       onTouchStart={resetHide}
@@ -425,7 +429,7 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
         }}
       >
         {/* ── Seek bar ── */}
-        <div className="pointer-events-auto px-3 pb-1 sm:px-4">
+        <div className="pointer-events-auto px-2 pb-1 sm:px-4">
           <div
             ref={seekbarRef}
             className="py-2 cursor-pointer touch-none"
@@ -463,27 +467,27 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
         </div>
 
         {/* ── Controls row ── */}
-        <div className="pointer-events-auto flex items-center gap-1 px-2 pb-3 sm:px-3 sm:pb-4 flex-wrap">
+        <div className="pointer-events-auto flex items-center gap-0.5 px-1 pb-2 sm:px-3 sm:pb-3 flex-wrap">
           {/* Play / Pause */}
           <button
             onClick={togglePlay}
-            className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors"
+            className="w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors flex-shrink-0"
             aria-label={playing ? 'Pause' : 'Play'}
           >
-            {playing ? <Pause size={20} className="fill-current" /> : <Play size={20} className="fill-current ml-0.5" />}
+            {playing ? <Pause size={18} className="sm:w-5 sm:h-5 fill-current" /> : <Play size={18} className="sm:w-5 sm:h-5 fill-current ml-0.5" />}
           </button>
 
           {/* Skip */}
-          <button onClick={() => doSkip(-10)} className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors">
-            <SkipBack size={18} />
+          <button onClick={() => doSkip(-10)} className="w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors flex-shrink-0">
+            <SkipBack size={16} className="sm:w-5 sm:h-5" />
           </button>
-          <button onClick={() => doSkip(10)} className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors">
-            <SkipForward size={18} />
+          <button onClick={() => doSkip(10)} className="w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors flex-shrink-0">
+            <SkipForward size={16} className="sm:w-5 sm:h-5" />
           </button>
 
           {/* Volume control */}
-          <button onClick={toggleMute} className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors">
-            {muted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+          <button onClick={toggleMute} className="w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors flex-shrink-0">
+            {muted || volume === 0 ? <VolumeX size={16} className="sm:w-5 sm:h-5" /> : <Volume2 size={16} className="sm:w-5 sm:h-5" />}
           </button>
 
           {/* Volume slider - desktop only */}
@@ -499,36 +503,35 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
           </div>
 
           {/* Time */}
-          <span className="text-xs sm:text-sm font-mono text-white/90 ml-1 whitespace-nowrap tabular-nums flex-shrink-0">
+          <span className="text-[10px] sm:text-sm font-mono text-white/90 ml-0.5 whitespace-nowrap tabular-nums flex-shrink-0">
             {fmtTime(currentTime)}
             {duration > 0 && (
               <span className="text-white/40"> / {fmtTime(duration)}</span>
             )}
           </span>
 
-          <div className="flex-1" />
+          <div className="flex-1 min-w-[8px]" />
 
-          {/* Speed button */}
+          {/* ═══ SPEED BUTTON - ALWAYS VISIBLE ═══ */}
           <div className="relative" onClick={e => e.stopPropagation()}>
             <button
-              onClick={() => { setShowSpeed(v => !v); setShowQuality(false) }}
-              className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors ${showSpeed ? 'text-indigo-400' : ''}`}
+              onClick={() => { setShowSpeed(!showSpeed); setShowQuality(false) }}
+              className="w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors relative flex-shrink-0"
               aria-label="Playback Speed"
             >
-              <Gauge size={18} />
+              <span className="text-[11px] sm:text-sm font-bold">{speed}x</span>
               {speed !== 1 && (
-                <span className="absolute -top-0.5 -right-0.5 text-[8px] font-bold bg-indigo-500 text-white px-1 rounded-full">
-                  {speed}
+                <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-indigo-500 rounded-full flex items-center justify-center">
+                  <span className="text-[6px] font-bold text-white">!</span>
                 </span>
               )}
             </button>
+            
+            {/* Speed Dropdown */}
             {showSpeed && (
-              <div
-                className="absolute bottom-full right-0 mb-2 w-48 sm:w-56 bg-[#0f0f1a]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
-                style={{ maxHeight: '60vh' }}
-              >
+              <div className="absolute bottom-full right-0 mb-2 w-48 sm:w-56 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[60vh]">
                 <div className="p-2">
-                  <div className="text-xs text-white/50 px-2 py-1 font-medium uppercase tracking-wider">Speed</div>
+                  <div className="text-[10px] text-white/50 px-2 py-1 font-medium uppercase tracking-wider">Playback Speed</div>
                   <div className="grid grid-cols-3 gap-1.5">
                     {SPEEDS.map(s => (
                       <button
@@ -549,65 +552,70 @@ function CustomPlayer({ url, savedPos = 0, onProgress, onComplete, title }) {
             )}
           </div>
 
-          {/* Quality button (only if HLS has levels) */}
-          {levels.length > 0 && (
-            <div className="relative" onClick={e => e.stopPropagation()}>
-              <button
-                onClick={() => { setShowQuality(v => !v); setShowSpeed(false) }}
-                className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors ${showQuality ? 'text-indigo-400' : ''}`}
-                aria-label="Quality"
-              >
-                <Monitor size={18} />
-              </button>
-              {showQuality && (
-                <div
-                  className="absolute bottom-full right-0 mb-2 w-48 sm:w-56 bg-[#0f0f1a]/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
-                  style={{ maxHeight: '60vh' }}
-                >
-                  <div className="p-2">
-                    <div className="text-xs text-white/50 px-2 py-1 font-medium uppercase tracking-wider">Quality</div>
-                    <div className="space-y-1">
-                      {[-1, ...levels.map((_, i) => i)].map(l => (
-                        <button
-                          key={l}
-                          onClick={() => changeQuality(l)}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            currentLevel === l
-                              ? 'bg-indigo-500 text-white'
-                              : 'text-white/70 hover:bg-white/10'
-                          }`}
-                        >
-                          <span>{qualityLabel(l)}</span>
-                          {l === -1 && (
-                            <span className="text-[10px] text-white/40">Auto</span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
+          {/* ═══ QUALITY BUTTON - ALWAYS VISIBLE ═══ */}
+          <div className="relative" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => { setShowQuality(!showQuality); setShowSpeed(false) }}
+              className={`w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center rounded-lg transition-colors flex-shrink-0 ${
+                levels.length > 0 
+                  ? 'text-white hover:bg-white/10 active:bg-white/20' 
+                  : 'text-white/30 cursor-not-allowed'
+              }`}
+              disabled={levels.length === 0}
+              aria-label="Quality"
+            >
+              <Monitor size={16} className="sm:w-5 sm:h-5" />
+            </button>
+            
+            {/* Quality Dropdown */}
+            {showQuality && levels.length > 0 && (
+              <div className="absolute bottom-full right-0 mb-2 w-48 sm:w-56 bg-[#1a1a2e] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 max-h-[60vh]">
+                <div className="p-2">
+                  <div className="text-[10px] text-white/50 px-2 py-1 font-medium uppercase tracking-wider">Video Quality</div>
+                  <div className="space-y-1">
+                    {[-1, ...levels.map((_, i) => i)].map(l => (
+                      <button
+                        key={l}
+                        onClick={() => changeQuality(l)}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          currentLevel === l
+                            ? 'bg-indigo-500 text-white'
+                            : 'text-white/70 hover:bg-white/10'
+                        }`}
+                      >
+                        <span>{qualityLabel(l)}</span>
+                        {l === -1 && (
+                          <span className="text-[10px] text-white/40">Auto</span>
+                        )}
+                        {currentLevel === l && (
+                          <span className="text-[10px] text-white/60">✓</span>
+                        )}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
           {/* PiP */}
           {pipSupported && (
             <button
               onClick={togglePip}
-              className={`hidden sm:flex w-10 h-10 sm:w-12 sm:h-12 items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors ${pip ? 'text-indigo-400' : ''}`}
+              className={`hidden sm:flex w-9 h-9 sm:w-12 sm:h-12 items-center justify-center text-white rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors flex-shrink-0 ${pip ? 'text-indigo-400' : ''}`}
               aria-label="Picture in Picture"
             >
-              <PictureInPicture2 size={16} />
+              <PictureInPicture2 size={16} className="sm:w-5 sm:h-5" />
             </button>
           )}
 
           {/* Fullscreen */}
           <button
             onClick={toggleFS}
-            className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-xl hover:bg-white/10 active:bg-white/20 transition-colors"
+            className="w-9 h-9 sm:w-12 sm:h-12 flex items-center justify-center text-white rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors flex-shrink-0"
             aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
           >
-            {fullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+            {fullscreen ? <Minimize size={16} className="sm:w-5 sm:h-5" /> : <Maximize size={16} className="sm:w-5 sm:h-5" />}
           </button>
         </div>
       </div>
@@ -804,12 +812,12 @@ export function VideoPlayer() {
   const isYT = isYouTubeURL(content.url)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#0a0a14] to-[#14141e] py-4 px-3 sm:py-6 sm:px-6">
+    <div className="min-h-screen bg-gradient-to-b from-[#0a0a14] to-[#14141e] py-3 px-2 sm:py-6 sm:px-6">
       <div className="max-w-3xl mx-auto w-full">
         {/* Back button */}
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-white/60 hover:text-white text-sm mb-4 transition-colors"
+          className="flex items-center gap-1.5 text-white/60 hover:text-white text-sm mb-3 sm:mb-4 transition-colors"
         >
           <ArrowLeft size={18} />
           <span>Back</span>
@@ -817,7 +825,7 @@ export function VideoPlayer() {
 
         {/* Title & metadata */}
         <div className="mb-3 sm:mb-4">
-          <h1 className="text-xl sm:text-2xl font-semibold text-white leading-tight">
+          <h1 className="text-lg sm:text-2xl font-semibold text-white leading-tight">
             {content.title}
           </h1>
           <div className="flex flex-wrap items-center gap-2 mt-1.5">
