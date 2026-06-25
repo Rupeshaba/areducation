@@ -62,8 +62,12 @@ function PodiumCard({ entry, position, delay }) {
   ]
   const badges = ['🥇', '🥈', '🥉']
   const textColors = ['text-amber-300', 'text-gray-200', 'text-orange-300']
-  const iconSizes = ['w-20 h-20', 'w-16 h-16', 'w-16 h-16']
-  const crownSizes = ['top-[-20px]', 'top-[-14px]', 'top-[-14px]']
+  const avatarSizes = ['w-20 h-20', 'w-16 h-16', 'w-16 h-16']
+  const badgeColors = [
+    'bg-amber-400/20 border-amber-400/50 text-amber-300',
+    'bg-slate-300/20 border-slate-300/50 text-gray-200',
+    'bg-orange-400/20 border-orange-400/50 text-orange-300'
+  ]
 
   const idx = position - 1
 
@@ -85,23 +89,28 @@ function PodiumCard({ entry, position, delay }) {
         </motion.div>
       )}
 
-      {/* Avatar with neon ring */}
-      <div className={`relative ${iconSizes[idx]} mb-3`}>
-        <div className="absolute inset-[-3px] rounded-2xl bg-gradient-to-br from-white/20 to-transparent blur-sm" />
-        {entry.avatarUrl ? (
-          <img src={entry.avatarUrl} alt="" className="w-full h-full rounded-2xl object-cover border-2 border-white/20 shadow-2xl" />
-        ) : (
-          <div className={`w-full h-full rounded-2xl flex items-center justify-center text-2xl font-black bg-gradient-to-br ${gradients[idx]} border-2 ${textColors[idx]} shadow-xl`}>
-            {(entry.name || 'U').charAt(0).toUpperCase()}
-          </div>
-        )}
-        <div className={`absolute ${crownSizes[idx]} left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-[#0d0d1a] border border-white/10 flex items-center justify-center text-base shadow-lg`}>
+      {/* Avatar container with rank badge above */}
+      <div className="relative flex flex-col items-center">
+        {/* Rank badge – positioned above the avatar, never covering the face */}
+        <div className={`absolute -top-3 left-1/2 -translate-x-1/2 z-10 w-7 h-7 rounded-full flex items-center justify-center text-sm border backdrop-blur-sm shadow-lg ${badgeColors[idx]}`}>
           {badges[idx]}
+        </div>
+
+        {/* Avatar with glow ring */}
+        <div className={`relative ${avatarSizes[idx]} mt-3`}>
+          <div className="absolute inset-[-3px] rounded-2xl bg-gradient-to-br from-white/20 to-transparent blur-sm" />
+          {entry.avatarUrl ? (
+            <img src={entry.avatarUrl} alt="" className="w-full h-full rounded-2xl object-cover border-2 border-white/20 shadow-2xl" />
+          ) : (
+            <div className={`w-full h-full rounded-2xl flex items-center justify-center text-2xl font-black bg-gradient-to-br ${gradients[idx]} border-2 ${textColors[idx]} shadow-xl`}>
+              {(entry.name || 'U').charAt(0).toUpperCase()}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Name */}
-      <div className={`font-bold text-sm text-center mb-1 ${textColors[idx]} max-w-[100px] truncate drop-shadow-glow`}>
+      <div className={`font-bold text-sm text-center mt-3 mb-1 ${textColors[idx]} max-w-[100px] truncate drop-shadow-glow`}>
         {entry.name || 'Unknown'}
       </div>
 
