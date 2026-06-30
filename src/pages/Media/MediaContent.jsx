@@ -270,14 +270,14 @@ function HLSPlayer({ url, onEnded }) {
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="relative bg-black w-full select-none touch-none"
-      style={{ aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden' }}
-      onMouseMove={resetHide}
-      onMouseLeave={() => { if (videoRef.current && !videoRef.current.paused) setShowCtrl(false) }}
-      onTouchStart={resetHide}
-    >
+    <div className="relative w-full bg-black" style={{ paddingTop: '56.25%', borderRadius: '12px', overflow: 'hidden' }}>
+      <div
+        ref={containerRef}
+        className="absolute inset-0 select-none touch-none"
+        onMouseMove={resetHide}
+        onMouseLeave={() => { if (videoRef.current && !videoRef.current.paused) setShowCtrl(false) }}
+        onTouchStart={resetHide}
+      >
       <video ref={videoRef} className="w-full h-full object-contain" playsInline preload="metadata" />
 
       {loading && !error && (
@@ -447,6 +447,7 @@ function HLSPlayer({ url, onEnded }) {
         @keyframes mc-fadeout { 0%{opacity:1} 60%{opacity:1} 100%{opacity:0} }
         @media(min-width:640px){ .mc-btn{ width:36px; height:36px; } }
       `}</style>
+      </div>
     </div>
   )
 }
@@ -488,14 +489,16 @@ function YouTubePlayer({ url, onEnded }) {
   }
 
   if (!embedSrc) return (
-    <div className="flex flex-col items-center justify-center h-full gap-2 bg-black" style={{ aspectRatio: '16/9' }}>
-      <XCircle size={28} className="text-red-400" />
-      <p className="text-gray-400 text-sm">Could not parse YouTube URL</p>
+    <div className="relative w-full bg-black" style={{ paddingTop: '56.25%', borderRadius: '12px', overflow: 'hidden' }}>
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+        <XCircle size={28} className="text-red-400" />
+        <p className="text-gray-400 text-sm">Could not parse YouTube URL</p>
+      </div>
     </div>
   )
 
   return (
-    <div ref={containerRef} className="relative w-full" style={{ aspectRatio: '16/9' }}>
+    <div ref={containerRef} className="relative w-full bg-black" style={{ paddingTop: '56.25%', borderRadius: '12px', overflow: 'hidden' }}>
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black z-10 rounded-xl">
           <div className="w-12 h-12 rounded-full border-2 border-red-500/20 border-t-red-500 animate-spin" />
