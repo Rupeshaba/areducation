@@ -9,6 +9,28 @@ import {
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 
+/* ═══ SWIPE HOOK (mobile: swipe left = next, swipe right = prev) ═══ */
+function useSwipeQuestion(onNext, onPrev, disabled) {
+  const startX = useRef(null)
+  const startY = useRef(null)
+  function onTouchStart(e) {
+    if (disabled) return
+    startX.current = e.touches[0].clientX
+    startY.current = e.touches[0].clientY
+  }
+  function onTouchEnd(e) {
+    if (disabled || startX.current === null) return
+    const dx = startX.current - e.changedTouches[0].clientX
+    const dy = Math.abs(startY.current - e.changedTouches[0].clientY)
+    startX.current = null
+    startY.current = null
+    if (Math.abs(dx) < 56 || dy > 70) return // ignore short/diagonal swipes
+    if (dx > 0) onNext()
+    else onPrev()
+  }
+  return { onTouchStart, onTouchEnd }
+}
+
 export default function QuizPlay() {
   const { subject, name } = useParams()
   const navigate = useNavigate()
@@ -199,6 +221,13 @@ export default function QuizPlay() {
     }
   }
 
+  // Mobile swipe: swipe left -> next question, swipe right -> prev question
+  const swipeNav = useSwipeQuestion(
+    () => { if (current < questions.length - 1) goToQuestion(current + 1) },
+    () => { if (current > 0) goToQuestion(current - 1) },
+    timerStopped
+  )
+
   // STOP TIMER when submit is clicked
   const handleSubmitClick = () => {
     setTimerStopped(true)
@@ -231,10 +260,10 @@ export default function QuizPlay() {
     <div className="h-screen flex flex-col bg-[#eff3f8] overflow-hidden select-none">
       {/* ===== TOP BAR ===== */}
       <div className="flex-shrink-0 bg-[#001123] flex items-center justify-between px-3 sm:px-4 h-[52px] z-50">
-        <div className="flex items-center gap-3">
-          <span className="text-white font-extrabold text-sm tracking-wide">AR QUIZ</span>
-          <span className="hidden sm:block text-white/40 text-xs">|</span>
-          <span className="hidden sm:block text-white/50 text-[11px] font-medium truncate max-w-[180px]">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <span className="text-white font-extrabold text-sm tracking-wide flex-shrink-0">AR QUIZ</span>
+          <span className="text-white/40 text-xs flex-shrink-0">|</span>
+          <span className="text-white/50 text-[11px] font-medium truncate max-w-[110px] sm:max-w-[180px]">
             {decodeURIComponent(name)}
           </span>
         </div>
@@ -262,8 +291,8 @@ export default function QuizPlay() {
         </div>
       </div>
 
-      {/* ===== ACTION BAR ===== */}
-      <div className="flex-shrink-0 bg-[#f8fafc] border-b border-[#dfe7ef] flex items-center justify-center px-2 sm:px-3 h-[52px] gap-1.5 overflow-x-auto">
+      {/* ===== ACTION BAR (desktop/tablet) ===== */}
+      <div className="hidden sm:flex flex-shrink-0 bg-[#f8fafc] border-b border-[#dfe7ef] items-center justify-center px-2 sm:px-3 h-[52px] gap-1.5 overflow-x-auto">
         <button onClick={() => goToQuestion(current - 1)} disabled={current === 0 || timerStopped} className="act-btn">
           <ChevronLeft size={14} /> Prev
         </button>
@@ -288,86 +317,111 @@ export default function QuizPlay() {
 
       {/* ===== MAIN CONTENT ===== */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Question Panel */}
-        <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 sm:py-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-bold text-gray-800">
-              Question {current + 1}
-            </span>
-            <div className="flex items-center gap-2">
-              {answers[current] !== undefined && (
+        {/* Question Panel (swipeable on touch devices) */}
+        <div
+          className="flex-1 overflow-y-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4"
+          style={{ touchAction: 'pan-y' }}
+          {...swipeNav}
+        >
+          <div className="max-w-2xl lg:max-w-3xl mx-auto">
+            <div className="flex items-center justify-between mb-3 gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-sm font-bold text-gray-800 whitespace-nowrap">
+                  Question {current + 1}<span className="text-gray-400 font-medium">/{totalQuestions}</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {answers[current] !== undefined && (
+                  <button
+                    onClick={handleClear}
+                    disabled={timerStopped}
+                    className="flex items-center gap-1 text-red-500 text-[11px] font-semibold bg-red-50 border border-red-200 rounded-full px-3 py-1 hover:bg-red-100 transition-colors disabled:opacity-50"
+                  >
+                    <X size={11} /> <span className="hidden xs:inline">Clear Selection</span><span className="xs:hidden">Clear</span>
+                  </button>
+                )}
                 <button
-                  onClick={handleClear}
+                  onClick={handleMarkReview}
                   disabled={timerStopped}
-                  className="flex items-center gap-1 text-red-500 text-[11px] font-semibold bg-red-50 border border-red-200 rounded-full px-3 py-1 hover:bg-red-100 transition-colors disabled:opacity-50"
+                  className={`flex items-center gap-1 text-[11px] font-semibold rounded-full px-3 py-1 transition-colors disabled:opacity-50 ${
+                    markedReview.has(current) 
+                      ? 'text-amber-600 bg-amber-50 border border-amber-200' 
+                      : 'text-gray-500 bg-gray-100 border border-gray-200'
+                  }`}
                 >
-                  <X size={11} /> Clear Selection
+                  <Bookmark size={11} className={markedReview.has(current) ? 'fill-current' : ''} />
+                  {markedReview.has(current) ? 'Marked' : 'Mark Review'}
                 </button>
-              )}
-              <button
-                onClick={handleMarkReview}
-                disabled={timerStopped}
-                className={`flex items-center gap-1 text-[11px] font-semibold rounded-full px-3 py-1 transition-colors disabled:opacity-50 ${
-                  markedReview.has(current) 
-                    ? 'text-amber-600 bg-amber-50 border border-amber-200' 
-                    : 'text-gray-500 bg-gray-100 border border-gray-200'
-                }`}
+              </div>
+            </div>
+
+            {/* Mobile progress bar */}
+            <div className="sm:hidden h-1 w-full bg-[#e2e8f0] rounded-full overflow-hidden mb-3">
+              <motion.div
+                className="h-full bg-[#1299FD]"
+                initial={false}
+                animate={{ width: `${((current + 1) / Math.max(totalQuestions, 1)) * 100}%` }}
+                transition={{ duration: 0.25 }}
+              />
+            </div>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={current}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.15 }}
               >
-                <Bookmark size={11} className={markedReview.has(current) ? 'fill-current' : ''} />
-                {markedReview.has(current) ? 'Marked' : 'Mark Review'}
-              </button>
+                <div className="bg-white border border-[#dfe7ef] rounded-xl p-3 sm:p-4 lg:p-5 mb-3 shadow-sm">
+                  <p className="text-gray-900 text-sm sm:text-base lg:text-lg font-semibold leading-relaxed whitespace-pre-wrap">
+                    {q?.question}
+                  </p>
+                </div>
+
+                <div className="bg-white border border-[#dfe7ef] rounded-xl p-3 sm:p-4 lg:p-5 shadow-sm">
+                  <div className="space-y-2 sm:space-y-2.5">
+                    {q?.options?.map((opt, i) => {
+                      const isSelected = answers[current] === i
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => handleOptionSelect(i)}
+                          disabled={timerStopped}
+                          className={`w-full text-left flex items-center gap-3 p-3 sm:p-3.5 rounded-lg border-2 transition-all active:scale-[0.99] disabled:cursor-not-allowed ${
+                            isSelected
+                              ? 'border-[#1299FD] bg-[#1299FD]/5 shadow-[0_0_0_2px_rgba(18,153,253,0.15)]'
+                              : 'border-[#dfe7ef] bg-[#fafbfc] hover:border-[#1299FD] hover:bg-[#1299FD]/[0.04]'
+                          }`}
+                        >
+                          <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-extrabold flex-shrink-0 transition-all ${
+                            isSelected ? 'bg-[#1299FD] text-white' : 'bg-[#dfe7ef] text-gray-500'
+                          }`}>
+                            {String.fromCharCode(65 + i)}
+                          </span>
+                          <span className={`text-sm sm:text-[15px] flex-1 ${isSelected ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>
+                            {opt}
+                          </span>
+                          {isSelected && <CheckCircle size={16} className="text-[#1299FD] flex-shrink-0" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Swipe hint - mobile only */}
+            <div className="sm:hidden flex items-center justify-center gap-1.5 text-[11px] text-gray-400 mt-3 mb-1 select-none">
+              <ChevronLeft size={12} />
+              <span>Swipe to move between questions</span>
+              <ChevronRight size={12} />
             </div>
           </div>
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={current}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.15 }}
-            >
-              <div className="bg-white border border-[#dfe7ef] rounded-xl p-3 sm:p-4 mb-3 shadow-sm">
-                <p className="text-gray-900 text-sm sm:text-base font-semibold leading-relaxed whitespace-pre-wrap">
-                  {q?.question}
-                </p>
-              </div>
-
-              <div className="bg-white border border-[#dfe7ef] rounded-xl p-3 sm:p-4 shadow-sm">
-                <div className="space-y-2">
-                  {q?.options?.map((opt, i) => {
-                    const isSelected = answers[current] === i
-                    return (
-                      <button
-                        key={i}
-                        onClick={() => handleOptionSelect(i)}
-                        disabled={timerStopped}
-                        className={`w-full text-left flex items-center gap-3 p-3 rounded-lg border-2 transition-all active:scale-[0.99] disabled:cursor-not-allowed ${
-                          isSelected
-                            ? 'border-[#1299FD] bg-[#1299FD]/5 shadow-[0_0_0_2px_rgba(18,153,253,0.15)]'
-                            : 'border-[#dfe7ef] bg-[#fafbfc] hover:border-[#1299FD] hover:bg-[#1299FD]/[0.04]'
-                        }`}
-                      >
-                        <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold flex-shrink-0 transition-all ${
-                          isSelected ? 'bg-[#1299FD] text-white' : 'bg-[#dfe7ef] text-gray-500'
-                        }`}>
-                          {String.fromCharCode(65 + i)}
-                        </span>
-                        <span className={`text-sm flex-1 ${isSelected ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>
-                          {opt}
-                        </span>
-                        {isSelected && <CheckCircle size={16} className="text-[#1299FD] flex-shrink-0" />}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </motion.div>
-          </AnimatePresence>
         </div>
 
         {/* Sidebar (Desktop) */}
-        <div className="hidden sm:flex flex-col w-[260px] lg:w-[280px] border-l border-[#dfe7ef] bg-white flex-shrink-0">
+        <div className="hidden sm:flex flex-col w-[260px] lg:w-[300px] border-l border-[#dfe7ef] bg-white flex-shrink-0">
           <div className="bg-[#001123] text-white px-3 py-2.5 text-xs font-bold flex items-center gap-2">
             <Grid3X3 size={14} className="text-[#1299FD]" />
             Question Palette
