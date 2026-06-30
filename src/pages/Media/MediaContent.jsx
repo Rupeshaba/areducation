@@ -367,75 +367,76 @@ function HLSPlayer({ url, onEnded }) {
               <PictureInPicture2 size={14} />
             </button>
           )}
-          <div className="relative">
-            <button
-              onClick={e => { e.stopPropagation(); setShowSettings(v => !v) }}
-              className={`mc-btn ${showSettings ? 'text-primary-400' : ''}`}
-            >
-              <Settings size={14} />
-            </button>
-            {showSettings && (
-              <div
-                className="absolute bottom-12 right-0 w-60 bg-gray-950/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden"
-                onClick={e => e.stopPropagation()}
-              >
-                <div className="flex border-b border-white/10 relative">
-                  <button
-                    onClick={() => setSettingsTab('speed')}
-                    className={`flex-1 py-2.5 text-xs font-semibold transition-all
-                      ${settingsTab === 'speed' ? 'text-primary-400' : 'text-gray-500 hover:text-gray-300'}`}
-                  >Speed</button>
-                  {levels.length > 0 && (
-                    <button
-                      onClick={() => setSettingsTab('quality')}
-                      className={`flex-1 py-2.5 text-xs font-semibold transition-all
-                        ${settingsTab === 'quality' ? 'text-primary-400' : 'text-gray-500 hover:text-gray-300'}`}
-                    >Quality</button>
-                  )}
-                  <button onClick={() => setShowSettings(false)} className="absolute right-2 top-2.5 text-gray-600 hover:text-white">
-                    <X size={12} />
-                  </button>
-                </div>
-                {settingsTab === 'speed' && (
-                  <div className="p-2 grid grid-cols-4 gap-1">
-                    {SPEEDS.map(s => (
-                      <button
-                        key={s}
-                        onClick={() => changeSpeed(s)}
-                        className={`py-2 rounded-xl text-xs font-semibold transition-all active:scale-90
-                          ${speed === s ? 'bg-primary-500 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
-                      >{s}x</button>
-                    ))}
-                  </div>
-                )}
-                {settingsTab === 'quality' && levels.length > 0 && (
-                  <div className="p-2 space-y-0.5 max-h-52 overflow-y-auto">
-                    {[-1, ...levels.map((_, i) => i)].map(l => (
-                      <button
-                        key={l}
-                        onClick={() => changeQuality(l)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all active:scale-95
-                          ${currentLevel === l ? 'bg-primary-500 text-white' : 'text-gray-300 hover:bg-white/10'}`}
-                      >
-                        <span>{qualityLabel(l)}</span>
-                        {l === -1 && (
-                          <span className={`text-[10px] ${currentLevel === l ? 'text-white/60' : 'text-gray-600'}`}>
-                            recommended
-                          </span>
-                        )}
-                        {currentLevel === l && l !== -1 && <CheckCircle size={11} />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <button
+            onClick={e => { e.stopPropagation(); setShowSettings(v => !v) }}
+            className={`mc-btn ${showSettings ? 'text-primary-400' : ''}`}
+          >
+            <Settings size={14} />
+          </button>
           <button onClick={toggleFS} className="mc-btn">
             {fullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
           </button>
         </div>
       </div>
+
+      {showSettings && (
+        <div
+          className="absolute z-50 top-2 right-2 bottom-12 w-48 sm:w-60 flex flex-col bg-gray-950/95 backdrop-blur-xl border border-white/10 rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="flex border-b border-white/10 relative shrink-0">
+            <button
+              onClick={() => setSettingsTab('speed')}
+              className={`flex-1 py-2.5 text-xs font-semibold transition-all
+                ${settingsTab === 'speed' ? 'text-primary-400' : 'text-gray-500 hover:text-gray-300'}`}
+            >Speed</button>
+            {levels.length > 0 && (
+              <button
+                onClick={() => setSettingsTab('quality')}
+                className={`flex-1 py-2.5 text-xs font-semibold transition-all
+                  ${settingsTab === 'quality' ? 'text-primary-400' : 'text-gray-500 hover:text-gray-300'}`}
+              >Quality</button>
+            )}
+            <button onClick={() => setShowSettings(false)} className="absolute right-2 top-2.5 text-gray-600 hover:text-white">
+              <X size={12} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto overscroll-contain">
+            {settingsTab === 'speed' && (
+              <div className="p-2 grid grid-cols-4 gap-1">
+                {SPEEDS.map(s => (
+                  <button
+                    key={s}
+                    onClick={() => changeSpeed(s)}
+                    className={`py-2 rounded-xl text-xs font-semibold transition-all active:scale-90
+                      ${speed === s ? 'bg-primary-500 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
+                  >{s}x</button>
+                ))}
+              </div>
+            )}
+            {settingsTab === 'quality' && levels.length > 0 && (
+              <div className="p-2 space-y-0.5">
+                {[-1, ...levels.map((_, i) => i)].map(l => (
+                  <button
+                    key={l}
+                    onClick={() => changeQuality(l)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all active:scale-95
+                      ${currentLevel === l ? 'bg-primary-500 text-white' : 'text-gray-300 hover:bg-white/10'}`}
+                  >
+                    <span>{qualityLabel(l)}</span>
+                    {l === -1 && (
+                      <span className={`text-[10px] ${currentLevel === l ? 'text-white/60' : 'text-gray-600'}`}>
+                        recommended
+                      </span>
+                    )}
+                    {currentLevel === l && l !== -1 && <CheckCircle size={11} />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <style>{`
         .mc-btn {
