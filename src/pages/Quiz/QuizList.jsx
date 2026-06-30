@@ -54,7 +54,7 @@ export default function QuizList() {
   )
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl xl:max-w-6xl mx-auto px-3 sm:px-0">
 
       {/* Header */}
       <motion.div
@@ -82,7 +82,7 @@ export default function QuizList() {
           <p className="text-sm">No quizzes available for this subject yet.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {quizzes.map((quiz, i) => (
             <motion.div
               key={quiz.id}
