@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import Hls from 'hls.js'
 import {
   ArrowLeft, Play, Pause, Volume2, VolumeX, Maximize, Minimize,
-  SkipBack, SkipForward, CheckCircle, AlertCircle,
-  PictureInPicture2, Monitor, Gauge
+  SkipBack, SkipForward, CheckCircle, AlertCircle, XCircle, FileText, ChevronUp,
+  PictureInPicture2, Monitor, Gauge, Settings, X
 } from 'lucide-react'
 import api from '../../api/axios'
+import useAuthStore from '../../store/authStore'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function fmtTime(s) {
