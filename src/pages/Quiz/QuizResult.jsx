@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useParams, useLocation, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -7,6 +7,27 @@ import {
   BarChart3, ChevronLeft, ChevronRight, X, BookOpen, Target
 } from 'lucide-react'
 import api from '../../api/axios'
+
+/* ═══ SWIPE HOOK (mobile: swipe left = next question, swipe right = prev) ═══ */
+function useSwipeQuestion(onNext, onPrev) {
+  const startX = useRef(null)
+  const startY = useRef(null)
+  function onTouchStart(e) {
+    startX.current = e.touches[0].clientX
+    startY.current = e.touches[0].clientY
+  }
+  function onTouchEnd(e) {
+    if (startX.current === null) return
+    const dx = startX.current - e.changedTouches[0].clientX
+    const dy = Math.abs(startY.current - e.changedTouches[0].clientY)
+    startX.current = null
+    startY.current = null
+    if (Math.abs(dx) < 56 || dy > 70) return
+    if (dx > 0) onNext()
+    else onPrev()
+  }
+  return { onTouchStart, onTouchEnd }
+}
 
 export default function QuizResult() {
   const { attemptId } = useParams()
@@ -42,23 +63,24 @@ export default function QuizResult() {
   const goPrev = () => {
     if (currentQIndex > 0) setCurrentQIndex(p => p - 1)
   }
+  const swipeNav = useSwipeQuestion(goNext, goPrev)
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 pb-12 relative">
+    <div className="max-w-3xl mx-auto px-3 sm:px-4 space-y-6 sm:space-y-8 pb-12 relative">
       
       {/* ═══ HERO SCORE CARD ═══ */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1a1040] via-[#0f0f1e] to-[#0a1628] border border-white/[0.08] p-8 sm:p-10 text-center"
+        className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#1a1040] via-[#0f0f1e] to-[#0a1628] border border-white/[0.08] p-5 sm:p-10 text-center"
       >
         <div className={`absolute top-[-30%] left-1/2 -translate-x-1/2 w-64 h-64 rounded-full blur-[100px] opacity-30 ${
           result.score >= 75 ? 'bg-emerald-500' : result.score >= 50 ? 'bg-amber-500' : 'bg-red-500'
         }`} />
 
         {/* Score Ring */}
-        <div className="relative z-10 w-40 h-40 mx-auto mb-6">
+        <div className="relative z-10 w-32 h-32 sm:w-40 sm:h-40 mx-auto mb-5 sm:mb-6">
           <svg className="w-full h-full transform -rotate-90" viewBox="0 0 140 140">
             <circle cx="70" cy="70" r="60" stroke="rgba(255,255,255,0.05)" strokeWidth="10" fill="none" />
             <motion.circle
@@ -78,7 +100,7 @@ export default function QuizResult() {
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.5, duration: 0.5 }}
-              className={`text-5xl font-black ${scoreColor}`}
+              className={`text-4xl sm:text-5xl font-black ${scoreColor}`}
             >
               {result.score}%
             </motion.span>
@@ -86,7 +108,7 @@ export default function QuizResult() {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
-          <h2 className="text-2xl font-black text-white mb-2">{scoreLabel}</h2>
+          <h2 className="text-xl sm:text-2xl font-black text-white mb-2">{scoreLabel}</h2>
           <p className="text-gray-400 text-sm mb-8">
             {result.score >= 75 ? 'Outstanding performance!' : result.score >= 50 ? 'You are improving!' : 'Practice makes perfect!'}
           </p>
@@ -157,30 +179,30 @@ export default function QuizResult() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 30 }}
               transition={{ duration: 0.3 }}
-              className="relative w-full max-w-2xl max-h-[85vh] overflow-hidden rounded-3xl bg-[#0a0a1a] border border-white/[0.1] shadow-2xl"
+              className="relative w-full max-w-2xl max-h-[92vh] sm:max-h-[85vh] overflow-hidden rounded-t-3xl sm:rounded-3xl bg-[#0a0a1a] border border-white/[0.1] shadow-2xl flex flex-col"
               onClick={e => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div className="flex items-center justify-between p-5 border-b border-white/[0.06]">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary-500/10 border border-primary-500/20 flex items-center justify-center">
-                    <Target size={20} className="text-primary-400" />
+              <div className="flex items-center justify-between p-4 sm:p-5 border-b border-white/[0.06] flex-shrink-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary-500/10 border border-primary-500/20 flex items-center justify-center flex-shrink-0">
+                    <Target size={18} className="text-primary-400" />
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white">Quiz Analysis</h3>
+                  <div className="min-w-0">
+                    <h3 className="text-base sm:text-lg font-bold text-white">Quiz Analysis</h3>
                     <p className="text-xs text-gray-500">Question {currentQIndex + 1} of {questions.length}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowAnalysis(false)}
-                  className="w-9 h-9 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.1] transition-all"
+                  className="w-9 h-9 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.1] transition-all flex-shrink-0"
                 >
                   <X size={18} />
                 </button>
               </div>
 
               {/* Progress Bar */}
-              <div className="w-full h-1 bg-white/[0.05]">
+              <div className="w-full h-1 bg-white/[0.05] flex-shrink-0">
                 <motion.div
                   className="h-full bg-gradient-to-r from-primary-500 to-primary-400"
                   initial={{ width: 0 }}
@@ -189,8 +211,12 @@ export default function QuizResult() {
                 />
               </div>
 
-              {/* Question Content */}
-              <div className="p-6 overflow-y-auto max-h-[calc(85vh-180px)]">
+              {/* Question Content (swipeable on touch devices) */}
+              <div
+                className="p-4 sm:p-6 overflow-y-auto flex-1"
+                style={{ touchAction: 'pan-y' }}
+                {...swipeNav}
+              >
                 <AnimatePresence mode="wait">
                   {currentQ && (
                     <motion.div
@@ -199,7 +225,7 @@ export default function QuizResult() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}
                       transition={{ duration: 0.2 }}
-                      className="space-y-5"
+                      className="space-y-4 sm:space-y-5"
                     >
                       {/* Status Badge */}
                       <div className="flex items-center gap-2">
@@ -216,7 +242,7 @@ export default function QuizResult() {
                       </div>
 
                       {/* Question */}
-                      <h4 className="text-base font-bold text-white leading-relaxed">
+                      <h4 className="text-sm sm:text-base font-bold text-white leading-relaxed">
                         {currentQ.question}
                       </h4>
 
@@ -229,7 +255,7 @@ export default function QuizResult() {
                           return (
                             <div
                               key={j}
-                              className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm transition-all ${
+                              className={`flex items-center gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl border text-sm transition-all ${
                                 isCorrect
                                   ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
                                   : isSelected && !currentQ.isCorrect
@@ -237,7 +263,7 @@ export default function QuizResult() {
                                   : 'bg-white/[0.02] border-white/[0.06] text-gray-400'
                               }`}
                             >
-                              <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${
+                              <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${
                                 isCorrect
                                   ? 'bg-emerald-500/20 text-emerald-400'
                                   : isSelected && !currentQ.isCorrect
@@ -246,9 +272,9 @@ export default function QuizResult() {
                               }`}>
                                 {isCorrect ? <CheckCircle size={14} /> : isSelected && !currentQ.isCorrect ? <XCircle size={14} /> : ['A', 'B', 'C', 'D'][j]}
                               </span>
-                              <span className="flex-1">{opt}</span>
-                              {isCorrect && <span className="text-[10px] font-bold text-emerald-400 uppercase">Correct</span>}
-                              {isSelected && !currentQ.isCorrect && <span className="text-[10px] font-bold text-red-400 uppercase">Your Answer</span>}
+                              <span className="flex-1 text-[13px] sm:text-sm">{opt}</span>
+                              {isCorrect && <span className="hidden xs:inline text-[10px] font-bold text-emerald-400 uppercase flex-shrink-0">Correct</span>}
+                              {isSelected && !currentQ.isCorrect && <span className="hidden xs:inline text-[10px] font-bold text-red-400 uppercase flex-shrink-0">Your Answer</span>}
                             </div>
                           )
                         })}
@@ -256,37 +282,44 @@ export default function QuizResult() {
 
                       {/* Explanation */}
                       {currentQ.explanation && (
-                        <div className="rounded-xl bg-amber-500/[0.05] border border-amber-500/15 p-4">
+                        <div className="rounded-xl bg-amber-500/[0.05] border border-amber-500/15 p-3.5 sm:p-4">
                           <div className="flex items-center gap-2 mb-2">
                             <BookOpen size={14} className="text-amber-400" />
                             <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Explanation</span>
                           </div>
-                          <p className="text-sm text-gray-400 leading-relaxed">{currentQ.explanation}</p>
+                          <p className="text-[13px] sm:text-sm text-gray-400 leading-relaxed">{currentQ.explanation}</p>
                         </div>
                       )}
+
+                      {/* Swipe hint - mobile only */}
+                      <div className="sm:hidden flex items-center justify-center gap-1.5 text-[11px] text-gray-600 pt-1 select-none">
+                        <ChevronLeft size={12} />
+                        <span>Swipe to change question</span>
+                        <ChevronRight size={12} />
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
 
               {/* Navigation Footer */}
-              <div className="flex items-center justify-between p-5 border-t border-white/[0.06] bg-white/[0.02]">
+              <div className="flex items-center justify-between p-3.5 sm:p-5 border-t border-white/[0.06] bg-white/[0.02] flex-shrink-0">
                 <button
                   onClick={goPrev}
                   disabled={currentQIndex === 0}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/[0.05] text-gray-300"
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/[0.05] text-gray-300"
                 >
-                  <ChevronLeft size={16} /> Previous
+                  <ChevronLeft size={16} /> <span className="hidden xs:inline">Previous</span>
                 </button>
 
                 {/* Dots */}
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto max-w-[40%] no-scrollbar">
                   {questions.map((_, i) => (
                     <button
                       key={i}
                       onClick={() => setCurrentQIndex(i)}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        i === currentQIndex ? 'w-6 bg-primary-400' : questions[i].isCorrect ? 'bg-emerald-500/40' : questions[i].isSkipped ? 'bg-gray-600' : 'bg-red-500/40'
+                      className={`h-2 rounded-full flex-shrink-0 transition-all ${
+                        i === currentQIndex ? 'w-6 bg-primary-400' : `w-2 ${questions[i].isCorrect ? 'bg-emerald-500/40' : questions[i].isSkipped ? 'bg-gray-600' : 'bg-red-500/40'}`
                       }`}
                     />
                   ))}
@@ -295,15 +328,20 @@ export default function QuizResult() {
                 <button
                   onClick={goNext}
                   disabled={currentQIndex === questions.length - 1}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary-500 hover:bg-primary-400 text-white text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-primary-500/20"
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-primary-500 hover:bg-primary-400 text-white text-xs sm:text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-primary-500/20"
                 >
-                  Next <ChevronRight size={16} />
+                  <span className="hidden xs:inline">Next</span> <ChevronRight size={16} />
                 </button>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </div>
   )
 }
