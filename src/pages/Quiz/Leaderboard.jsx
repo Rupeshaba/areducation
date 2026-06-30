@@ -53,7 +53,7 @@ function ShimmerPodium() {
 function PodiumCard({ entry, position, delay }) {
   if (!entry) return null
 
-  const heights = ['h-44', 'h-36', 'h-28']
+  const heights = ['h-32 sm:h-44', 'h-28 sm:h-36', 'h-20 sm:h-28']
   const positions = ['order-2', 'order-1', 'order-3']
   const gradients = [
     'from-amber-400/30 to-yellow-500/20 border-amber-400/60 shadow-amber-400/20',
@@ -62,7 +62,7 @@ function PodiumCard({ entry, position, delay }) {
   ]
   const badges = ['🥇', '🥈', '🥉']
   const textColors = ['text-amber-300', 'text-gray-200', 'text-orange-300']
-  const avatarSizes = ['w-20 h-20', 'w-16 h-16', 'w-16 h-16']
+  const avatarSizes = ['w-16 h-16 sm:w-20 sm:h-20', 'w-14 h-14 sm:w-16 sm:h-16', 'w-14 h-14 sm:w-16 sm:h-16']
   const badgeColors = [
     'bg-amber-400/20 border-amber-400/50 text-amber-300',
     'bg-slate-300/20 border-slate-300/50 text-gray-200',
@@ -118,10 +118,10 @@ function PodiumCard({ entry, position, delay }) {
       <div className="text-xs text-gray-400 font-medium mb-3">{(entry.points || 0).toLocaleString()} pts</div>
 
       {/* Podium Bar with glow effect */}
-      <div className={`w-20 sm:w-24 ${heights[idx]} rounded-t-2xl bg-gradient-to-b ${gradients[idx]} border-t border-x relative overflow-hidden shadow-xl`}>
+      <div className={`w-16 xs:w-20 sm:w-24 ${heights[idx]} rounded-t-2xl bg-gradient-to-b ${gradients[idx]} border-t border-x relative overflow-hidden shadow-xl`}>
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" />
-        <span className={`text-3xl font-black ${textColors[idx]} relative z-10 drop-shadow-lg`}>#{position}</span>
+        <span className={`text-2xl sm:text-3xl font-black ${textColors[idx]} relative z-10 drop-shadow-lg`}>#{position}</span>
       </div>
     </motion.div>
   )
@@ -224,25 +224,25 @@ export default function Leaderboard() {
   const rest = leaderboard.slice(3)
 
   return (
-    <div className="max-w-2xl mx-auto px-4">
+    <div className="max-w-2xl mx-auto px-3 sm:px-4">
       
       {/* ═══ HERO HEADER ═══ */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500/20 via-yellow-500/5 to-transparent border border-amber-400/30 p-8 mb-10 shadow-2xl shadow-amber-500/10"
+        className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-amber-500/20 via-yellow-500/5 to-transparent border border-amber-400/30 p-5 sm:p-8 mb-6 sm:mb-10 shadow-2xl shadow-amber-500/10"
       >
         {/* Ambient glow orbs */}
         <div className="absolute top-[-40%] right-[-20%] w-64 h-64 bg-amber-400/20 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-[-30%] left-[-20%] w-56 h-56 bg-orange-500/15 rounded-full blur-3xl animate-pulse delay-1000" />
         
-        <div className="relative z-10 flex items-center gap-6">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400/30 to-yellow-500/20 border border-amber-400/40 flex items-center justify-center shadow-xl shadow-amber-500/20">
-            <Trophy size={36} className="text-amber-300 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]" />
+        <div className="relative z-10 flex items-center gap-4 sm:gap-6">
+          <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-amber-400/30 to-yellow-500/20 border border-amber-400/40 flex items-center justify-center shadow-xl shadow-amber-500/20 flex-shrink-0">
+            <Trophy size={26} className="sm:w-9 sm:h-9 text-amber-300 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]" />
           </div>
-          <div>
-            <h1 className="text-4xl font-black text-white tracking-tight mb-1">Leaderboard</h1>
-            <p className="text-gray-300 text-sm font-light">Compete, climb, and claim your glory.</p>
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight mb-0.5 sm:mb-1">Leaderboard</h1>
+            <p className="text-gray-300 text-xs sm:text-sm font-light">Compete, climb, and claim your glory.</p>
           </div>
         </div>
 
@@ -251,17 +251,17 @@ export default function Leaderboard() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.4 }}
-            className="relative z-10 mt-6 inline-flex items-center gap-4 px-5 py-2.5 rounded-2xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-sm"
+            className="relative z-10 mt-4 sm:mt-6 inline-flex items-center gap-2.5 sm:gap-4 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-2xl bg-white/[0.04] border border-white/[0.08] backdrop-blur-sm max-w-full overflow-x-auto no-scrollbar"
           >
-            <div className="flex items-center gap-2">
-              <Target size={16} className="text-primary-400" />
-              <span className="text-gray-300 text-sm">Your Rank</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              <Target size={14} className="sm:w-4 sm:h-4 text-primary-400" />
+              <span className="text-gray-300 text-xs sm:text-sm whitespace-nowrap">Your Rank</span>
             </div>
-            <div className="w-px h-5 bg-white/10" />
-            <span className="font-black text-2xl text-amber-300 drop-shadow-glow">#{myRank}</span>
-            <div className="w-px h-5 bg-white/10" />
-            <div className="flex items-center gap-1.5">
-              <Star size={14} className="text-amber-300 fill-amber-300" />
+            <div className="w-px h-5 bg-white/10 flex-shrink-0" />
+            <span className="font-black text-xl sm:text-2xl text-amber-300 drop-shadow-glow flex-shrink-0">#{myRank}</span>
+            <div className="w-px h-5 bg-white/10 flex-shrink-0" />
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <Star size={13} className="sm:w-3.5 sm:h-3.5 text-amber-300 fill-amber-300" />
               <span className="text-sm font-bold text-white">{myEntry?.points?.toLocaleString() || 0}</span>
               <span className="text-xs text-gray-400">pts</span>
             </div>
@@ -270,8 +270,8 @@ export default function Leaderboard() {
       </motion.div>
 
       {/* ═══ PERIOD TABS ═══ */}
-      <div className="relative mb-10">
-        <div className="flex bg-white/[0.03] rounded-2xl p-1 border border-white/[0.06] backdrop-blur-sm">
+      <div className="relative mb-8 sm:mb-10">
+        <div className="flex bg-white/[0.03] rounded-2xl p-1 border border-white/[0.06] backdrop-blur-sm overflow-x-auto no-scrollbar">
           {PERIODS.map(p => {
             const Icon = p.icon
             const isActive = period === p.key
@@ -279,7 +279,7 @@ export default function Leaderboard() {
               <button
                 key={p.key}
                 onClick={() => setPeriod(p.key)}
-                className={`relative flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all duration-300 ${
+                className={`relative flex-1 min-w-[78px] flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 ${
                   isActive ? 'text-white' : 'text-gray-400 hover:text-gray-200'
                 }`}
               >
@@ -290,8 +290,8 @@ export default function Leaderboard() {
                     transition={{ type: 'spring', bounce: 0.3, duration: 0.6 }}
                   />
                 )}
-                <span className="relative z-10 flex items-center gap-2">
-                  <Icon size={16} />
+                <span className="relative z-10 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap">
+                  <Icon size={15} className="sm:w-4 sm:h-4" />
                   {p.label}
                 </span>
               </button>
@@ -327,7 +327,7 @@ export default function Leaderboard() {
           
           {/* ═══ TOP 3 PODIUM ═══ */}
           {topThree.length > 0 && (
-            <div className="flex items-end justify-center gap-5 pb-2">
+            <div className="flex items-end justify-center gap-3 xs:gap-5 pb-2 px-1">
               {topThree.map((entry, i) => (
                 <PodiumCard key={entry.userId} entry={entry} position={i + 1} delay={i * 0.15} />
               ))}
@@ -369,6 +369,8 @@ export default function Leaderboard() {
         .drop-shadow-glow {
           text-shadow: 0 0 10px rgba(251,191,36,0.3);
         }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
     </div>
   )
