@@ -18,6 +18,7 @@ import Notifications from "./pages/Notifications/Notifications"
 import Quiz from "./pages/Quiz/QuizList"
 import QuizPlay from "./pages/Quiz/QuizPlay"
 import QuizResult from "./pages/Quiz/QuizResult"
+import QuizAnalysis from "./pages/Quiz/QuizAnalysis"
 import Leaderboard from "./pages/Quiz/Leaderboard"
 import Progress from "./pages/Progress/Progress"
 import DoubtChat from "./pages/DoubtChat/DoubtChat"
@@ -41,6 +42,8 @@ function App() {
           {/* Media (video/pdf) routes render OUTSIDE Layout — no navbar/header ever shows */}
           <Route path="/courses/:courseId/subjects/:subjectId/content/:contentId" element={<MediaContent />} />
           <Route path="/courses/:courseId/subjects/:subjectId/chapters/:chapterId/content/:contentId" element={<MediaContent />} />
+          <Route path="/quiz/analysis/:attemptId" element={<QuizAnalysis />} />
+          <Route path="/quiz/:subject/:name/play" element={<QuizPlay />} />
 
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
@@ -55,7 +58,6 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/quiz/:subject" element={<Quiz />} />
-            <Route path="/quiz/:subject/:name/play" element={<QuizPlay />} />
             <Route path="/quiz/result/:attemptId" element={<QuizResult />} />
             <Route path="/progress" element={<Progress />} />
             <Route path="/doubt-chat" element={<DoubtChat />} />
