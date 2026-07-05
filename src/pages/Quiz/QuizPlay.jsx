@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Clock, ChevronLeft, ChevronRight, Flag, CheckCircle, AlertCircle, 
+  Clock, ChevronLeft, ChevronRight, CheckCircle, AlertCircle, 
   Loader, X, Bookmark, Send, AlertTriangle, Grid3X3
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -103,9 +103,10 @@ export default function QuizPlay() {
       const el = document.documentElement
       if (!document.fullscreenElement && fullscreenLocked.current && !submitting) {
         if (el.requestFullscreen) {
-          el.requestFullscreen().catch(() => {})
-        } else if (el.webkitRequestFullscreen) {
-          el.webkitRequestFullscreen()
+          el.requestFullscreen().catch(() => {
+            // Fullscreen failed - continue without it
+            fullscreenLocked.current = false
+          })
         }
       }
     }
@@ -116,7 +117,6 @@ export default function QuizPlay() {
     // Prevent exiting fullscreen
     const handleFSChange = () => {
       if (!document.fullscreenElement && fullscreenLocked.current && !submitting) {
-        // Small delay then re-enter
         setTimeout(() => enterFS(), 200)
       }
     }
@@ -131,29 +131,14 @@ export default function QuizPlay() {
       }
     }
 
-    // Block fullscreen exit via various methods
-    const blockFSExit = (e) => {
-      if (fullscreenLocked.current && !submitting) {
-        e.preventDefault()
-        e.stopPropagation()
-        return false
-      }
-    }
-
     document.addEventListener('fullscreenchange', handleFSChange)
-    document.addEventListener('webkitfullscreenchange', handleFSChange)
     document.addEventListener('keydown', handleKeyDown, true)
     
-    // Also block on window
-    window.addEventListener('keydown', handleKeyDown, true)
-
     return () => {
       clearTimeout(initTimer)
       fullscreenLocked.current = false
       document.removeEventListener('fullscreenchange', handleFSChange)
-      document.removeEventListener('webkitfullscreenchange', handleFSChange)
       document.removeEventListener('keydown', handleKeyDown, true)
-      window.removeEventListener('keydown', handleKeyDown, true)
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {})
       }
@@ -248,7 +233,7 @@ export default function QuizPlay() {
   }
 
   if (isLoading) return (
-    <div className="h-screen bg-[#001123] flex flex-col items-center justify-center gap-4">
+    <div className="fixed inset-0 bg-[#001123] flex flex-col items-center justify-center gap-4">
       <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center animate-bounce">
         <Loader size={32} className="text-[#1299FD] animate-spin" />
       </div>
@@ -257,10 +242,10 @@ export default function QuizPlay() {
   )
 
   return (
-    <div className="h-screen flex flex-col bg-[#eff3f8] overflow-hidden select-none">
+    <div className="fixed inset-0 flex flex-col bg-[#eff3f8] select-none">
       {/* ===== TOP BAR ===== */}
-      <div className="flex-shrink-0 bg-[#001123] flex items-center justify-between px-3 sm:px-4 h-[52px] z-50">
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+      <div className="flex-shrink-0 bg-[#001123] flex items-center justify-between px-3 sm:px-4 h-[48px] z-50">
+        <div className="flex items-center gap-2 min-w-0">
           <span className="text-white font-extrabold text-sm tracking-wide flex-shrink-0">AR QUIZ</span>
           <span className="text-white/40 text-xs flex-shrink-0">|</span>
           <span className="text-white/50 text-[11px] font-medium truncate max-w-[110px] sm:max-w-[180px]">
@@ -271,15 +256,15 @@ export default function QuizPlay() {
         <div className="flex items-center gap-2">
           <div className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 border transition-all ${
             timerStopped 
-              ? 'bg-red-500/20 border-red-500/30' 
+              ? 'bg-danger-500/20 border-danger-500/30' 
               : 'bg-white/10 border-white/15'
           }`}>
-            <Clock size={13} className={timerStopped ? 'text-red-400' : 'text-white/50'} />
-            <span className={`text-xs font-bold tabular-nums ${timerStopped ? 'text-red-300' : 'text-white'}`}>
+            <Clock size={13} className={timerStopped ? 'text-danger-400' : 'text-white/50'} />
+            <span className={`text-xs font-bold tabular-nums ${timerStopped ? 'text-danger-400' : 'text-white'}`}>
               {formatTime(timerStopped ? finalTime : elapsed)}
             </span>
             {timerStopped && (
-              <span className="text-[10px] text-red-400 font-medium ml-1">PAUSED</span>
+              <span className="text-[10px] text-danger-400 font-medium ml-1">PAUSED</span>
             )}
           </div>
           <button
@@ -292,7 +277,7 @@ export default function QuizPlay() {
       </div>
 
       {/* ===== ACTION BAR (desktop/tablet) ===== */}
-      <div className="hidden sm:flex flex-shrink-0 bg-[#f8fafc] border-b border-[#dfe7ef] items-center justify-center px-2 sm:px-3 h-[52px] gap-1.5 overflow-x-auto">
+      <div className="hidden sm:flex flex-shrink-0 bg-[#f8fafc] border-b border-[#dfe7ef] items-center justify-center px-2 sm:px-3 h-[48px] gap-1.5">
         <button onClick={() => goToQuestion(current - 1)} disabled={current === 0 || timerStopped} className="act-btn">
           <ChevronLeft size={14} /> Prev
         </button>
@@ -310,20 +295,15 @@ export default function QuizPlay() {
         <button onClick={handleClear} disabled={timerStopped} className="act-btn !bg-white !text-gray-700 !border !border-gray-300 hover:!bg-gray-100">
           <X size={14} /> Clear
         </button>
-        <button onClick={handleSubmitClick} className="act-btn !bg-gradient-to-r !from-pink-400 !to-red-400 !text-white !border-none">
+        <button onClick={handleSubmitClick} className="act-btn !bg-gradient-to-r !from-pink-400 !to-danger-400 !text-white !border-none">
           <Send size={14} /> Submit
         </button>
       </div>
 
-      {/* ===== MAIN CONTENT ===== */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Question Panel (swipeable on touch devices) */}
-        <div
-          className="flex-1 overflow-y-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4"
-          style={{ touchAction: 'pan-y' }}
-          {...swipeNav}
-        >
-          <div className="max-w-2xl lg:max-w-3xl mx-auto">
+      {/* ===== MAIN CONTENT - Full screen, no scroll ===== */}
+      <div className="flex-1 flex flex-col min-h-0 mr-0 sm:mr-64">
+        <div className="flex-1 flex flex-col px-3 sm:px-4 lg:px-6 py-3 sm:py-4 min-h-0">
+          <div className="flex-1 flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-3 gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-sm font-bold text-gray-800 whitespace-nowrap">
@@ -335,7 +315,7 @@ export default function QuizPlay() {
                   <button
                     onClick={handleClear}
                     disabled={timerStopped}
-                    className="flex items-center gap-1 text-red-500 text-[11px] font-semibold bg-red-50 border border-red-200 rounded-full px-3 py-1 hover:bg-red-100 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1 text-danger-500 text-[11px] font-semibold bg-red-50 border border-red-200 rounded-full px-3 py-1 hover:bg-red-100 transition-colors disabled:opacity-50"
                   >
                     <X size={11} /> <span className="hidden xs:inline">Clear Selection</span><span className="xs:hidden">Clear</span>
                   </button>
@@ -372,112 +352,58 @@ export default function QuizPlay() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.15 }}
+                className="flex-1 flex flex-col min-h-0"
               >
-                <div className="bg-white border border-[#dfe7ef] rounded-xl p-3 sm:p-4 lg:p-5 mb-3 shadow-sm">
+                <div className="bg-white border border-[#dfe7ef] rounded-xl p-3 sm:p-4 lg:p-5 mb-3 shadow-sm flex-shrink-0">
                   <p className="text-gray-900 text-sm sm:text-base lg:text-lg font-semibold leading-relaxed whitespace-pre-wrap">
                     {q?.question}
                   </p>
                 </div>
 
-                <div className="bg-white border border-[#dfe7ef] rounded-xl p-3 sm:p-4 lg:p-5 shadow-sm">
-                  <div className="space-y-2 sm:space-y-2.5">
-                    {q?.options?.map((opt, i) => {
-                      const isSelected = answers[current] === i
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => handleOptionSelect(i)}
-                          disabled={timerStopped}
-                          className={`w-full text-left flex items-center gap-3 p-3 sm:p-3.5 rounded-lg border-2 transition-all active:scale-[0.99] disabled:cursor-not-allowed ${
-                            isSelected
-                              ? 'border-[#1299FD] bg-[#1299FD]/5 shadow-[0_0_0_2px_rgba(18,153,253,0.15)]'
-                              : 'border-[#dfe7ef] bg-[#fafbfc] hover:border-[#1299FD] hover:bg-[#1299FD]/[0.04]'
-                          }`}
-                        >
-                          <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-extrabold flex-shrink-0 transition-all ${
-                            isSelected ? 'bg-[#1299FD] text-white' : 'bg-[#dfe7ef] text-gray-500'
-                          }`}>
-                            {String.fromCharCode(65 + i)}
-                          </span>
-                          <span className={`text-sm sm:text-[15px] flex-1 ${isSelected ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>
-                            {opt}
-                          </span>
-                          {isSelected && <CheckCircle size={16} className="text-[#1299FD] flex-shrink-0" />}
-                        </button>
-                      )
-                    })}
+                <div className="flex-1 min-h-0">
+                  <div 
+                    className="h-full overflow-y-auto pr-1"
+                    style={{ touchAction: 'pan-y' }}
+                    {...swipeNav}
+                  >
+                    <div className="space-y-2 sm:space-y-2.5">
+                      {q?.options?.map((opt, i) => {
+                        const isSelected = answers[current] === i
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => handleOptionSelect(i)}
+                            disabled={timerStopped}
+                            className={`w-full text-left flex items-center gap-3 p-3 sm:p-3.5 rounded-lg border-2 transition-all active:scale-[0.99] disabled:cursor-not-allowed ${
+                              isSelected
+                                ? 'border-[#1299FD] bg-[#1299FD]/5 shadow-[0_0_0_2px_rgba(18,153,253,0.15)]'
+                                : 'border-[#dfe7ef] bg-[#fafbfc] hover:border-[#1299FD] hover:bg-[#1299FD]/[0.04]'
+                            }`}
+                          >
+                            <span className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-extrabold flex-shrink-0 transition-all ${
+                              isSelected ? 'bg-[#1299FD] text-white' : 'bg-[#dfe7ef] text-gray-500'
+                            }`}>
+                              {String.fromCharCode(65 + i)}
+                            </span>
+                            <span className={`text-sm sm:text-[15px] flex-1 ${isSelected ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>
+                              {opt}
+                            </span>
+                            {isSelected && <CheckCircle size={16} className="text-[#1299FD] flex-shrink-0" />}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
+                </div>
+
+                {/* Swipe hint - mobile only */}
+                <div className="sm:hidden flex items-center justify-center gap-1.5 text-[11px] text-gray-400 mt-3 mb-1 select-none">
+                  <ChevronLeft size={12} />
+                  <span>Swipe to move between questions</span>
+                  <ChevronRight size={12} />
                 </div>
               </motion.div>
             </AnimatePresence>
-
-            {/* Swipe hint - mobile only */}
-            <div className="sm:hidden flex items-center justify-center gap-1.5 text-[11px] text-gray-400 mt-3 mb-1 select-none">
-              <ChevronLeft size={12} />
-              <span>Swipe to move between questions</span>
-              <ChevronRight size={12} />
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar (Desktop) */}
-        <div className="hidden sm:flex flex-col w-[260px] lg:w-[300px] border-l border-[#dfe7ef] bg-white flex-shrink-0">
-          <div className="bg-[#001123] text-white px-3 py-2.5 text-xs font-bold flex items-center gap-2">
-            <Grid3X3 size={14} className="text-[#1299FD]" />
-            Question Palette
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-2.5">
-            <div className="grid grid-cols-5 gap-1.5">
-              {questions.map((_, i) => {
-                const status = getQuestionStatus(i)
-                return (
-                  <button
-                    key={i}
-                    onClick={() => goToQuestion(i)}
-                    disabled={timerStopped}
-                    className={`aspect-square rounded-md text-xs font-bold flex items-center justify-center transition-all active:scale-95 hover:scale-105 disabled:cursor-not-allowed ${
-                      status === 'current' ? 'bg-[#001123] text-white shadow-[0_0_0_3px_rgba(0,17,35,0.3)] scale-110' :
-                      status === 'answered' ? 'bg-[#22c55e] text-white' :
-                      status === 'not-visited' ? 'bg-[#f3f4f6] border border-[#e5e7eb] text-[#374151]' :
-                      status === 'review' ? 'bg-[#f59e0b] text-white' :
-                      'bg-[#ef4444] text-white'
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="px-2.5 py-2 border-t border-[#dfe7ef] grid grid-cols-2 gap-1.5 text-[10px]">
-            <div className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-[#22c55e]"></span> Answered</div>
-            <div className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-[#ef4444]"></span> Not Answered</div>
-            <div className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-[#f59e0b]"></span> Review</div>
-            <div className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-[#f3f4f6] border border-[#e5e7eb]"></span> Not Visited</div>
-          </div>
-
-          <div className="border-t border-[#dfe7ef]">
-            <div className="grid grid-cols-2 divide-x divide-[#dfe7ef]">
-              <div className="p-3 text-center">
-                <div className="text-xl font-black text-[#16a34a]">{answeredCount}</div>
-                <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Answered</div>
-              </div>
-              <div className="p-3 text-center">
-                <div className="text-xl font-black text-[#dc2626]">{notAnsweredCount + notVisitedCount}</div>
-                <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Not Answered</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-2.5 border-t border-[#dfe7ef]">
-            <button
-              onClick={handleSubmitClick}
-              className="w-full bg-gradient-to-r from-pink-400 to-red-400 text-white rounded-lg py-3 font-extrabold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-red-200"
-            >
-              <Send size={16} /> Submit Quiz
-            </button>
           </div>
         </div>
       </div>
@@ -499,10 +425,60 @@ export default function QuizPlay() {
             Next <ChevronRight size={16} />
           </button>
         ) : (
-          <button onClick={handleSubmitClick} className="nav-btn-mob !flex-[1.2] !bg-gradient-to-r !from-pink-400 !to-red-400 !text-white !border-none">
+          <button onClick={handleSubmitClick} className="nav-btn-mob !flex-[1.2] !bg-gradient-to-r !from-pink-400 !to-danger-400 !text-white !border-none">
             Submit <Send size={14} />
           </button>
         )}
+      </div>
+
+      {/* ===== DESKTOP SIDE PANEL ===== */}
+      <div className="hidden sm:flex fixed top-0 right-0 bottom-0 w-64 bg-white border-l border-[#dfe7ef] z-40 flex-col">
+        <div className="bg-[#001123] text-white px-4 py-3 flex items-center justify-between">
+          <span className="text-sm font-bold">Question Palette</span>
+        </div>
+
+        <div className="grid grid-cols-2 divide-x divide-[#dfe7ef] border-b border-[#dfe7ef]">
+          <div className="p-3 text-center">
+            <div className="text-lg font-black text-[#14B8A6]">{answeredCount}</div>
+            <div className="text-[10px] font-semibold text-gray-500 uppercase">Answered</div>
+          </div>
+          <div className="p-3 text-center">
+            <div className="text-lg font-black text-[#E23F3F]">{notAnsweredCount + notVisitedCount}</div>
+            <div className="text-[10px] font-semibold text-gray-500 uppercase">Not Answered</div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-3">
+          <div className="grid grid-cols-5 gap-2">
+            {questions.map((_, i) => {
+              const status = getQuestionStatus(i)
+              return (
+                <button
+                  key={i}
+                  onClick={() => goToQuestion(i)}
+                  className={`aspect-square rounded-md text-xs font-bold flex items-center justify-center ${
+                    status === 'current' ? 'bg-[#001123] text-white shadow-[0_0_0_2px_rgba(0,17,35,0.3)]' :
+                    status === 'answered' ? 'bg-[#2DD4BF] text-white' :
+                    status === 'not-visited' ? 'bg-[#f3f4f6] border border-[#e5e7eb] text-[#374151]' :
+                    status === 'review' ? 'bg-[#FFB020] text-white' :
+                    'bg-[#FF5C5C] text-white'
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="p-3 border-t border-[#dfe7ef]">
+          <button
+            onClick={handleSubmitClick}
+            className="w-full bg-gradient-to-r from-pink-400 to-danger-400 text-white rounded-lg py-2.5 font-extrabold text-sm flex items-center justify-center gap-2"
+          >
+            <Send size={16} /> Submit Quiz
+          </button>
+        </div>
       </div>
 
       {/* ===== MOBILE PALETTE ===== */}
@@ -521,11 +497,11 @@ export default function QuizPlay() {
 
             <div className="grid grid-cols-2 divide-x divide-[#dfe7ef] border-b border-[#dfe7ef]">
               <div className="p-2.5 text-center">
-                <div className="text-base font-black text-[#16a34a]">{answeredCount}</div>
+                <div className="text-base font-black text-[#14B8A6]">{answeredCount}</div>
                 <div className="text-[10px] font-semibold text-gray-500 uppercase">Answered</div>
               </div>
               <div className="p-2.5 text-center">
-                <div className="text-base font-black text-[#dc2626]">{notAnsweredCount + notVisitedCount}</div>
+                <div className="text-base font-black text-[#E23F3F]">{notAnsweredCount + notVisitedCount}</div>
                 <div className="text-[10px] font-semibold text-gray-500 uppercase">Not Answered</div>
               </div>
             </div>
@@ -540,10 +516,10 @@ export default function QuizPlay() {
                       onClick={() => goToQuestion(i)}
                       className={`aspect-square rounded-md text-xs font-bold flex items-center justify-center ${
                         status === 'current' ? 'bg-[#001123] text-white shadow-[0_0_0_2px_rgba(0,17,35,0.3)]' :
-                        status === 'answered' ? 'bg-[#22c55e] text-white' :
+                        status === 'answered' ? 'bg-[#2DD4BF] text-white' :
                         status === 'not-visited' ? 'bg-[#f3f4f6] border border-[#e5e7eb] text-[#374151]' :
-                        status === 'review' ? 'bg-[#f59e0b] text-white' :
-                        'bg-[#ef4444] text-white'
+                        status === 'review' ? 'bg-[#FFB020] text-white' :
+                        'bg-[#FF5C5C] text-white'
                       }`}
                     >
                       {i + 1}
@@ -556,7 +532,7 @@ export default function QuizPlay() {
             <div className="p-2.5 border-t border-[#dfe7ef]">
               <button
                 onClick={handleSubmitClick}
-                className="w-full bg-gradient-to-r from-pink-400 to-red-400 text-white rounded-lg py-3 font-extrabold text-sm flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-pink-400 to-danger-400 text-white rounded-lg py-3 font-extrabold text-sm flex items-center justify-center gap-2"
               >
                 <Send size={16} /> Submit Quiz
               </button>
@@ -589,11 +565,11 @@ export default function QuizPlay() {
             <div className="bg-[#f8fafc] rounded-xl p-4 mb-4 border border-[#dfe7ef]">
               <div className="grid grid-cols-2 gap-3 text-center">
                 <div>
-                  <div className="text-2xl font-black text-[#16a34a]">{answeredCount}</div>
+                  <div className="text-2xl font-black text-[#14B8A6]">{answeredCount}</div>
                   <div className="text-[11px] font-semibold text-gray-500 uppercase">Answered</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-black text-[#dc2626]">{totalQuestions - answeredCount}</div>
+                  <div className="text-2xl font-black text-[#E23F3F]">{totalQuestions - answeredCount}</div>
                   <div className="text-[11px] font-semibold text-gray-500 uppercase">Unanswered</div>
                 </div>
               </div>
@@ -615,8 +591,8 @@ export default function QuizPlay() {
 
             {totalQuestions - answeredCount > 0 && (
               <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-                <AlertCircle size={16} className="text-red-500 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-red-700 font-medium">
+                <AlertCircle size={16} className="text-danger-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-danger-600 font-medium">
                   {totalQuestions - answeredCount} question{totalQuestions - answeredCount > 1 ? 's' : ''} unanswered. 
                   Once submitted, you won't be able to resume.
                 </p>
@@ -625,7 +601,7 @@ export default function QuizPlay() {
 
             {totalQuestions - answeredCount === 0 && (
               <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-                <CheckCircle size={16} className="text-green-500 flex-shrink-0 mt-0.5" />
+                <CheckCircle size={16} className="text-mint-500 flex-shrink-0 mt-0.5" />
                 <p className="text-xs text-green-700 font-medium">
                   All questions answered! Ready to submit.
                 </p>
@@ -640,13 +616,13 @@ export default function QuizPlay() {
             <div className="flex gap-3">
               <button
                 onClick={cancelSubmit}
-                className="flex-1 py-3 rounded-xl border-2 border-[#dfe7ef] text-gray-700 font-bold text-sm hover:bg-gray-50 active:scale-95 transition-all"
+                className="flex-1 py-3 rounded-xl border-2 border-[#dfe7ef] text-gray-700 font-bold text-sm hover:bg-gray-50 active:scale-[0.98] transition-all"
               >
                 Resume Quiz
               </button>
               <button
                 onClick={confirmSubmit}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-pink-400 to-red-400 text-white font-extrabold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-red-200"
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-pink-400 to-danger-400 text-white font-extrabold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-red-200"
               >
                 <Send size={16} />
                 Submit Now
