@@ -50,9 +50,9 @@ export default function QuizResult() {
     </div>
   )
 
-  const scoreColor = result.score >= 75 ? 'text-emerald-400' : result.score >= 50 ? 'text-amber-400' : 'text-red-400'
+  const scoreColor = result.score >= 75 ? 'text-mint-400' : result.score >= 50 ? 'text-amber-400' : 'text-danger-400'
   const scoreLabel = result.score >= 75 ? 'Excellent! 🎉' : result.score >= 50 ? 'Good Job! 👍' : 'Keep Practicing! 💪'
-  const ringColor = result.score >= 75 ? '#10b981' : result.score >= 50 ? '#f59e0b' : '#ef4444'
+  const ringColor = result.score >= 75 ? '#2DD4BF' : result.score >= 50 ? '#FFB020' : '#FF5C5C'
 
   const questions = result.results || []
   const currentQ = questions[currentQIndex]
@@ -73,10 +73,10 @@ export default function QuizResult() {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#1a1040] via-[#0f0f1e] to-[#0a1628] border border-white/[0.08] p-5 sm:p-10 text-center"
+        className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#1a1040] via-[#12162A] to-[#0B0E1A] border border-white/[0.08] p-5 sm:p-10 text-center"
       >
         <div className={`absolute top-[-30%] left-1/2 -translate-x-1/2 w-64 h-64 rounded-full blur-[100px] opacity-30 ${
-          result.score >= 75 ? 'bg-emerald-500' : result.score >= 50 ? 'bg-amber-500' : 'bg-red-500'
+          result.score >= 75 ? 'bg-mint-500' : result.score >= 50 ? 'bg-amber-500' : 'bg-danger-500'
         }`} />
 
         {/* Score Ring */}
@@ -122,8 +122,8 @@ export default function QuizResult() {
           className="relative z-10 grid grid-cols-3 gap-3 max-w-sm mx-auto mb-6"
         >
           {[
-            { label: 'Correct', value: result.correct, icon: CheckCircle, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
-            { label: 'Wrong', value: result.wrong, icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' },
+            { label: 'Correct', value: result.correct, icon: CheckCircle, color: 'text-mint-400', bg: 'bg-mint-500/10', border: 'border-mint-500/20' },
+            { label: 'Wrong', value: result.wrong, icon: XCircle, color: 'text-danger-400', bg: 'bg-danger-500/10', border: 'border-danger-500/20' },
             { label: 'Skipped', value: result.skipped, icon: MinusCircle, color: 'text-gray-400', bg: 'bg-white/[0.03]', border: 'border-white/[0.08]' },
           ].map((s) => (
             <div key={s.label} className={`rounded-2xl border ${s.border} ${s.bg} p-3`}>
@@ -153,15 +153,16 @@ export default function QuizResult() {
         className="flex gap-3"
       >
         <Link to={`/quiz/${result.subject}`}
-          className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white text-sm font-bold transition-all active:scale-95 shadow-lg shadow-primary-500/25">
+          className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white text-sm font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-500/25">
           <RotateCcw size={16} /> Try Again
         </Link>
-        <button
-          onClick={() => setShowAnalysis(true)}
+        <Link
+          to={`/quiz/analysis/${attemptId}`}
+          state={{ result }}
           className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] hover:border-primary-500/30 text-gray-200 text-sm font-bold transition-all"
         >
           <BarChart3 size={16} className="text-primary-400" /> Analysis
-        </button>
+        </Link>
       </motion.div>
 
       {/* ═══ ANALYSIS MODAL ═══ */}
@@ -179,7 +180,7 @@ export default function QuizResult() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 30 }}
               transition={{ duration: 0.3 }}
-              className="relative w-full max-w-2xl max-h-[92vh] sm:max-h-[85vh] overflow-hidden rounded-t-3xl sm:rounded-3xl bg-[#0a0a1a] border border-white/[0.1] shadow-2xl flex flex-col"
+              className="relative w-full max-w-2xl max-h-[92vh] sm:max-h-[85vh] overflow-hidden rounded-t-3xl sm:rounded-3xl bg-[#0B0E1A] border border-white/[0.1] shadow-2xl flex flex-col"
               onClick={e => e.stopPropagation()}
             >
               {/* Modal Header */}
@@ -231,10 +232,10 @@ export default function QuizResult() {
                       <div className="flex items-center gap-2">
                         <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
                           currentQ.isCorrect
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            ? 'bg-mint-500/10 text-mint-400 border-mint-500/20'
                             : currentQ.isSkipped
                             ? 'bg-white/[0.05] text-gray-400 border-white/[0.1]'
-                            : 'bg-red-500/10 text-red-400 border-red-500/20'
+                            : 'bg-danger-500/10 text-danger-400 border-danger-500/20'
                         }`}>
                           {currentQ.isCorrect ? '✓ Correct' : currentQ.isSkipped ? '− Skipped' : '✗ Incorrect'}
                         </span>
@@ -257,24 +258,24 @@ export default function QuizResult() {
                               key={j}
                               className={`flex items-center gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl border text-sm transition-all ${
                                 isCorrect
-                                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                                  ? 'bg-mint-500/10 border-mint-500/20 text-mint-400'
                                   : isSelected && !currentQ.isCorrect
-                                  ? 'bg-red-500/10 border-red-500/20 text-red-300'
+                                  ? 'bg-danger-500/10 border-danger-500/20 text-danger-400'
                                   : 'bg-white/[0.02] border-white/[0.06] text-gray-400'
                               }`}
                             >
                               <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${
                                 isCorrect
-                                  ? 'bg-emerald-500/20 text-emerald-400'
+                                  ? 'bg-mint-500/20 text-mint-400'
                                   : isSelected && !currentQ.isCorrect
-                                  ? 'bg-red-500/20 text-red-400'
+                                  ? 'bg-danger-500/20 text-danger-400'
                                   : 'bg-white/[0.05] text-gray-500'
                               }`}>
                                 {isCorrect ? <CheckCircle size={14} /> : isSelected && !currentQ.isCorrect ? <XCircle size={14} /> : ['A', 'B', 'C', 'D'][j]}
                               </span>
                               <span className="flex-1 text-[13px] sm:text-sm">{opt}</span>
-                              {isCorrect && <span className="hidden xs:inline text-[10px] font-bold text-emerald-400 uppercase flex-shrink-0">Correct</span>}
-                              {isSelected && !currentQ.isCorrect && <span className="hidden xs:inline text-[10px] font-bold text-red-400 uppercase flex-shrink-0">Your Answer</span>}
+                              {isCorrect && <span className="hidden xs:inline text-[10px] font-bold text-mint-400 uppercase flex-shrink-0">Correct</span>}
+                              {isSelected && !currentQ.isCorrect && <span className="hidden xs:inline text-[10px] font-bold text-danger-400 uppercase flex-shrink-0">Your Answer</span>}
                             </div>
                           )
                         })}
@@ -319,7 +320,7 @@ export default function QuizResult() {
                       key={i}
                       onClick={() => setCurrentQIndex(i)}
                       className={`h-2 rounded-full flex-shrink-0 transition-all ${
-                        i === currentQIndex ? 'w-6 bg-primary-400' : `w-2 ${questions[i].isCorrect ? 'bg-emerald-500/40' : questions[i].isSkipped ? 'bg-gray-600' : 'bg-red-500/40'}`
+                        i === currentQIndex ? 'w-6 bg-primary-400' : `w-2 ${questions[i].isCorrect ? 'bg-mint-500/40' : questions[i].isSkipped ? 'bg-gray-600' : 'bg-danger-500/40'}`
                       }`}
                     />
                   ))}
