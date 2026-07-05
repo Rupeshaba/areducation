@@ -38,6 +38,10 @@ function App() {
 
         {/* All Student Routes - Protected */}
         <Route element={<PrivateRoute role="student" />}>
+          {/* Media (video/pdf) routes render OUTSIDE Layout — no navbar/header ever shows */}
+          <Route path="/courses/:courseId/subjects/:subjectId/content/:contentId" element={<MediaContent />} />
+          <Route path="/courses/:courseId/subjects/:subjectId/chapters/:chapterId/content/:contentId" element={<MediaContent />} />
+
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />
             <Route path="/about" element={<About />} />
@@ -47,9 +51,7 @@ function App() {
             <Route path="/my-courses" element={<MyCourses />} />
             <Route path="/courses/:courseId/subjects" element={<Subjects />} />
             <Route path="/courses/:courseId/subjects/:subjectId" element={<SubjectDetail />} />
-            <Route path="/courses/:courseId/subjects/:subjectId/content/:contentId" element={<MediaContent />} />
             <Route path="/courses/:courseId/subjects/:subjectId/chapters/:chapterId" element={<SubjectDetail />} />
-            <Route path="/courses/:courseId/subjects/:subjectId/chapters/:chapterId/content/:contentId" element={<MediaContent />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/notifications" element={<Notifications />} />
             <Route path="/quiz/:subject" element={<Quiz />} />
