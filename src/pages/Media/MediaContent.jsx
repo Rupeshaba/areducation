@@ -90,7 +90,7 @@ function BackIcon({ onClick, visible = true }) {
 }
 
 // ─── Native / HLS video stage (fills the entire screen, no chrome around it) ─
-function NativeVideoStage({ content, onEnded, onBack }) {
+function NativeVideoStage({ content, onEnded, onBack, contentId }) {
   const videoRef      = useRef(null)
   const hlsRef        = useRef(null)
   const containerRef  = useRef(null)
@@ -167,8 +167,16 @@ function NativeVideoStage({ content, onEnded, onBack }) {
   // Video element events
   useEffect(() => {
     const v = videoRef.current; if (!v) return
+    const idKey = `ar_pos_${contentId || content.id || content._id}`
+    
     const onTime  = () => {
-      setCurrentTime(v.currentTime)
+      const time = v.currentTime
+      setCurrentTime(time)
+      if (time > 0 && Math.abs(time - (v.duration || 0)) > 5) {
+        localStorage.setItem(idKey, String(time))
+      } else if (time > 0 && Math.abs(time - (v.duration || 0)) <= 5) {
+        localStorage.removeItem(idKey)
+      }
       if (v.buffered.length) setBuffered(v.buffered.end(v.buffered.length - 1))
     }
     const onDur   = () => setDuration(v.duration || 0)
@@ -176,10 +184,26 @@ function NativeVideoStage({ content, onEnded, onBack }) {
     const onPause = () => setPlaying(false)
     const onWait  = () => setLoading(true)
     const onCanP  = () => setLoading(false)
-    const onEnd   = () => onEnded?.()
+    const onEnd   = () => {
+      localStorage.removeItem(idKey)
+      onEnded?.()
+    }
     const onVol   = () => { setVolume(v.volume); setMuted(v.muted) }
+    
+    const onMeta = () => {
+      setLoading(false)
+      const saved = localStorage.getItem(idKey)
+      if (saved) {
+        const pos = parseFloat(saved)
+        if (!isNaN(pos) && pos > 0 && pos < (v.duration || 999999)) {
+          v.currentTime = pos
+        }
+      }
+    }
+
     v.addEventListener('timeupdate', onTime)
     v.addEventListener('durationchange', onDur)
+    v.addEventListener('loadedmetadata', onMeta)
     v.addEventListener('play', onPlay)
     v.addEventListener('pause', onPause)
     v.addEventListener('waiting', onWait)
@@ -190,6 +214,7 @@ function NativeVideoStage({ content, onEnded, onBack }) {
     return () => {
       v.removeEventListener('timeupdate', onTime)
       v.removeEventListener('durationchange', onDur)
+      v.removeEventListener('loadedmetadata', onMeta)
       v.removeEventListener('play', onPlay)
       v.removeEventListener('pause', onPause)
       v.removeEventListener('waiting', onWait)
@@ -198,7 +223,7 @@ function NativeVideoStage({ content, onEnded, onBack }) {
       v.removeEventListener('ended', onEnd)
       v.removeEventListener('volumechange', onVol)
     }
-  }, [onEnded])
+  }, [onEnded, contentId, content])
 
   // If the user (or system) exits fullscreen after we've started, treat it as "close the page"
   // — since there is no navbar/header to fall back on otherwise.
@@ -332,7 +357,7 @@ function NativeVideoStage({ content, onEnded, onBack }) {
 
         {error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/90 z-40">
-            <AlertTriangle size={32} className="text-red-400" />
+            <AlertTriangle size={32} className="text-danger-400" />
             <p className="text-white text-sm text-center px-6">{error}</p>
             <button className="text-xs bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-white" onClick={() => window.location.reload()}>Retry</button>
           </div>
@@ -409,7 +434,7 @@ function NativeVideoStage({ content, onEnded, onBack }) {
               {settingsTab === 'quality' && levels.length > 0 && (
                 <div className="p-2 space-y-0.5">
                   {[-1, ...levels.map((_, i) => i)].map(l => (
-                    <button key={l} onClick={() => changeQuality(l)} className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all active:scale-95 ${currentLevel === l ? 'bg-primary-500 text-white' : 'text-gray-300 hover:bg-white/10'}`}>
+                    <button key={l} onClick={() => changeQuality(l)} className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all active:scale-[0.98] ${currentLevel === l ? 'bg-primary-500 text-white' : 'text-gray-300 hover:bg-white/10'}`}>
                       <span>{qualityLabel(l)}</span>
                       {currentLevel === l && l !== -1 && <CheckCircle size={11} />}
                     </button>
@@ -424,7 +449,7 @@ function NativeVideoStage({ content, onEnded, onBack }) {
 
         <style>{`
           .mc-btn { width:32px; height:32px; display:flex; align-items:center; justify-content:center; color:white; border-radius:8px; transition:color .15s,transform .1s,background .15s; flex-shrink:0; }
-          .mc-btn:hover { color:rgb(129,140,248); background:rgba(255,255,255,0.08); }
+          .mc-btn:hover { color:rgb(139,124,255); background:rgba(255,255,255,0.08); }
           .mc-btn:active { transform:scale(0.88); }
           @keyframes mc-fadeout { 0%{opacity:1} 60%{opacity:1} 100%{opacity:0} }
           @media(min-width:640px){ .mc-btn{ width:36px; height:36px; } }
@@ -435,14 +460,23 @@ function NativeVideoStage({ content, onEnded, onBack }) {
 }
 
 // ─── YouTube stage (fills screen, tap-to-play triggers fullscreen landscape) ─
-function YouTubeStage({ content, onBack }) {
+function YouTubeStage({ content, onBack, contentId }) {
   const ytId = extractYTId(content.url)
   const containerRef = useRef(null)
+  const iframeRef = useRef(null)
   const [started, setStarted] = useState(false)
   const [loading, setLoading] = useState(true)
 
+  // Get saved position from localStorage
+  const [savedPosition, setSavedPosition] = useState(() => {
+    try {
+      const pos = localStorage.getItem(`ar_pos_${contentId || content.id || content._id}`)
+      return pos ? parseInt(pos, 10) : 0
+    } catch { return 0 }
+  })
+
   const embedSrc = ytId
-    ? `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`
+    ? `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&start=${Math.floor(savedPosition)}&origin=${encodeURIComponent(window.location.origin)}`
     : null
 
   useEffect(() => {
@@ -463,10 +497,68 @@ function YouTubeStage({ content, onBack }) {
     await goFullscreenLandscape(containerRef.current, null)
   }
 
+  // Save position periodically for YouTube
+  useEffect(() => {
+    if (!started || !ytId) return
+    
+    const idKey = `ar_pos_${contentId || content.id || content._id}`
+    const saveInterval = setInterval(() => {
+      const iframe = iframeRef.current
+      if (!iframe) return
+      try {
+        // Request current time from YouTube iframe
+        iframe.contentWindow?.postMessage(JSON.stringify({
+          event: 'command',
+          func: 'getCurrentTime'
+        }), '*')
+      } catch {}
+    }, 5000)
+
+    // Listen for messages from YouTube iframe
+    const handleMessage = (event) => {
+      if (event.origin !== 'https://www.youtube.com' && event.origin !== 'https://www.youtube-nocookie.com') return
+      try {
+        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+        if (data?.event === 'infoDelivery' && typeof data.info?.currentTime === 'number') {
+          const pos = data.info.currentTime
+          if (pos > 0) {
+            localStorage.setItem(idKey, String(pos))
+            setSavedPosition(pos)
+          }
+        }
+      } catch {}
+    }
+    window.addEventListener('message', handleMessage)
+    
+    return () => {
+      clearInterval(saveInterval)
+      window.removeEventListener('message', handleMessage)
+    }
+  }, [started, ytId, contentId, content])
+
+  // Seek to saved position when iframe is ready
+  useEffect(() => {
+    if (!started || !ytId || savedPosition <= 0) return
+    
+    const idKey = `ar_pos_${contentId || content.id || content._id}`
+    const seekTimeout = setTimeout(() => {
+      const iframe = iframeRef.current
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage(JSON.stringify({
+          event: 'command',
+          func: 'seekTo',
+          args: [savedPosition, true]
+        }), '*')
+      }
+    }, 1500)
+    
+    return () => clearTimeout(seekTimeout)
+  }, [started, ytId, savedPosition, contentId, content])
+
   if (!embedSrc) {
     return (
       <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-2">
-        <AlertTriangle size={28} className="text-red-400" />
+        <AlertTriangle size={28} className="text-danger-400" />
         <p className="text-gray-400 text-sm">YouTube URL parse nahi hua</p>
         <BackIcon onClick={onBack} />
       </div>
@@ -488,10 +580,11 @@ function YouTubeStage({ content, onBack }) {
         <>
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
-              <div className="w-12 h-12 rounded-full border-2 border-red-500/20 border-t-red-500 animate-spin" />
+              <div className="w-12 h-12 rounded-full border-2 border-danger-500/20 border-t-red-500 animate-spin" />
             </div>
           )}
           <iframe
+            ref={iframeRef}
             src={embedSrc}
             className="w-full h-full absolute inset-0 border-0"
             allowFullScreen
@@ -665,6 +758,31 @@ export default function MediaContent() {
 
   const content = contentData?.content || null
 
+  useEffect(() => {
+    if (content && contentId) {
+      try {
+        const recent = JSON.parse(localStorage.getItem('ar_recently_watched') || '[]')
+        const entry = {
+          id: contentId,
+          contentId,
+          courseId,
+          subjectId,
+          chapterId,
+          title: content.title,
+          type: content.type,
+          thumbnailUrl: content.thumbnailUrl,
+          url: content.url,
+          lastActiveAt: new Date().toISOString()
+        }
+        const filtered = recent.filter(item => item.contentId !== contentId)
+        const updated = [entry, ...filtered].slice(0, 10)
+        localStorage.setItem('ar_recently_watched', JSON.stringify(updated))
+      } catch (e) {
+        console.error('Error saving to recently watched:', e)
+      }
+    }
+  }, [content, contentId, courseId, subjectId, chapterId])
+
   const backUrl = chapterId
     ? `/courses/${courseId}/subjects/${subjectId}/chapters/${chapterId}`
     : `/courses/${courseId}/subjects/${subjectId}`
@@ -695,8 +813,8 @@ export default function MediaContent() {
 
   if (content.type === 'video' || content.type === 'hls') {
     return isYT
-      ? <YouTubeStage content={content} onBack={handleBack} />
-      : <NativeVideoStage content={content} onEnded={handleEnded} onBack={handleBack} />
+      ? <YouTubeStage content={content} onBack={handleBack} contentId={contentId} />
+      : <NativeVideoStage content={content} onEnded={handleEnded} onBack={handleBack} contentId={contentId} />
   }
 
   return (
