@@ -22,6 +22,15 @@ const NAV = [
   { to: '/contact', icon: Phone, label: 'Contact' },
 ]
 
+// Mobile bottom tab bar — 5 highest-intent destinations only
+const BOTTOM_NAV = [
+  { to: '/', icon: Home, label: 'Home', exact: true },
+  { to: '/my-courses', icon: Play, label: 'Courses' },
+  { to: '/progress', icon: TrendingUp, label: 'Progress' },
+  { to: '/store', icon: ShoppingBag, label: 'Store' },
+  { to: '/profile', icon: User, label: 'Profile' },
+]
+
 // ── FIX: Query config for polling queries (notif-count, chat-unread-count)
 // Don't retry on 403 (blocked) or 503 (maintenance) — these are terminal states
 // For other errors, retry max 2 times with exponential backoff
@@ -43,14 +52,14 @@ function Badge({ count, position = 'sidebar' }) {
   const label = count > 99 ? '99+' : String(count)
   if (position === 'sidebar') {
     return (
-      <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+      <span className="ml-auto bg-danger-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
         {label}
       </span>
     )
   }
   // position === 'icon' — absolute bubble on icon
   return (
-    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold min-w-[16px] h-4 px-0.5 rounded-full flex items-center justify-center leading-none">
+    <span className="absolute -top-1 -right-1 bg-danger-500 text-white text-[9px] font-bold min-w-[16px] h-4 px-0.5 rounded-full flex items-center justify-center leading-none ring-2 ring-dark-900">
       {label}
     </span>
   )
@@ -111,6 +120,8 @@ export default function Layout() {
   const socketRef = useRef(null)
 
   const isQuizPage = location.pathname.includes('/quiz/') && !location.pathname.includes('/result')
+  const isQuizPlayPage = location.pathname.includes('/quiz/') && location.pathname.includes('/play')
+  const hideSidebar = isQuizPlayPage
 
   // Check maintenance on every page load
   useEffect(() => {
@@ -158,7 +169,10 @@ export default function Layout() {
 
   useEffect(() => {
     if (!user?.uid) return
-    const socket = io('/', {
+    const SOCKET_URL = import.meta.env.VITE_API_URL
+      ? import.meta.env.VITE_API_URL.replace('/api', '')
+      : '/'
+    const socket = io(SOCKET_URL, {
       autoConnect: true,
       reconnection: true,
       reconnectionAttempts: 10,
@@ -247,200 +261,292 @@ export default function Layout() {
       <AnimatePresence>
         {sidebarOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
         )}
       </AnimatePresence>
 
-      {/* ── MOBILE SIDEBAR ──────────────────────────────────────────────────── */}
-      <aside className={`
-        fixed lg:hidden inset-y-0 left-0 z-40 w-64 flex flex-col
-        bg-dark-800/95 backdrop-blur-xl border-r border-white/5
-        transform transition-transform duration-300
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <div className="flex items-center gap-3 px-4 py-4 border-b border-white/5">
-          {logoUrl ? (
-            <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded-lg object-cover" />
-          ) : (
-            <div className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center">
-              <Zap size={15} className="text-white" />
+      {/* ── MOBILE SIDEBAR (More menu) ──────────────────────────────────────── */}
+      {!hideSidebar && (
+        <aside className={`
+          fixed lg:hidden inset-y-0 left-0 z-40 w-72 flex flex-col
+          bg-dark-800 border-r border-white/[0.06]
+          transform transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}>
+          {/* Header block with gradient wash */}
+          <div className="relative px-5 pt-6 pb-5 overflow-hidden">
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(160deg, rgba(255,107,74,0.22) 0%, transparent 70%)' }} />
+            <div className="relative flex items-center justify-between mb-5">
+              <Link to="/" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2.5">
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Logo" className="w-9 h-9 rounded-xl object-cover" />
+                ) : (
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/30"
+                    style={{ background: 'linear-gradient(135deg, #FF9270 0%, #FF6B4A 60%, #C23F1F 100%)' }}>
+                    <Zap size={17} className="text-white" fill="white" />
+                  </div>
+                )}
+                <span className="font-bold text-white text-[15px] tracking-tight">AR Education</span>
+              </Link>
+              <button className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-white/5" onClick={() => setSidebarOpen(false)}>
+                <X size={18} />
+              </button>
             </div>
-          )}
-          <span className="font-bold text-white text-sm">AR Education</span>
-          <button className="ml-auto text-gray-400" onClick={() => setSidebarOpen(false)}><X size={16} /></button>
-        </div>
 
-        <div className="px-4 py-3 border-b border-white/5">
-          <div className="flex items-center gap-3">
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="w-9 h-9 rounded-full object-cover" />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400 font-bold text-sm">
-                {(user?.name || 'U').charAt(0).toUpperCase()}
+            <div className="relative flex items-center gap-3 p-3 rounded-2xl bg-white/[0.04] border border-white/[0.06]">
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover ring-2 ring-primary-500/30" />
+              ) : (
+                <div className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-base"
+                  style={{ background: 'linear-gradient(135deg, #FF9270, #FF6B4A)' }}>
+                  {(user?.name || 'U').charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-white truncate max-w-[150px]">{user?.name || 'Student'}</div>
+                <div className="text-xs text-gray-500 truncate max-w-[150px]">{user?.email}</div>
               </div>
-            )}
-            <div>
-              <div className="text-sm font-medium text-white truncate max-w-[130px]">{user?.name || 'Student'}</div>
-              <div className="text-xs text-gray-500 truncate max-w-[130px]">{user?.email}</div>
             </div>
           </div>
-        </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
-          {NAV.map(({ to, icon: Icon, label, exact }) => (
+          <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
+            <p className="eyebrow px-3 pt-2 pb-1.5">Menu</p>
+            {NAV.map(({ to, icon: Icon, label, exact }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={exact}
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) => `
+                  relative flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                  ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'}
+                `}
+              >
+                {({ isActive }) => (
+                  <>
+                    {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-primary-400" />}
+                    <Icon size={17} className={isActive ? 'text-primary-400' : ''} />
+                    {label}
+                  </>
+                )}
+              </NavLink>
+            ))}
+
+            {/* Doubt Chat — sidebar with badge */}
             <NavLink
-              key={to}
-              to={to}
-              end={exact}
+              to="/doubt-chat"
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => `
-                flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
-                ${isActive ? 'bg-primary-500/15 text-primary-300 border border-primary-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}
+                relative flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'}
               `}
             >
-              <Icon size={18} />{label}
+              {({ isActive }) => (
+                <>
+                  {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-primary-400" />}
+                  <MessageSquare size={17} className={isActive ? 'text-primary-400' : ''} />
+                  Doubt Chat
+                  <Badge count={chatUnread} position="sidebar" />
+                </>
+              )}
             </NavLink>
-          ))}
+          </nav>
 
-          {/* Doubt Chat — sidebar with badge */}
-          <NavLink
-            to="/doubt-chat"
-            onClick={() => setSidebarOpen(false)}
-            className={({ isActive }) => `
-              flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
-              ${isActive ? 'bg-primary-500/15 text-primary-300 border border-primary-500/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}
-            `}
-          >
-            <MessageSquare size={18} />
-            Doubt Chat
-            <Badge count={chatUnread} position="sidebar" />
-          </NavLink>
-        </nav>
-
-        <div className="px-3 pb-4 space-y-1 border-t border-white/5 pt-3">
-          {/* Notifications — sidebar with badge */}
-          <NavLink to="/notifications" onClick={() => setSidebarOpen(false)}
-            className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all relative ${isActive ? 'bg-primary-500/15 text-primary-300' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
-            <Bell size={18} />
-            Notifications
-            <Badge count={unreadCount} position="sidebar" />
-          </NavLink>
-          <NavLink to="/profile" onClick={() => setSidebarOpen(false)}
-            className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-primary-500/15 text-primary-300' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
-            <User size={18} />Profile
-          </NavLink>
-          <button onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-all">
-            <LogOut size={18} />Logout
-          </button>
-        </div>
-      </aside>
-
-      {/* ── DESKTOP TOP NAVBAR ───────────────────────────────────────────────── */}
-      <div className="hidden lg:flex fixed top-0 left-0 right-0 z-30 h-14 bg-dark-800/95 backdrop-blur-xl border-b border-white/5 items-center px-6 gap-2">
-        <Link to="/" className="flex items-center gap-2 mr-4">
-          {logoUrl ? (
-            <img src={logoUrl} alt="Logo" className="w-7 h-7 rounded-lg object-cover" />
-          ) : (
-            <div className="w-7 h-7 rounded-lg bg-primary-500 flex items-center justify-center">
-              <Zap size={13} className="text-white" />
-            </div>
-          )}
-          <span className="font-bold text-white text-sm hidden xl:block">AR Education</span>
-        </Link>
-
-        <nav className="flex items-center gap-1 flex-1">
-          {NAV.map(({ to, icon: Icon, label, exact }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={exact}
-              className={({ isActive }) => `
-                flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all
-                ${isActive ? 'bg-primary-500/15 text-primary-300' : 'text-gray-400 hover:text-white hover:bg-white/5'}
-              `}
-            >
-              <Icon size={15} />
-              <span className="hidden xl:block">{label}</span>
+          <div className="px-3 pb-5 space-y-0.5 border-t border-white/[0.06] pt-3">
+            <NavLink to="/notifications" onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) => `flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all relative ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'}`}>
+              <Bell size={17} />
+              Notifications
+              <Badge count={unreadCount} position="sidebar" />
             </NavLink>
-          ))}
+            <NavLink to="/profile" onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) => `flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'}`}>
+              <User size={17} />Profile
+            </NavLink>
+            <button onClick={handleLogout}
+              className="w-full flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium text-danger-400 hover:bg-danger-500/10 transition-all">
+              <LogOut size={17} />Logout
+            </button>
+          </div>
+        </aside>
+      )}
 
-          {/* Doubt Chat — desktop nav with badge */}
-          <NavLink
-            to="/doubt-chat"
-            className={({ isActive }) => `
-              relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all
-              ${isActive ? 'bg-primary-500/15 text-primary-300' : 'text-gray-400 hover:text-white hover:bg-white/5'}
-            `}
-          >
-            <MessageSquare size={15} />
-            <span className="hidden xl:block">Doubt Chat</span>
-            <Badge count={chatUnread} position="icon" />
-          </NavLink>
-        </nav>
-
-        <div className="flex items-center gap-2">
-          {/* Bell — desktop with badge */}
-          <NavLink to="/notifications" className={({ isActive }) =>
-            `relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${isActive ? 'bg-primary-500/15 text-primary-300' : 'text-gray-400 hover:text-white hover:bg-white/5'}`
-          }>
-            <Bell size={15} />
-            <Badge count={unreadCount} position="icon" />
-          </NavLink>
-          <NavLink to="/profile" className={({ isActive }) =>
-            `flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-all ${isActive ? 'bg-primary-500/15' : 'hover:bg-white/5'}`
-          }>
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400 font-bold text-xs">
-                {(user?.name || 'U').charAt(0).toUpperCase()}
-              </div>
-            )}
-            <span className="text-gray-300 text-sm hidden xl:block">{user?.name?.split(' ')[0]}</span>
-          </NavLink>
-          <button onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
-            <LogOut size={15} />
-          </button>
-        </div>
-      </div>
-
-      {/* ── Main content ─────────────────────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto lg:pt-14">
-        {/* Mobile header */}
-        <div className="lg:hidden sticky top-0 z-20 flex items-center justify-between px-4 h-14 bg-dark-900/95 backdrop-blur-xl border-b border-white/5">
-          <button onClick={() => setSidebarOpen(true)} className="text-gray-400 hover:text-white p-1">
-            <Menu size={20} />
-          </button>
-          <Link to="/" className="flex items-center gap-2">
+      {/* ── DESKTOP PERMANENT SIDEBAR ────────────────────────────────────────── */}
+      {!hideSidebar && (
+        <aside className="hidden lg:flex fixed inset-y-0 left-0 z-30 w-[248px] flex-col
+          bg-dark-800/70 backdrop-blur-2xl border-r border-white/[0.06]">
+          <Link to="/" className="flex items-center gap-3 px-5 h-20 border-b border-white/[0.06]">
             {logoUrl ? (
-              <img src={logoUrl} alt="Logo" className="w-7 h-7 rounded-lg object-cover" />
+              <img src={logoUrl} alt="Logo" className="w-9 h-9 rounded-xl object-cover" />
             ) : (
-              <div className="w-7 h-7 rounded-lg bg-primary-500 flex items-center justify-center">
-                <Zap size={13} className="text-white" />
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/30"
+                style={{ background: 'linear-gradient(135deg, #FF9270 0%, #FF6B4A 60%, #C23F1F 100%)' }}>
+                <Zap size={17} className="text-white" fill="white" />
               </div>
             )}
-            <span className="font-bold text-white text-sm">AR Education</span>
+            <span className="font-bold text-white text-[15px] tracking-tight">AR Education</span>
           </Link>
 
-          {/* Mobile header: Doubt Chat + Bell icons with badges */}
-          <div className="flex items-center gap-1">
-            <NavLink to="/doubt-chat" className="relative text-gray-400 hover:text-white p-1">
-              <MessageSquare size={20} />
-              <Badge count={chatUnread} position="icon" />
-            </NavLink>
-            <NavLink to="/notifications" className="relative text-gray-400 hover:text-white p-1">
-              <Bell size={20} />
-              <Badge count={unreadCount} position="icon" />
-            </NavLink>
-          </div>
-        </div>
+          <nav className="flex-1 overflow-y-auto px-3.5 py-5 space-y-1">
+            <p className="eyebrow px-2.5 pb-2">Menu</p>
+            {NAV.map(({ to, icon: Icon, label, exact }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={exact}
+                className={({ isActive }) => `
+                  relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+                  ${isActive ? 'text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'}
+                `}
+              >
+                {({ isActive }) => (
+                  <>
+                    {isActive && (
+                      <motion.span layoutId="sidebar-nav-pill" className="absolute inset-0 rounded-xl -z-10 shadow-lg shadow-primary-500/25"
+                        style={{ background: 'linear-gradient(135deg, #FF6B4A, #E8532F)' }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 32 }} />
+                    )}
+                    <Icon size={17} />
+                    {label}
+                  </>
+                )}
+              </NavLink>
+            ))}
 
-        <div className="p-4 lg:p-6 max-w-7xl mx-auto">
+            <NavLink
+              to="/doubt-chat"
+              className={({ isActive }) => `
+                relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+                ${isActive ? 'text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'}
+              `}
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <motion.span layoutId="sidebar-nav-pill" className="absolute inset-0 rounded-xl -z-10 shadow-lg shadow-primary-500/25"
+                      style={{ background: 'linear-gradient(135deg, #FF6B4A, #E8532F)' }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 32 }} />
+                  )}
+                  <MessageSquare size={17} />
+                  Doubt Chat
+                  <Badge count={chatUnread} position="sidebar" />
+                </>
+              )}
+            </NavLink>
+
+            <NavLink
+              to="/notifications"
+              className={({ isActive }) => `
+                relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
+                ${isActive ? 'text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'}
+              `}
+            >
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <motion.span layoutId="sidebar-nav-pill" className="absolute inset-0 rounded-xl -z-10 shadow-lg shadow-primary-500/25"
+                      style={{ background: 'linear-gradient(135deg, #FF6B4A, #E8532F)' }}
+                      transition={{ type: 'spring', stiffness: 400, damping: 32 }} />
+                  )}
+                  <Bell size={17} />
+                  Notifications
+                  <Badge count={unreadCount} position="sidebar" />
+                </>
+              )}
+            </NavLink>
+          </nav>
+
+          {/* Bottom: profile + logout */}
+          <div className="p-3.5 border-t border-white/[0.06] space-y-1">
+            <NavLink to="/profile" className={({ isActive }) =>
+              `flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm transition-all ${isActive ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'}`
+            }>
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+              ) : (
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #FF9270, #FF6B4A)' }}>
+                  {(user?.name || 'U').charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="text-gray-200 text-sm font-medium truncate">{user?.name?.split(' ')[0] || 'Student'}</p>
+                <p className="text-gray-500 text-[11px] truncate">View profile</p>
+              </div>
+            </NavLink>
+            <button onClick={handleLogout}
+              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm font-medium text-danger-400 hover:bg-danger-500/10 transition-all">
+              <LogOut size={16} />Logout
+            </button>
+          </div>
+        </aside>
+      )}
+
+      {/* ── Main content ─────────────────────────────────────────────────────── */}
+      <main className={`flex-1 overflow-y-auto ${hideSidebar ? '' : 'lg:ml-[248px]'}`}>
+        {/* Mobile header */}
+        {!hideSidebar && (
+          <div className="lg:hidden sticky top-0 z-20 flex items-center justify-between px-4 h-16 rounded-b-2xl
+            bg-dark-800/90 backdrop-blur-2xl border-b border-white/[0.06] shadow-lg shadow-black/20">
+            <button onClick={() => setSidebarOpen(true)} className="text-gray-300 hover:text-white p-2 -ml-2 rounded-xl hover:bg-white/5">
+              <Menu size={20} />
+            </button>
+            <Link to="/" className="flex items-center gap-2">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded-xl object-cover" />
+              ) : (
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-md shadow-primary-500/30"
+                  style={{ background: 'linear-gradient(135deg, #FF9270 0%, #FF6B4A 60%, #C23F1F 100%)' }}>
+                  <Zap size={15} className="text-white" fill="white" />
+                </div>
+              )}
+              <span className="font-bold text-white text-sm tracking-tight">AR Education</span>
+            </Link>
+
+            {/* Mobile header: Doubt Chat + Bell icons with badges */}
+            <div className="flex items-center gap-1">
+              <NavLink to="/doubt-chat" className="relative text-gray-300 hover:text-white p-2 rounded-xl hover:bg-white/5">
+                <MessageSquare size={19} />
+                <Badge count={chatUnread} position="icon" />
+              </NavLink>
+              <NavLink to="/notifications" className="relative text-gray-300 hover:text-white p-2 rounded-xl hover:bg-white/5">
+                <Bell size={19} />
+                <Badge count={unreadCount} position="icon" />
+              </NavLink>
+            </div>
+          </div>
+        )}
+
+        <div className={`p-4 lg:p-8 pb-28 lg:pb-8 max-w-5xl mx-auto ${hideSidebar ? 'p-0 lg:p-0 max-w-full' : ''}`}>
           <Outlet />
         </div>
       </main>
+
+      {/* ── MOBILE BOTTOM TAB BAR (edge-to-edge, rounded top only) ──────────── */}
+      {!hideSidebar && (
+        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 flex items-stretch justify-around
+          rounded-t-[28px] bg-dark-800/95 backdrop-blur-2xl border-t border-x border-white/[0.08] shadow-2xl shadow-black/40 pt-2 px-2"
+          style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
+          {BOTTOM_NAV.map(({ to, icon: Icon, label, exact }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={exact}
+              className="relative flex-1 flex flex-col items-center justify-center gap-1 py-1.5 text-[10px] font-semibold transition-all duration-300"
+            >
+              {({ isActive }) => (
+                <>
+                  <div className={`flex items-center justify-center w-11 h-8 rounded-2xl transition-all duration-300
+                    ${isActive ? 'bg-primary-500/15' : ''}`}>
+                    <Icon size={18} className={isActive ? 'text-primary-400' : 'text-gray-500'} strokeWidth={isActive ? 2.4 : 2} />
+                  </div>
+                  <span className={isActive ? 'text-primary-400' : 'text-gray-500'}>{label}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+      )}
     </div>
   )
 }
