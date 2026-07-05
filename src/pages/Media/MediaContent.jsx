@@ -541,6 +541,16 @@ function PDFStage({ content, onBack }) {
   const loadedRef  = useRef(false)
   const attemptedFallback = useRef(false)
 
+  // While viewing the PDF, stop the outer app page from pinch-zooming so the
+  // gesture reaches the PDF viewer inside the iframe instead (which handles
+  // its own zoom). Restored on unmount.
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="viewport"]')
+    const prev = meta?.getAttribute('content')
+    if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
+    return () => { if (meta && prev) meta.setAttribute('content', prev) }
+  }, [])
+
   const driveUrl  = driveId ? `https://drive.google.com/file/d/${driveId}/preview` : ''
   const googleUrl = url ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true` : ''
   const directUrl = url ? `${url}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0&view=FitH` : ''
@@ -589,7 +599,12 @@ function PDFStage({ content, onBack }) {
   )
 
   return (
-    <div className="fixed inset-0 bg-black" onTouchStart={wake} onMouseMove={wake}>
+    <div
+      className="fixed inset-0 bg-black"
+      style={{ touchAction: 'none' }}
+      onTouchStart={wake}
+      onMouseMove={wake}
+    >
       {loading && !failed && (
         <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
           <div className="w-10 h-10 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
