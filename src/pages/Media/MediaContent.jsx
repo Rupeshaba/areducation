@@ -5,7 +5,7 @@ import Hls from 'hls.js'
 import {
   ChevronLeft, Play, Pause, Volume2, VolumeX,
   SkipBack, SkipForward, Settings, X, CheckCircle, AlertTriangle,
-  PictureInPicture2,
+  PictureInPicture2, ExternalLink,
 } from 'lucide-react'
 import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
@@ -507,26 +507,71 @@ function YouTubeStage({ content, onBack }) {
   )
 }
 
+// Extract a Google Drive file id from any share/preview/open link shape.
+function extractDriveId(url) {
+  if (!url) return null
+  const patterns = [
+    /drive\.google\.com\/file\/d\/([^/]+)/,
+    /drive\.google\.com\/open\?id=([^&]+)/,
+    /[?&]id=([^&]+)/,
+    /drive\.google\.com\/uc\?.*id=([^&]+)/,
+  ]
+  for (const p of patterns) {
+    const m = url.match(p)
+    if (m?.[1]) return m[1]
+  }
+  return null
+}
+
 // ─── PDF stage — full page, portrait, nothing on screen but the PDF ─────────
 function PDFStage({ content, onBack }) {
-  const [mode, setMode]       = useState('direct')
-  const [loading, setLoading] = useState(true)
-  const [showBack, setShowBack] = useState(true)
-  const hideTimer = useRef(null)
-
   const url = content.url
-  const directUrl = url ? `${url}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0&view=FitH` : ''
-  const googleUrl = url ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true` : ''
-  const src = mode === 'google' ? googleUrl : directUrl
+  const driveId = extractDriveId(url)
 
-  const handleLoad  = () => setLoading(false)
-  const handleError = () => {
-    if (mode === 'direct') { setMode('google'); setLoading(true) }
-    else setLoading(false)
+  // Drive links get Drive's own /preview embed — the only shape Google reliably
+  // allows inside an iframe. Everything else goes through the Google Docs viewer
+  // first (works for most publicly reachable PDFs incl. Cloudinary), falling
+  // back to a direct browser-native render if that fails.
+  const [mode, setMode] = useState(driveId ? 'drive' : 'google')
+  const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+  const [showBack, setShowBack] = useState(true)
+  const hideTimer  = useRef(null)
+  const loadTimer  = useRef(null)
+  const loadedRef  = useRef(false)
+  const attemptedFallback = useRef(false)
+
+  const driveUrl  = driveId ? `https://drive.google.com/file/d/${driveId}/preview` : ''
+  const googleUrl = url ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true` : ''
+  const directUrl = url ? `${url}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0&view=FitH` : ''
+  const src = mode === 'drive' ? driveUrl : mode === 'google' ? googleUrl : directUrl
+
+  const fallback = useCallback(() => {
+    if (loadedRef.current) return // already loaded fine, ignore a late/false error
+    if (attemptedFallback.current) { setLoading(false); setFailed(true); return }
+    attemptedFallback.current = true
+    setMode(m => (m === 'google' ? 'direct' : m === 'direct' ? 'google' : 'direct'))
+    setLoading(true)
+  }, [])
+
+  const handleLoad = () => {
+    loadedRef.current = true
+    clearTimeout(loadTimer.current)
+    setLoading(false)
   }
+  const handleError = () => fallback()
+
+  // Some blocked/broken embeds never fire onLoad or onError (iframe just stays
+  // blank) — a load-timeout catches that case and switches viewer mode.
+  useEffect(() => {
+    loadedRef.current = false
+    setLoading(true)
+    clearTimeout(loadTimer.current)
+    loadTimer.current = setTimeout(fallback, 7000)
+    return () => clearTimeout(loadTimer.current)
+  }, [mode, fallback])
 
   useEffect(() => {
-    // fade the tiny back icon out after a moment, tap anywhere to bring it back
     hideTimer.current = setTimeout(() => setShowBack(false), 2500)
     return () => clearTimeout(hideTimer.current)
   }, [])
@@ -545,20 +590,31 @@ function PDFStage({ content, onBack }) {
 
   return (
     <div className="fixed inset-0 bg-black" onTouchStart={wake} onMouseMove={wake}>
-      {loading && (
+      {loading && !failed && (
         <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
           <div className="w-10 h-10 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
         </div>
       )}
-      <iframe
-        key={mode}
-        src={src}
-        className="w-full h-full border-0"
-        title="Notes"
-        onLoad={handleLoad}
-        onError={handleError}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-      />
+      {failed ? (
+        <button
+          onClick={() => window.open(url, '_blank', 'noopener')}
+          className="absolute inset-0 flex items-center justify-center"
+        >
+          <span className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center">
+            <ExternalLink size={22} className="text-white/70" />
+          </span>
+        </button>
+      ) : (
+        <iframe
+          key={mode}
+          src={src}
+          className="w-full h-full border-0"
+          title="Notes"
+          onLoad={handleLoad}
+          onError={handleError}
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+        />
+      )}
       <BackIcon onClick={onBack} visible={showBack} />
     </div>
   )
