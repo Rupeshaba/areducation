@@ -4,12 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   MessageSquare, Send, Loader2, CheckCircle, XCircle, Clock,
   Paperclip, FileText, Trash2, XCircle as XCircle2, Pin,
-  ChevronDown, X, Pencil, Eye,
+  ChevronDown, X, Pencil, Eye, ArrowLeft,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
 import { io } from 'socket.io-client'
+import { useNavigate } from 'react-router-dom'
 
 // Helper: resolve media URL (handles relative URLs from Render backend)
 const resolveUrl = (url) => {
@@ -24,6 +25,7 @@ const resolveUrl = (url) => {
 export default function DoubtChat() {
   const user = useAuthStore(s => s.user)
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [socketConnected, setSocketConnected] = useState(false)
@@ -276,7 +278,7 @@ export default function DoubtChat() {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] w-full relative overflow-hidden" style={{maxWidth: "768px", margin: "0 auto"}}>
+    <div className="fixed inset-0 flex flex-col bg-dark-900 overflow-hidden">
       <style>{`
         .highlight-flash { animation: msgFlash 1.5s ease; }
         @keyframes msgFlash {
@@ -289,34 +291,48 @@ export default function DoubtChat() {
       `}</style>
 
       {/* ── HEADER (fixed at top, never scrolls) ── */}
-      <div className="flex-shrink-0 flex items-center justify-between px-3 py-2 border-b border-white/5 bg-dark-800/90 backdrop-blur-sm z-20">
-        <div className="flex items-center gap-2.5">
-          {appConfig?.logoUrl
-            ? <img src={resolveUrl(appConfig.logoUrl)} alt="Logo" className="w-9 h-9 rounded-xl object-cover" />
-            : <div className="w-9 h-9 rounded-xl bg-primary-500/20 flex items-center justify-center"><MessageSquare size={18} className="text-primary-400" /></div>}
-          <div>
-            <h3 className="font-bold text-white text-sm leading-tight">{appConfig?.appName || 'AR Education'}</h3>
-            <p className="text-[11px] leading-tight">
-              {socketConnected
-                ? <span className="flex items-center gap-1.5 text-emerald-400">
-                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse inline-block" />
-                    Online
-                    {onlineCount > 0 && (
-                      <span className="flex items-center gap-0.5 text-emerald-300 text-[10px]">
-                        <Eye size={9} className="text-emerald-400" />
-                        {onlineCount > 999 ? `${(onlineCount/1000).toFixed(onlineCount >= 10000 ? 0 : 1)}k` : onlineCount}
-                      </span>
-                    )}
-                  </span>
-                : <span className="text-gray-600">Connecting…</span>}
-            </p>
+      <div className="flex-shrink-0 flex items-center justify-between px-4 sm:px-5 h-14 sm:h-16 border-b border-white/5 bg-dark-800/95 backdrop-blur-md z-20">
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => navigate(-1)}
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <div className="flex items-center gap-2.5">
+            {appConfig?.logoUrl
+              ? <img src={resolveUrl(appConfig.logoUrl)} alt="Logo" className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover" />
+              : <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-primary-500/20 flex items-center justify-center">
+                  <MessageSquare size={16} className="sm:w-5 sm:h-5 text-primary-400" />
+                </div>}
+            <div>
+              <h3 className="font-bold text-white text-sm sm:text-base leading-tight">{appConfig?.appName || 'AR Education'}</h3>
+              <p className="text-[10px] sm:text-[11px] leading-tight">
+                {socketConnected
+                  ? <span className="flex items-center gap-1.5 text-emerald-400">
+                      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse inline-block" />
+                      Online
+                      {onlineCount > 0 && (
+                        <span className="flex items-center gap-0.5 text-emerald-300 text-[9px] sm:text-[10px]">
+                          <Eye size={8} className="sm:w-3 sm:h-3 text-emerald-400" />
+                          {onlineCount > 999 ? `${(onlineCount/1000).toFixed(onlineCount >= 10000 ? 0 : 1)}k` : onlineCount}
+                        </span>
+                      )}
+                    </span>
+                  : <span className="text-gray-600">Connecting…</span>}
+              </p>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
+        
+        <div className="flex items-center gap-2">
           {/* BG picker */}
           <div className="relative group">
-            <button className="w-7 h-7 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/5 transition-all">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+            <button className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/5 transition-all">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+              </svg>
             </button>
             <div className="absolute right-0 top-full mt-1 bg-dark-800 border border-white/10 rounded-xl p-2 flex gap-1.5 shadow-xl z-30 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity">
               {Object.entries({ default: '⬛', dots: '•••', grid: '###', waves: '≈≈≈' }).map(([k, label]) => (
@@ -326,10 +342,11 @@ export default function DoubtChat() {
               ))}
             </div>
           </div>
-          <span className="text-[11px] text-gray-500 hidden sm:block truncate max-w-[80px]">{user?.name}</span>
           {user?.avatarUrl
-            ? <img src={resolveUrl(user.avatarUrl)} alt="" className="w-7 h-7 rounded-full object-cover border border-white/10" />
-            : <div className="w-7 h-7 rounded-full bg-primary-500/20 flex items-center justify-center text-[11px] font-bold text-primary-400">{(user?.name || 'U').charAt(0).toUpperCase()}</div>}
+            ? <img src={resolveUrl(user.avatarUrl)} alt="" className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border border-white/10" />
+            : <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary-500/20 flex items-center justify-center text-[10px] sm:text-[11px] font-bold text-primary-400">
+                {(user?.name || 'U').charAt(0).toUpperCase()}
+              </div>}
         </div>
       </div>
 
@@ -343,23 +360,23 @@ export default function DoubtChat() {
             className="flex-shrink-0 bg-dark-800/80 backdrop-blur-sm border-b border-amber-500/20 z-10 overflow-hidden"
           >
             <div className="flex items-center gap-2 px-3 py-1.5">
-              <div className="w-0.5 h-8 bg-amber-400 rounded-full flex-shrink-0" />
+              <div className="w-0.5 h-6 sm:h-8 bg-amber-400 rounded-full flex-shrink-0" />
               <button
                 className="flex-1 min-w-0 text-left"
                 onClick={() => pinnedMessages.length > 1 ? setShowPinnedList(true) : scrollToMessage(latestPinned.id)}
               >
                 <div className="flex items-center gap-1 mb-0.5">
-                  <Pin size={9} className="text-amber-400" />
-                  <span className="text-[10px] text-amber-400 font-semibold">
+                  <Pin size={8} className="sm:w-3 sm:h-3 text-amber-400" />
+                  <span className="text-[9px] sm:text-[10px] text-amber-400 font-semibold">
                     Pinned Message {pinnedMessages.length > 1 ? `(${pinnedMessages.length})` : ''}
                   </span>
                 </div>
-                <p className="text-xs text-gray-300 truncate">
+                <p className="text-[10px] sm:text-xs text-gray-300 truncate">
                   {latestPinned.type === 'image' ? '📷 Photo' : latestPinned.type === 'pdf' ? '📄 PDF' : latestPinned.content}
                 </p>
               </button>
               <button onClick={() => setShowPinnedList(false)} className="text-gray-600 hover:text-gray-400 p-1">
-                <ChevronDown size={14} />
+                <ChevronDown size={12} className="sm:w-3.5 sm:h-3.5" />
               </button>
             </div>
           </motion.div>
@@ -367,11 +384,11 @@ export default function DoubtChat() {
       </AnimatePresence>
 
       {/* ── MESSAGES AREA ── */}
-      <div className={`flex-1 overflow-y-auto px-3 py-2 space-y-0.5 ${bgStyles[chatBg] || bgStyles.default}`}>
+      <div className={`flex-1 overflow-y-auto px-3 sm:px-4 py-2 sm:py-3 space-y-1 sm:space-y-1.5 ${bgStyles[chatBg] || bgStyles.default}`}>
         {grouped.map((item, i) => {
           if (item.type === 'date') return (
             <div key={`d${i}`} className="flex justify-center my-2">
-              <span className="text-[10px] text-gray-500 bg-dark-800/70 px-2.5 py-0.5 rounded-full">{item.date}</span>
+              <span className="text-[9px] sm:text-[10px] text-gray-500 bg-dark-800/70 px-2 sm:px-2.5 py-0.5 rounded-full">{item.date}</span>
             </div>
           )
 
@@ -388,10 +405,10 @@ export default function DoubtChat() {
               onMouseEnter={() => setShowOptionsId(item.id)}
               onMouseLeave={() => setShowOptionsId(null)}
             >
-              <div className={`max-w-[78%] flex ${own ? 'flex-row-reverse' : 'flex-row'} gap-1.5 items-end`}>
+              <div className={`max-w-[82%] sm:max-w-[78%] flex ${own ? 'flex-row-reverse' : 'flex-row'} gap-1.5 sm:gap-2 items-end`}>
                 {/* Avatar */}
                 <div
-                  className="w-7 h-7 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-[9px] font-bold text-white mb-0.5 flex-none"
+                  className="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-[8px] sm:text-[9px] font-bold text-white mb-0.5 flex-none"
                   style={{ backgroundColor: sender.color }}
                 >
                   {sender.avatarUrl
@@ -403,12 +420,12 @@ export default function DoubtChat() {
                 <div className={`flex flex-col ${own ? 'items-end' : 'items-start'} min-w-0`}>
                   {/* Sender name (only non-own) */}
                   {!own && (
-                    <span className={`text-[10px] font-semibold mb-0.5 ml-1 ${isAdmin ? 'text-emerald-400' : 'text-blue-400'}`}>
+                    <span className={`text-[9px] sm:text-[10px] font-semibold mb-0.5 ml-1 ${isAdmin ? 'text-emerald-400' : 'text-blue-400'}`}>
                       {sender.name}
                     </span>
                   )}
 
-                  <div className={`rounded-2xl px-3 py-1.5 text-sm leading-snug shadow-sm max-w-full relative ${
+                  <div className={`rounded-2xl px-2.5 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm leading-snug shadow-sm max-w-full relative ${
                     own
                       ? 'bg-primary-500/25 text-white border border-primary-500/20 rounded-br-sm'
                       : isAdmin
@@ -418,23 +435,23 @@ export default function DoubtChat() {
 
                     {/* Edited pencil icon - tiny corner indicator */}
                     {item.editedAt && !isEditing && (
-                      <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-dark-700 rounded-full flex items-center justify-center border border-white/10" title="Edited">
-                        <Pencil size={7} className="text-gray-500" />
+                      <span className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-3.5 sm:h-3.5 bg-dark-700 rounded-full flex items-center justify-center border border-white/10" title="Edited">
+                        <Pencil size={6} className="sm:w-2 sm:h-2 text-gray-500" />
                       </span>
                     )}
 
                     {isEditing ? (
-                      <div className="space-y-1 min-w-[160px]">
+                      <div className="space-y-1 min-w-[140px] sm:min-w-[160px]">
                         <input
                           type="text" value={editText}
                           onChange={e => setEditText(e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit() }}
-                          className="w-full bg-dark-800 border border-white/10 rounded-lg px-2 py-1 text-sm text-white focus:outline-none focus:border-primary-500/50"
+                          className="w-full bg-dark-800 border border-white/10 rounded-lg px-2 py-1 text-xs sm:text-sm text-white focus:outline-none focus:border-primary-500/50"
                           autoFocus
                         />
                         <div className="flex gap-2">
-                          <button onClick={saveEdit} className="text-[11px] text-emerald-400 hover:text-emerald-300 font-medium">Save</button>
-                          <button onClick={cancelEdit} className="text-[11px] text-gray-500 hover:text-gray-300">Cancel</button>
+                          <button onClick={saveEdit} className="text-[10px] sm:text-[11px] text-emerald-400 hover:text-emerald-300 font-medium">Save</button>
+                          <button onClick={cancelEdit} className="text-[10px] sm:text-[11px] text-gray-500 hover:text-gray-300">Cancel</button>
                         </div>
                       </div>
                     ) : (
@@ -442,41 +459,42 @@ export default function DoubtChat() {
                         {item.type === 'image' && item.media && (
                           <img
                             src={resolveUrl(item.media.url)} alt="shared"
-                            className="rounded-xl max-w-full mb-1.5 cursor-pointer max-h-48 object-cover"
+                            className="rounded-xl max-w-full mb-1.5 cursor-pointer max-h-40 sm:max-h-48 object-cover"
                             onClick={() => window.open(resolveUrl(item.media.url), '_blank')}
                             onError={e => { e.currentTarget.src = ''; e.currentTarget.alt = '⚠ Image unavailable' }}
                           />
                         )}
                         {item.type === 'pdf' && item.media && (
                           <a href={resolveUrl(item.media.url)} target="_blank" rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 mb-1.5 text-sm">
-                            <FileText size={14} /> <span className="truncate max-w-[160px]">{item.media.filename || 'PDF'}</span>
+                            className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 mb-1.5 text-xs sm:text-sm">
+                            <FileText size={12} className="sm:w-3.5 sm:h-3.5" /> 
+                            <span className="truncate max-w-[140px] sm:max-w-[160px]">{item.media.filename || 'PDF'}</span>
                           </a>
                         )}
 
                         {(item.content || item.selfDeleted) && (
-                          <div className={`whitespace-pre-wrap break-words text-sm leading-snug ${item.selfDeleted ? 'italic text-gray-500' : ''}`}>
+                          <div className={`whitespace-pre-wrap break-words text-xs sm:text-sm leading-snug ${item.selfDeleted ? 'italic text-gray-500' : ''}`}>
                             {item.selfDeleted ? 'This message was deleted' : linkify(item.content)}
                           </div>
                         )}
 
                         {/* Timestamp row */}
-                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                          <span className="text-[10px] opacity-40">{fmt(item.createdAt)}</span>
+                        <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 flex-wrap">
+                          <span className="text-[8px] sm:text-[10px] opacity-40">{fmt(item.createdAt)}</span>
                           {item.seenBy > 0 && (
-                            <span className="flex items-center gap-0.5 text-[10px] text-gray-500">
-                              <Eye size={8} className="opacity-60" />
+                            <span className="flex items-center gap-0.5 text-[8px] sm:text-[10px] text-gray-500">
+                              <Eye size={7} className="sm:w-2 sm:h-2 opacity-60" />
                               {fmtSeen(item.seenBy)}
                             </span>
                           )}
-                          {item._optimistic && <span className="text-[10px] text-gray-500">•</span>}
+                          {item._optimistic && <span className="text-[8px] sm:text-[10px] text-gray-500">•</span>}
                           {item.status === 'pending' && !item._optimistic && (
-                            <Clock size={9} className="text-amber-400 opacity-70" />
+                            <Clock size={8} className="sm:w-2.5 sm:h-2.5 text-amber-400 opacity-70" />
                           )}
                           {item.status === 'rejected' && (
-                            <XCircle size={9} className="text-red-400 opacity-70" />
+                            <XCircle size={8} className="sm:w-2.5 sm:h-2.5 text-red-400 opacity-70" />
                           )}
-                          {item.pinned && <Pin size={9} className="text-amber-400 opacity-70" />}
+                          {item.pinned && <Pin size={8} className="sm:w-2.5 sm:h-2.5 text-amber-400 opacity-70" />}
                         </div>
 
                         {/* Hover actions */}
@@ -484,19 +502,19 @@ export default function DoubtChat() {
                           <motion.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="flex gap-1.5 mt-1 pt-1 border-t border-white/10"
+                            className="flex gap-1 sm:gap-1.5 mt-1 pt-1 border-t border-white/10"
                           >
                             <button onClick={() => startEdit(item)}
-                              className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5">
-                              <Pencil size={10} /> Edit
+                              className="text-[9px] sm:text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5">
+                              <Pencil size={9} className="sm:w-2.5 sm:h-2.5" /> Edit
                             </button>
                             <button onClick={() => deleteMsg(item.id, false)}
-                              className="text-[10px] text-gray-500 hover:text-red-400 flex items-center gap-0.5">
-                              <Trash2 size={10} /> Me
+                              className="text-[9px] sm:text-[10px] text-gray-500 hover:text-red-400 flex items-center gap-0.5">
+                              <Trash2 size={9} className="sm:w-2.5 sm:h-2.5" /> Me
                             </button>
                             <button onClick={() => deleteMsg(item.id, true)}
-                              className="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-0.5">
-                              <XCircle2 size={10} /> All
+                              className="text-[9px] sm:text-[10px] text-red-400 hover:text-red-300 flex items-center gap-0.5">
+                              <XCircle2 size={9} className="sm:w-2.5 sm:h-2.5" /> All
                             </button>
                           </motion.div>
                         )}
@@ -511,31 +529,31 @@ export default function DoubtChat() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* ── INPUT BAR ── */}
-      <div className="flex-shrink-0 px-3 py-2 border-t border-white/5 bg-dark-800/90 backdrop-blur-sm">
+      {/* ── INPUT BAR (fixed at bottom) ── */}
+      <div className="flex-shrink-0 px-3 sm:px-4 py-2 sm:py-3 border-t border-white/5 bg-dark-800/95 backdrop-blur-md">
         <input ref={fileInputRef} type="file" accept="image/*,.pdf" onChange={handleMediaUpload} className="hidden" />
         <div className="flex items-center gap-2">
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/5 border border-white/5 transition-all flex-shrink-0"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-gray-500 hover:text-white hover:bg-white/5 border border-white/5 transition-all flex-shrink-0"
           >
-            <Paperclip size={15} />
+            <Paperclip size={16} className="sm:w-4 sm:h-4" />
           </button>
           <input
             type="text" value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type your doubt…"
-            className="flex-1 bg-dark-700/60 border border-white/5 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500/40 focus:ring-1 focus:ring-primary-500/15 transition-all"
+            className="flex-1 bg-dark-700/60 border border-white/5 rounded-xl px-3 py-2 sm:py-2.5 text-xs sm:text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500/40 focus:ring-1 focus:ring-primary-500/15 transition-all"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || !socketConnected}
-            className="w-9 h-9 rounded-xl bg-primary-500 hover:bg-primary-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-lg shadow-primary-500/20 flex-shrink-0"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary-500 hover:bg-primary-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-lg shadow-primary-500/20 flex-shrink-0"
           >
             {socketConnected
-              ? <Send size={16} className="text-white" />
-              : <Loader2 size={16} className="text-white animate-spin" />}
+              ? <Send size={16} className="sm:w-4 sm:h-4 text-white" />
+              : <Loader2 size={16} className="sm:w-4 sm:h-4 text-white animate-spin" />}
           </button>
         </div>
       </div>
