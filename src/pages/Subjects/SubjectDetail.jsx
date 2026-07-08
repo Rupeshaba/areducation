@@ -189,6 +189,9 @@ const ContentCard = function ContentCard({ content, courseId, subjectId, chapter
       localStorage.removeItem(`ar_completed_${content.id}`)
     } else {
       localStorage.setItem(`ar_completed_${content.id}`, 'true')
+      // Sync to backend so Subjects / MyCourses list pages (which read from
+      // /user/progress) also reflect this completion, not just this page.
+      api.post(`/user/progress/${content.id}/complete`, { subjectId, courseId }).catch(() => {})
     }
     // Force re-render by updating state
     window.dispatchEvent(new CustomEvent('ar-completion-changed'))
@@ -434,6 +437,23 @@ export default function SubjectDetail() {
     ...(progressData?.progress?.completedContentIds || []),
     ...(Object.keys(localStorage).filter(k => k.startsWith('ar_completed_')).map(k => k.replace('ar_completed_', '')))
   ]), [progressData, refreshKey])
+
+  // One-time reconciliation: some content may have been marked completed only
+  // in localStorage (older app versions, or offline marking) and never told
+  // the backend. Push those over so the Subjects list / MyCourses progress
+  // (which only trust the backend) stay in sync with what this page shows.
+  useEffect(() => {
+    if (!progressData || allContents.length === 0) return
+    const apiCompleted = new Set(progressData?.progress?.completedContentIds || [])
+    const localOnly = allContents.filter(c => {
+      try {
+        return localStorage.getItem(`ar_completed_${c.id}`) === 'true' && !apiCompleted.has(c.id)
+      } catch { return false }
+    })
+    localOnly.forEach(c => {
+      api.post(`/user/progress/${c.id}/complete`, { subjectId, courseId }).catch(() => {})
+    })
+  }, [progressData, allContents, subjectId, courseId])
 
   const videosCount = allContents.filter(isVideoType).length
   const pdfsCount   = allContents.filter(isPdfType).length
