@@ -522,7 +522,7 @@ export default function Layout() {
         </div>
       </main>
 
-      {/* ── MOBILE BOTTOM TAB BAR (edge-to-edge, rounded top only) ──────────── */}
+      {/* ── MOBILE BOTTOM TAB BAR (enhanced with glow) ──────────── */}
       {!hideSidebar && (
         <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 flex items-stretch justify-around
           rounded-t-[28px] bg-dark-800/95 backdrop-blur-2xl border-t border-x border-white/[0.08] shadow-2xl shadow-black/40 pt-2 px-2"
@@ -536,11 +536,14 @@ export default function Layout() {
             >
               {({ isActive }) => (
                 <>
-                  <div className={`flex items-center justify-center w-11 h-8 rounded-2xl transition-all duration-300
-                    ${isActive ? 'bg-primary-500/15' : ''}`}>
+                  <div className={`flex items-center justify-center w-11 h-8 rounded-2xl transition-all duration-300 relative
+                    ${isActive ? 'shadow-lg shadow-primary-500/25' : ''}`}>
+                    {isActive && (
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary-500/20 to-primary-400/10" />
+                    )}
                     <Icon size={18} className={isActive ? 'text-primary-400' : 'text-gray-500'} strokeWidth={isActive ? 2.4 : 2} />
                   </div>
-                  <span className={isActive ? 'text-primary-400' : 'text-gray-500'}>{label}</span>
+                  <span className={isActive ? 'text-primary-400 font-bold' : 'text-gray-500'}>{label}</span>
                 </>
               )}
             </NavLink>
