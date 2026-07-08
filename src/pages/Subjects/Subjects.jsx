@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   BookOpen, AlertCircle, GraduationCap,
-  Layers, Sparkles, ArrowRight
+  Layers, Sparkles, ArrowRight, CheckCircle
 } from 'lucide-react'
 import api from '../../api/axios'
 
@@ -30,8 +30,10 @@ function ShimmerCard() {
 }
 
 /* ═══ SUBJECT CARD ═══ */
-function SubjectCard({ subject, courseId, index }) {
+function SubjectCard({ subject, courseId, index, subjectProgress }) {
   const accent = subject.color || '#6366f1'
+  const progress = subjectProgress?.[subject.id] || { completed: 0, total: 0 }
+  const progressPct = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0
 
   return (
     <motion.div
@@ -79,6 +81,26 @@ function SubjectCard({ subject, courseId, index }) {
             className="absolute left-0 top-0 bottom-0 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-400"
             style={{ background: `linear-gradient(to bottom, ${accent}, ${accent}44)` }}
           />
+
+          {/* Progress Circle Overlay */}
+          {progress.total > 0 && (
+            <div className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-dark-900/80 backdrop-blur-sm border border-white/10 flex items-center justify-center">
+              <svg className="w-7 h-7 -rotate-90" viewBox="0 0 20 20">
+                <circle cx="10" cy="10" r="8" stroke="rgba(255,255,255,0.1)" strokeWidth="2" fill="none" />
+                <circle
+                  cx="10" cy="10" r="8"
+                  stroke="#10b981"
+                  strokeWidth="2"
+                  fill="none"
+                  strokeDasharray={`${2 * Math.PI * 8}`}
+                  strokeDashoffset={`${2 * Math.PI * 8 * (1 - progressPct / 100)}`}
+                  strokeLinecap="round"
+                  className="transition-all duration-500"
+                />
+              </svg>
+              <span className="absolute text-[8px] font-bold text-white">{progressPct}%</span>
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -165,7 +187,16 @@ export default function Subjects() {
     retry: 2,
   })
 
+  const { data: progressData } = useQuery({
+    queryKey: ['course-progress', courseId],
+    queryFn: () => api.get(`/user/progress?courseId=${courseId}`).then(r => r.data),
+    enabled: !!courseId,
+    staleTime: 0,
+    gcTime: 60000,
+  })
+
   const subjects = data?.subjects || []
+  const subjectProgress = progressData?.subjectProgress || {}
 
   return (
     <div className="max-w-2xl pb-12">
@@ -218,7 +249,7 @@ export default function Subjects() {
       {!isLoading && !isError && subjects.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
           {subjects.map((subject, i) => (
-            <SubjectCard key={subject.id} subject={subject} courseId={courseId} index={i} />
+            <SubjectCard key={subject.id} subject={subject} courseId={courseId} index={i} subjectProgress={subjectProgress} />
           ))}
         </div>
       )}
