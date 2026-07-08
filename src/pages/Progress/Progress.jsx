@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
   TrendingUp, CheckCircle, BookOpen, Trophy, Clock, Target,
-  BarChart3, Flame, Zap, Star, ArrowUpRight, Calendar, Award
+  BarChart3, Flame, Zap, Star, ArrowUpRight, Calendar, Award, Layers
 } from 'lucide-react'
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar'
 import 'react-circular-progressbar/dist/styles.css'
@@ -106,6 +106,46 @@ function StudyRow({ label, value, icon: Icon, color, delay = 0 }) {
   )
 }
 
+/* ─── Subject Progress Row ─── */
+function SubjectProgressRow({ subject, progress, index }) {
+  const progressPct = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -15 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="flex items-center justify-between py-3 border-b border-white/[0.05] last:border-0"
+    >
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(99,102,241,0.15)' }}>
+          <Layers size={14} className="text-primary-400" />
+        </div>
+        <span className="text-sm text-gray-300">{subject.name || subject.id}</span>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="text-xs text-gray-500">{progress.completed}/{progress.total}</span>
+        <div className="w-12 h-12 relative">
+          <svg className="w-12 h-12 -rotate-90" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.1)" strokeWidth="2" fill="none" />
+            <circle
+              cx="12" cy="12" r="10"
+              stroke="#10b981"
+              strokeWidth="2"
+              fill="none"
+              strokeDasharray={`${2 * Math.PI * 10}`}
+              strokeDashoffset={`${2 * Math.PI * 10 * (1 - progressPct / 100)}`}
+              strokeLinecap="round"
+              className="transition-all duration-500"
+            />
+          </svg>
+          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">{progressPct}%</span>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
 /* ─── Quiz Attempt Card ─── */
 function QuizCard({ attempt, index }) {
   const getColor = (score) => {
@@ -181,6 +221,35 @@ export default function Progress() {
   const { data: pointsData, isLoading: pointsLoading } = useQuery({
     queryKey: ['my-points'],
     queryFn: () => api.get('/my-points').then(r => r.data),
+  })
+
+  const { data: purchasesData } = useQuery({
+    queryKey: ['purchases'],
+    queryFn: () => api.get('/store/my-purchases').then(r => r.data),
+  })
+
+  // Fetch course-wise progress for all purchased courses
+  const purchases = purchasesData?.purchases || []
+  const { data: courseProgressData, isLoading: courseProgressLoading } = useQuery({
+    queryKey: ['all-courses-progress', purchases.map(p => p.courseId).join(',')],
+    queryFn: async () => {
+      const results = {}
+      for (const purchase of purchases) {
+        const courseId = purchase.courseId
+        if (courseId) {
+          try {
+            const res = await api.get(`/user/progress?courseId=${courseId}`)
+            results[courseId] = res.data
+          } catch (e) {
+            results[courseId] = { progress: { totalSeen: 0, totalWatched: 0 }, subjectProgress: {} }
+          }
+        }
+      }
+      return results
+    },
+    enabled: !!purchases.length,
+    staleTime: 0,
+    gcTime: 60000,
   })
 
   const recentAttempts = (() => {
@@ -313,6 +382,115 @@ export default function Progress() {
               <StudyRow label="Points from Quizzes" value={totalPoints} icon={Zap} color="#f59e0b" delay={0.25} />
             </div>
           </motion.div>
+
+          {/* ═══ COURSE PROGRESS ═══ */}
+          {purchases.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+              className="rounded-2xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] p-6"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <BookOpen size={18} className="text-primary-400" />
+                <h2 className="text-lg font-bold text-white">Course Progress</h2>
+              </div>
+              <div className="space-y-1">
+                {purchases.map((purchase, i) => {
+                  const course = purchase.courseDetails || {}
+                  const courseId = course.id || course._id || purchase.courseId
+                  const courseProgress = courseProgressData?.[courseId]?.progress || { totalSeen: 0, totalWatched: 0 }
+                  const progressPct = courseProgress.totalSeen > 0 
+                    ? Math.round((courseProgress.totalWatched / courseProgress.totalSeen) * 100) 
+                    : 0
+                  
+                  return (
+                    <div key={purchase.id} className="flex items-center justify-between py-3 border-b border-white/[0.05] last:border-0">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'rgba(99,102,241,0.15)' }}>
+                          <BookOpen size={14} className="text-primary-400" />
+                        </div>
+                        <span className="text-sm text-gray-300">{purchase.courseName}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-500">{courseProgress.totalWatched}/{courseProgress.totalSeen}</span>
+                        <div className="w-12 h-12 relative">
+                          <svg className="w-12 h-12 -rotate-90" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.1)" strokeWidth="2" fill="none" />
+                            <circle
+                              cx="12" cy="12" r="10"
+                              stroke="#6366f1"
+                              strokeWidth="2"
+                              fill="none"
+                              strokeDasharray={`${2 * Math.PI * 10}`}
+                              strokeDashoffset={`${2 * Math.PI * 10 * (1 - progressPct / 100)}`}
+                              strokeLinecap="round"
+                              className="transition-all duration-500"
+                            />
+                          </svg>
+                          <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">{progressPct}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ═══ SUBJECT PROGRESS ═══ */}
+          {purchases.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="rounded-2xl bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] p-6"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Layers size={18} className="text-primary-400" />
+                <h2 className="text-lg font-bold text-white">Subject Progress</h2>
+              </div>
+              <div className="space-y-1">
+                {purchases.map((purchase, i) => {
+                  const course = purchase.courseDetails || {}
+                  const courseId = course.id || course._id || purchase.courseId
+                  const subjectProgress = courseProgressData?.[courseId]?.subjectProgress || {}
+                  
+                  return Object.entries(subjectProgress).map(([subjectId, sp], j) => (
+                    <div key={subjectId} className="flex items-center justify-between py-2 border-b border-white/[0.05] last:border-0">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ backgroundColor: 'rgba(99,102,241,0.1)' }}>
+                          <Layers size={12} className="text-primary-400" />
+                        </div>
+                        <span className="text-xs text-gray-400">{subjectId}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-500">{sp.completed}/{sp.total}</span>
+                        <div className="w-8 h-8 relative">
+                          <svg className="w-8 h-8 -rotate-90" viewBox="0 0 16 16">
+                            <circle cx="8" cy="8" r="6" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" fill="none" />
+                            <circle
+                              cx="8" cy="8" r="6"
+                              stroke="#10b981"
+                              strokeWidth="1.5"
+                              fill="none"
+                              strokeDasharray={`${2 * Math.PI * 6}`}
+                              strokeDashoffset={`${2 * Math.PI * 6 * (1 - (sp.total > 0 ? sp.completed / sp.total : 0))}`}
+                              strokeLinecap="round"
+                              className="transition-all duration-500"
+                            />
+                          </svg>
+                          <span className="absolute inset-0 flex items-center justify-center text-[8px] font-bold text-white">
+                            {sp.total > 0 ? Math.round((sp.completed / sp.total) * 100) : 0}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                })}
+              </div>
+            </motion.div>
+          )}
 
           {/* ═══ RECENT QUIZZES ═══ */}
           {recentAttempts.length > 0 && (
