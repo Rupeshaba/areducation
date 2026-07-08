@@ -134,7 +134,7 @@ export default function Store() {
   const { data: purchasesData } = useQuery({ queryKey: ['purchases'], queryFn: () => api.get('/store/my-purchases').then(r => r.data) })
   const { data: settingsData } = useQuery({ queryKey: ['payment-settings'], queryFn: () => api.get('/store/payment-settings').then(r => r.data) })
 
-  const courses = coursesData?.courses || []
+  const courses = (coursesData?.courses || []).filter(c => !c.isFree)
   const purchases = purchasesData?.purchases || []
   const settings = settingsData?.settings || {}
 
