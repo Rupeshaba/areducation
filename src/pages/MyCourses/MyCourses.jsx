@@ -1,15 +1,40 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { BookOpen, Play, Clock, ShoppingBag, ChevronRight, Calendar } from 'lucide-react'
+import { BookOpen, Play, Clock, ShoppingBag, ChevronRight, Calendar, CheckCircle, TrendingUp } from 'lucide-react'
 import api from '../../api/axios'
 
 export default function MyCourses() {
-  const { data: purchasesData, isLoading } = useQuery({
+  const { data: purchasesData, isLoading: purchasesLoading } = useQuery({
     queryKey: ['purchases'],
     queryFn: () => api.get('/store/my-purchases').then(r => r.data),
   })
   const purchases = purchasesData?.purchases || []
+
+  // Fetch progress for all courses
+  const { data: progressData, isLoading: progressLoading } = useQuery({
+    queryKey: ['all-courses-progress'],
+    queryFn: async () => {
+      const results = {}
+      for (const purchase of purchases) {
+        const courseId = purchase.courseId
+        if (courseId) {
+          try {
+            const res = await api.get(`/user/progress?courseId=${courseId}`)
+            results[courseId] = res.data
+          } catch (e) {
+            results[courseId] = { progress: { totalSeen: 0, totalWatched: 0 }, subjectProgress: {} }
+          }
+        }
+      }
+      return results
+    },
+    enabled: !!purchases.length,
+    staleTime: 0,
+    gcTime: 60000,
+  })
+
+  const isLoading = purchasesLoading || progressLoading
 
   if (isLoading) return (
     <div className="flex justify-center py-20">
@@ -43,6 +68,13 @@ export default function MyCourses() {
           const daysLeft = (!isFree && purchase.expiresAt) ? Math.ceil((purchase.expiresAt - Date.now()) / 86400000) : null
           const isExpired = daysLeft !== null && daysLeft <= 0
           const isUrgent = daysLeft !== null && !isExpired && daysLeft <= 30
+
+          // Get progress from API
+          const courseProgress = progressData?.[courseId]?.progress || { totalSeen: 0, totalWatched: 0 }
+          const subjectProgress = progressData?.[courseId]?.subjectProgress || {}
+          const progressPercent = courseProgress.totalSeen > 0 
+            ? Math.round((courseProgress.totalWatched / courseProgress.totalSeen) * 100) 
+            : 0
 
           return (
             <motion.div
@@ -87,9 +119,22 @@ export default function MyCourses() {
 
                 {/* Info */}
                 <div className="p-4">
-                  <h3 className="font-bold text-white text-sm mb-3 line-clamp-2 leading-snug group-hover:text-primary-300 transition-colors">
+                  <h3 className="font-bold text-white text-sm mb-2 line-clamp-2 leading-snug group-hover:text-primary-300 transition-colors">
                     {purchase.courseName}
                   </h3>
+
+                  {/* Progress Bar */}
+                  {courseProgress.totalSeen > 0 && (
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
+                        <span>Progress</span>
+                        <span>{progressPercent}%</span>
+                      </div>
+                      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary-500 rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
+                      </div>
+                    </div>
+                  )}
 
                   <Link
                     to={`/courses/${courseId}/subjects`}
