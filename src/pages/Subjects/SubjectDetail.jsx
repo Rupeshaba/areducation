@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, memo, useRef, useEffect } from 'react'
+import { useState, memo, useRef, useEffect, useMemo } from 'react'
 import {
   AlertCircle, BookOpen, Play, FileText, Video,
-  Clock, Trophy, Zap
+  Clock, Trophy, Zap, CheckCircle
 } from 'lucide-react'
 import api from '../../api/axios'
 
@@ -49,7 +49,6 @@ function YTThumb({ vid, alt, className }) {
         const img = new Image()
         img.onload = () => resolve(true)
         img.onerror = () => resolve(false)
-        // Add cache-busting parameter to avoid stale failures
         img.src = `${url}?t=${Date.now()}`
       })
     }
@@ -65,7 +64,6 @@ function YTThumb({ vid, alt, className }) {
           return
         }
       }
-      // No quality available
       if (isMounted) {
         setFailed(true)
         setLoading(false)
@@ -123,8 +121,18 @@ function ShimmerCard() {
 }
 
 /* ═══ CONTENT CARD ═══ */
-const ContentCard = memo(function ContentCard({ content, courseId, subjectId, chapterId, index }) {
+const ContentCard = function ContentCard({ content, courseId, subjectId, chapterId, index, completedContentIds, onMarkCompleted }) {
   const [imgFailed, setImgFailed] = useState(false)
+  const [showContextMenu, setShowContextMenu] = useState(false)
+  const [contextPos, setContextPos] = useState({ x: 0, y: 0 })
+  const [forceUpdate, setForceUpdate] = useState(0)
+
+  // Listen for completion changes to force re-render
+  useEffect(() => {
+    const handleCompletionChange = () => setForceUpdate(prev => prev + 1)
+    window.addEventListener('ar-completion-changed', handleCompletionChange)
+    return () => window.removeEventListener('ar-completion-changed', handleCompletionChange)
+  }, [])
 
   const type = ctype(content)
   const cfg  = TYPE_CFG[type]
@@ -140,12 +148,79 @@ const ContentCard = memo(function ContentCard({ content, courseId, subjectId, ch
   const showYTThumb       = !showUploadedThumb && !!vid
   const showFallback      = !showUploadedThumb && !showYTThumb
 
+  // Check if content is completed (from localStorage or API)
+  const isCompleted = completedContentIds?.has(content.id) || 
+    (function() {
+      try {
+        return localStorage.getItem(`ar_completed_${content.id}`) === 'true'
+      } catch { return false }
+    })()
+
+  const handleContextMenu = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextPos({ x: e.clientX, y: e.clientY })
+    setShowContextMenu(true)
+  }
+
+  const longPressTimer = useRef(null)
+
+  const handleLongPress = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    setContextPos({ x: rect.left + 10, y: rect.top + 10 })
+    setShowContextMenu(true)
+  }
+
+  const handleTouchStart = (e) => {
+    longPressTimer.current = setTimeout(() => handleLongPress(e), 600)
+  }
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  const handleMarkCompleted = () => {
+    if (isCompleted) {
+      localStorage.removeItem(`ar_completed_${content.id}`)
+    } else {
+      localStorage.setItem(`ar_completed_${content.id}`, 'true')
+    }
+    // Force re-render by updating state
+    window.dispatchEvent(new CustomEvent('ar-completion-changed'))
+    onMarkCompleted?.(content.id)
+    setShowContextMenu(false)
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className="relative"
     >
+      <div
+        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center transition-all z-10"
+        style={{
+          background: isCompleted ? 'rgba(16,185,129,0.9)' : 'rgba(255,255,255,0.1)',
+          border: '1px solid rgba(255,255,255,0.2)',
+        }}
+        onClick={(e) => {
+          e.stopPropagation()
+          handleMarkCompleted()
+        }}
+        onContextMenu={handleContextMenu}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchEnd}
+      >
+        <CheckCircle size={12} className={isCompleted ? 'text-white' : 'text-white/40'} />
+      </div>
+
       <Link to={linkTo} className="group block focus:outline-none">
         <div className="rounded-2xl overflow-hidden transition-all duration-300 active:scale-[0.97]"
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
@@ -220,12 +295,37 @@ const ContentCard = memo(function ContentCard({ content, courseId, subjectId, ch
           </div>
         </div>
       </Link>
+
+      {/* Context Menu */}
+      {showContextMenu && (
+        <div
+          className="fixed z-50 bg-dark-800 border border-white/20 rounded-lg py-1 px-1 shadow-lg"
+          style={{ left: contextPos.x, top: contextPos.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={handleMarkCompleted}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs text-white hover:bg-white/10 rounded"
+          >
+            <CheckCircle size={12} />
+            {isCompleted ? 'Unmark Completed' : 'Mark as Completed'}
+          </button>
+        </div>
+      )}
+
+      {/* Click outside to close context menu */}
+      {showContextMenu && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowContextMenu(false)}
+        />
+      )}
     </motion.div>
   )
-})
+}
 
 /* ═══ CONTENT GRID ═══ */
-function ContentGrid({ contents, tab, courseId, subjectId }) {
+function ContentGrid({ contents, tab, courseId, subjectId, completedContentIds }) {
   const filtered = tab === 'video' ? contents.filter(isVideoType) : contents.filter(isPdfType)
 
   if (!filtered.length) return (
@@ -252,6 +352,7 @@ function ContentGrid({ contents, tab, courseId, subjectId }) {
           subjectId={subjectId}
           chapterId={c._chapterId ?? null}
           index={i}
+          completedContentIds={completedContentIds}
         />
       ))}
     </div>
@@ -278,12 +379,42 @@ function useSwipeTabs(tab, setTab, order) {
 export default function SubjectDetail() {
   const { courseId, subjectId } = useParams()
   const [tab, setTab] = useState('video')
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  // Refresh on completion change
+  useEffect(() => {
+    const handleCompletionChange = () => {
+      setRefreshKey(prev => prev + 1)
+    }
+    window.addEventListener('ar-completion-changed', handleCompletionChange)
+    return () => window.removeEventListener('ar-completion-changed', handleCompletionChange)
+  }, [])
+
+  // Close context menu on click outside
+  useEffect(() => {
+    const closeAllMenus = () => {
+      document.querySelectorAll('.content-context-menu').forEach(el => {
+        if (el.parentNode) el.parentNode.removeChild(el)
+      })
+    }
+    document.addEventListener('click', closeAllMenus)
+    return () => document.removeEventListener('click', closeAllMenus)
+  }, [])
 
   const swipe = useSwipeTabs(tab, setTab, ['video', 'pdf'])
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['subject-detail', subjectId],
     queryFn: () => api.get(`/subjects/${subjectId}`).then(r => r.data),
+    enabled: !!subjectId,
+    staleTime: 0,
+    gcTime: 60000,
+    retry: 2,
+  })
+
+  const { data: progressData } = useQuery({
+    queryKey: ['user-progress', subjectId],
+    queryFn: () => api.get(`/user/progress?subjectId=${subjectId}`).then(r => r.data),
     enabled: !!subjectId,
     staleTime: 0,
     gcTime: 60000,
@@ -299,12 +430,19 @@ export default function SubjectDetail() {
     ? chapters.flatMap(ch => (ch.contents ?? []).map(c => ({ ...c, _chapterId: ch.id })))
     : flat
 
+  const completedContentIds = useMemo(() => new Set([
+    ...(progressData?.progress?.completedContentIds || []),
+    ...(Object.keys(localStorage).filter(k => k.startsWith('ar_completed_')).map(k => k.replace('ar_completed_', '')))
+  ]), [progressData, refreshKey])
+
   const videosCount = allContents.filter(isVideoType).length
   const pdfsCount   = allContents.filter(isPdfType).length
+  const completedVideos = allContents.filter(c => isVideoType(c) && completedContentIds.has(c.id)).length
+  const completedPdfs   = allContents.filter(c => isPdfType(c) && completedContentIds.has(c.id)).length
 
   const TABS = [
-    { key: 'video', label: 'Videos', Icon: Play,     count: videosCount, accent: '#818cf8', accentBg: 'rgba(99,102,241,0.15)',  accentBorder: 'rgba(99,102,241,0.28)' },
-    { key: 'pdf',   label: 'PDFs',   Icon: FileText,  count: pdfsCount,   accent: '#fbbf24', accentBg: 'rgba(234,179,8,0.15)',   accentBorder: 'rgba(234,179,8,0.28)'  },
+    { key: 'video', label: 'Videos', Icon: Play,     count: videosCount, completed: completedVideos, accent: '#818cf8', accentBg: 'rgba(99,102,241,0.15)',  accentBorder: 'rgba(99,102,241,0.28)' },
+    { key: 'pdf',   label: 'PDFs',   Icon: FileText,  count: pdfsCount,   completed: completedPdfs,   accent: '#fbbf24', accentBg: 'rgba(234,179,8,0.15)',   accentBorder: 'rgba(234,179,8,0.28)'  },
   ]
 
   /* ── Loading ── */
@@ -387,6 +525,28 @@ export default function SubjectDetail() {
           </div>
         </div>
 
+        {/* Progress Circle */}
+        {allContents.length > 0 && (
+          <div className="relative w-10 h-10 flex-shrink-0">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="16" stroke="rgba(255,255,255,0.1)" strokeWidth="2" fill="none" />
+              <circle
+                cx="18" cy="18" r="16"
+                stroke="#10b981"
+                strokeWidth="2"
+                fill="none"
+                strokeDasharray={`${2 * Math.PI * 16}`}
+                strokeDashoffset={`${2 * Math.PI * 16 * (1 - (completedContentIds.size / allContents.length))}`}
+                strokeLinecap="round"
+                className="transition-all duration-500"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
+              {Math.round((completedContentIds.size / allContents.length) * 100)}%
+            </div>
+          </div>
+        )}
+
         {/* Quiz button */}
         <Link
           to={`/quiz/${encodeURIComponent(subjectId)}`}
@@ -455,6 +615,7 @@ export default function SubjectDetail() {
               tab={tab}
               courseId={courseId}
               subjectId={subjectId}
+              completedContentIds={completedContentIds}
             />
           </motion.div>
         </AnimatePresence>
