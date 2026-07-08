@@ -460,7 +460,7 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
 }
 
 // ─── YouTube stage (fills screen, tap-to-play triggers fullscreen landscape) ─
-function YouTubeStage({ content, onBack, contentId }) {
+function YouTubeStage({ content, onBack, contentId, onEnded }) {
   const ytId = extractYTId(content.url)
   const containerRef = useRef(null)
   const iframeRef = useRef(null)
@@ -526,6 +526,10 @@ function YouTubeStage({ content, onBack, contentId }) {
             setSavedPosition(pos)
           }
         }
+        // playerState === 0 means the video has finished playing (YT.PlayerState.ENDED)
+        if (data?.event === 'infoDelivery' && data.info?.playerState === 0) {
+          onEnded?.()
+        }
       } catch {}
     }
     window.addEventListener('message', handleMessage)
@@ -534,7 +538,7 @@ function YouTubeStage({ content, onBack, contentId }) {
       clearInterval(saveInterval)
       window.removeEventListener('message', handleMessage)
     }
-  }, [started, ytId, contentId, content])
+  }, [started, ytId, contentId, content, onEnded])
 
   // Seek to saved position when iframe is ready
   useEffect(() => {
@@ -752,9 +756,16 @@ export default function MediaContent() {
     mutationFn: () => api.post(`/user/progress/${contentId}/complete`, { subjectId, courseId }),
   })
 
+  const hasMarkedCompleteRef = useRef(false)
+  useEffect(() => { hasMarkedCompleteRef.current = false }, [contentId])
+
   const handleEnded = useCallback(() => {
+    if (hasMarkedCompleteRef.current) return
+    hasMarkedCompleteRef.current = true
     if (user) markCompletedMutation.mutate()
-  }, [user, markCompletedMutation])
+    try { localStorage.setItem(`ar_completed_${contentId}`, 'true') } catch {}
+    window.dispatchEvent(new CustomEvent('ar-completion-changed'))
+  }, [user, markCompletedMutation, contentId])
 
   const content = contentData?.content || null
 
@@ -813,7 +824,7 @@ export default function MediaContent() {
 
   if (content.type === 'video' || content.type === 'hls') {
     return isYT
-      ? <YouTubeStage content={content} onBack={handleBack} contentId={contentId} />
+      ? <YouTubeStage content={content} onBack={handleBack} contentId={contentId} onEnded={handleEnded} />
       : <NativeVideoStage content={content} onEnded={handleEnded} onBack={handleBack} contentId={contentId} />
   }
 
