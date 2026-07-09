@@ -9,14 +9,7 @@ import {
 } from 'lucide-react'
 import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
-
-// Default images for home cards - cached in the app
-const DEFAULT_IMAGES = {
-  '/free-courses': 'https://res.cloudinary.com/dhniudiwg/image/upload/v1783496658/ChatGPT_Image_Jul_8_2026_01_04_02_PM_nrak15.png',
-  '/store': 'https://res.cloudinary.com/dhniudiwg/image/upload/v1783496658/ChatGPT_Image_Jul_8_2026_01_02_48_PM_o8b7z5.png',
-  '/books': 'https://res.cloudinary.com/dhniudiwg/image/upload/v1783496658/ChatGPT_Image_Jul_8_2026_01_09_49_PM_bx3jst.png',
-  '/progress': 'https://res.cloudinary.com/dhniudiwg/image/upload/v1783496658/ChatGPT_Image_Jul_8_2026_01_11_37_PM_hz5kvh.png',
-}
+import { useCoursesProgress } from '../../hooks/useCoursesProgress'
 
 /* ═══ MODERN PULSE SHIMMER ═══ */
 function Shimmer({ className = '' }) {
@@ -80,10 +73,8 @@ function WelcomeHero({ user, isLoading }) {
   )
 }
 
-/* ═══ QUICK ACTION CARD - Full background image with label at bottom ═══ */
+/* ═══ QUICK ACTION CARD ═══ */
 function QuickActionCard({ to, icon: Icon, label, description, accent, delay, thumbnailUrl }) {
-  const defaultImage = DEFAULT_IMAGES[to] || thumbnailUrl
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -92,30 +83,31 @@ function QuickActionCard({ to, icon: Icon, label, description, accent, delay, th
     >
       <Link to={to} className="block group">
         <div
-          className="rounded-2xl flex flex-col items-center justify-center text-center transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden aspect-square"
+          className="rounded-2xl p-4 flex flex-col items-center justify-center text-center transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden aspect-square"
           style={{
             background: 'rgba(255, 255, 255, 0.02)',
             border: '1px solid rgba(255, 255, 255, 0.06)',
           }}
         >
-          {/* Full background image */}
-          {defaultImage ? (
-            <img 
-              src={defaultImage} 
-              alt={label} 
-              className="absolute inset-0 w-full h-full object-cover"
-              loading="lazy"
-            />
+          {/* Hover glow effect */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+            style={{ background: `radial-gradient(circle at center, ${accent}15 0%, transparent 70%)` }} />
+          
+          {thumbnailUrl ? (
+            <img src={thumbnailUrl} alt={label} className="w-12 h-12 rounded-xl object-cover mb-2" />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center"
-              style={{ background: `${accent}12` }}>
-              <Icon size={32} style={{ color: accent }} />
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-2"
+              style={{ background: `${accent}12`, border: `1px solid ${accent}25` }}>
+              <Icon size={22} style={{ color: accent }} />
             </div>
           )}
           
-          {/* Text label at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
-            <h3 className="text-sm font-bold text-white">{label}</h3>
+          <h3 className="text-xs font-bold text-white/90 mb-1">{label}</h3>
+          <p className="text-[9px] text-white/40">{description}</p>
+          
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center mt-2 transition-all duration-300 group-hover:translate-x-0.5"
+            style={{ background: `${accent}10`, border: `1px solid ${accent}20` }}>
+            <ArrowRight size={12} style={{ color: accent }} />
           </div>
         </div>
       </Link>
@@ -209,23 +201,30 @@ export default function Home() {
     queryFn: () => api.get('/my-points').then(r => r.data),
   })
 
-  const { data: progressData, isLoading: progressLoading } = useQuery({
-    queryKey: ['user-progress'],
+  const { data: lastWatchedData } = useQuery({
+    queryKey: ['user-last-watched'],
     queryFn: () => api.get('/user/progress').then(r => r.data),
   })
 
   const { data: purchasesData, isLoading: purchasesLoading } = useQuery({
     queryKey: ['purchases'],
     queryFn: () => api.get('/store/my-purchases').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
   })
 
   const points = pointsData?.points || {}
-  const progress = progressData?.progress || {}
+  const lastWatched = lastWatchedData?.progress || {}
   const purchases = purchasesData?.purchases || []
 
-  const lastContentId = progress.lastContentId
-  const lastSubjectId = progress.lastContentSubjectId
-  const lastCourseId = progress.lastContentCourseId
+  // Overall "% complete" — computed locally from cached subject structure +
+  // local completion state, same source every page in the app agrees on.
+  const courseIds = purchases.map(p => p.courseId).filter(Boolean)
+  const { overall } = useCoursesProgress(courseIds)
+
+  const lastContentId = lastWatched.lastContentId
+  const lastSubjectId = lastWatched.lastContentSubjectId
+  const lastCourseId = lastWatched.lastContentCourseId
 
   const { data: lastContentData, isLoading: contentLoading } = useQuery({
     queryKey: ['last-content-detail', lastContentId],
@@ -244,7 +243,7 @@ export default function Home() {
       ? `/courses/${lastCourseId}/subjects/${lastSubjectId}`
       : null
 
-  const isLoading = pointsLoading || progressLoading || purchasesLoading
+  const isLoading = pointsLoading || purchasesLoading
 
   // Static cards with thumbnail support
   const staticCards = [
@@ -254,7 +253,7 @@ export default function Home() {
   ]
 
   // Progress card data
-  const progressPercent = progress.percent || 0
+  const progressPercent = overall.total > 0 ? Math.round((overall.completed / overall.total) * 100) : 0
   const progressCard = {
     to: '/progress',
     icon: TrendingUp,
