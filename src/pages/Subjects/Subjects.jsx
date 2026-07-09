@@ -6,6 +6,7 @@ import {
   Layers, Sparkles, ArrowRight, CheckCircle
 } from 'lucide-react'
 import api from '../../api/axios'
+import { useCoursesProgress } from '../../hooks/useCoursesProgress'
 
 /* ═══ SHIMMER ═══ */
 function Shimmer({ className = '' }) {
@@ -182,21 +183,14 @@ export default function Subjects() {
     queryKey: ['course-subjects', courseId],
     queryFn: () => api.get(`/courses/${courseId}/subjects`).then(r => r.data),
     enabled: !!courseId,
-    staleTime: 0,
-    gcTime: 60000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
     retry: 2,
   })
 
-  const { data: progressData } = useQuery({
-    queryKey: ['course-progress', courseId],
-    queryFn: () => api.get(`/user/progress?courseId=${courseId}`).then(r => r.data),
-    enabled: !!courseId,
-    staleTime: 0,
-    gcTime: 60000,
-  })
+  const { subjectProgress } = useCoursesProgress(courseId)
 
   const subjects = data?.subjects || []
-  const subjectProgress = progressData?.subjectProgress || {}
 
   return (
     <div className="max-w-2xl pb-12">
