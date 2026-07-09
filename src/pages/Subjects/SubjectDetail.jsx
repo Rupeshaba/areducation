@@ -7,6 +7,7 @@ import {
   Clock, Trophy, Zap, CheckCircle
 } from 'lucide-react'
 import api from '../../api/axios'
+import { getCompletedIdsSet, markContentCompleted, unmarkContentCompleted, isContentCompleted } from '../../utils/progress'
 
 /* ═══ HELPERS ═══ */
 function ytId(url) {
@@ -148,13 +149,8 @@ const ContentCard = function ContentCard({ content, courseId, subjectId, chapter
   const showYTThumb       = !showUploadedThumb && !!vid
   const showFallback      = !showUploadedThumb && !showYTThumb
 
-  // Check if content is completed (from localStorage or API)
-  const isCompleted = completedContentIds?.has(content.id) || 
-    (function() {
-      try {
-        return localStorage.getItem(`ar_completed_${content.id}`) === 'true'
-      } catch { return false }
-    })()
+  // Check if content is completed — single source of truth, local only
+  const isCompleted = isContentCompleted(content.id)
 
   const handleContextMenu = (e) => {
     e.preventDefault()
@@ -186,15 +182,10 @@ const ContentCard = function ContentCard({ content, courseId, subjectId, chapter
 
   const handleMarkCompleted = () => {
     if (isCompleted) {
-      localStorage.removeItem(`ar_completed_${content.id}`)
+      unmarkContentCompleted(content.id)
     } else {
-      localStorage.setItem(`ar_completed_${content.id}`, 'true')
-      // Sync to backend so Subjects / MyCourses list pages (which read from
-      // /user/progress) also reflect this completion, not just this page.
-      api.post(`/user/progress/${content.id}/complete`, { subjectId, courseId }).catch(() => {})
+      markContentCompleted(content.id)
     }
-    // Force re-render by updating state
-    window.dispatchEvent(new CustomEvent('ar-completion-changed'))
     onMarkCompleted?.(content.id)
     setShowContextMenu(false)
   }
@@ -410,17 +401,8 @@ export default function SubjectDetail() {
     queryKey: ['subject-detail', subjectId],
     queryFn: () => api.get(`/subjects/${subjectId}`).then(r => r.data),
     enabled: !!subjectId,
-    staleTime: 0,
-    gcTime: 60000,
-    retry: 2,
-  })
-
-  const { data: progressData } = useQuery({
-    queryKey: ['user-progress', subjectId],
-    queryFn: () => api.get(`/user/progress?subjectId=${subjectId}`).then(r => r.data),
-    enabled: !!subjectId,
-    staleTime: 0,
-    gcTime: 60000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
     retry: 2,
   })
 
@@ -433,27 +415,13 @@ export default function SubjectDetail() {
     ? chapters.flatMap(ch => (ch.contents ?? []).map(c => ({ ...c, _chapterId: ch.id })))
     : flat
 
-  const completedContentIds = useMemo(() => new Set([
-    ...(progressData?.progress?.completedContentIds || []),
-    ...(Object.keys(localStorage).filter(k => k.startsWith('ar_completed_')).map(k => k.replace('ar_completed_', '')))
-  ]), [progressData, refreshKey])
-
-  // One-time reconciliation: some content may have been marked completed only
-  // in localStorage (older app versions, or offline marking) and never told
-  // the backend. Push those over so the Subjects list / MyCourses progress
-  // (which only trust the backend) stay in sync with what this page shows.
-  useEffect(() => {
-    if (!progressData || allContents.length === 0) return
-    const apiCompleted = new Set(progressData?.progress?.completedContentIds || [])
-    const localOnly = allContents.filter(c => {
-      try {
-        return localStorage.getItem(`ar_completed_${c.id}`) === 'true' && !apiCompleted.has(c.id)
-      } catch { return false }
-    })
-    localOnly.forEach(c => {
-      api.post(`/user/progress/${c.id}/complete`, { subjectId, courseId }).catch(() => {})
-    })
-  }, [progressData, allContents, subjectId, courseId])
+  // Scoped strictly to THIS subject's content ids — a global completed-ids
+  // count previously leaked into the header %, showing progress here even
+  // when nothing in this particular subject was actually completed.
+  const completedContentIds = useMemo(() => {
+    const globalCompleted = getCompletedIdsSet()
+    return new Set(allContents.filter(c => globalCompleted.has(c.id)).map(c => c.id))
+  }, [allContents, refreshKey])
 
   const videosCount = allContents.filter(isVideoType).length
   const pdfsCount   = allContents.filter(isPdfType).length
