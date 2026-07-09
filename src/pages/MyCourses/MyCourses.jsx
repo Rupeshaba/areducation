@@ -3,38 +3,24 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { BookOpen, Play, Clock, ShoppingBag, ChevronRight, Calendar, CheckCircle, TrendingUp } from 'lucide-react'
 import api from '../../api/axios'
+import { useCoursesProgress } from '../../hooks/useCoursesProgress'
 
 export default function MyCourses() {
   const { data: purchasesData, isLoading: purchasesLoading } = useQuery({
     queryKey: ['purchases'],
     queryFn: () => api.get('/store/my-purchases').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
   })
   const purchases = purchasesData?.purchases || []
 
-  // Fetch progress for all courses
-  const { data: progressData, isLoading: progressLoading } = useQuery({
-    queryKey: ['all-courses-progress'],
-    queryFn: async () => {
-      const results = {}
-      for (const purchase of purchases) {
-        const courseId = purchase.courseId
-        if (courseId) {
-          try {
-            const res = await api.get(`/user/progress?courseId=${courseId}`)
-            results[courseId] = res.data
-          } catch (e) {
-            results[courseId] = { progress: { totalSeen: 0, totalWatched: 0 }, subjectProgress: {} }
-          }
-        }
-      }
-      return results
-    },
-    enabled: !!purchases.length,
-    staleTime: 0,
-    gcTime: 60000,
-  })
+  // Progress for every purchased course, fetched in parallel and cached
+  // (persisted across reloads) — replaces the old sequential per-course
+  // backend loop that made this page slow to load.
+  const courseIds = purchases.map(p => p.courseId).filter(Boolean)
+  const { courseProgress, isLoading: progressLoading } = useCoursesProgress(courseIds)
 
-  const isLoading = purchasesLoading || progressLoading
+  const isLoading = purchasesLoading
 
   if (isLoading) return (
     <div className="flex justify-center py-20">
@@ -69,11 +55,10 @@ export default function MyCourses() {
           const isExpired = daysLeft !== null && daysLeft <= 0
           const isUrgent = daysLeft !== null && !isExpired && daysLeft <= 30
 
-          // Get progress from API
-          const courseProgress = progressData?.[courseId]?.progress || { totalSeen: 0, totalWatched: 0 }
-          const subjectProgress = progressData?.[courseId]?.subjectProgress || {}
-          const progressPercent = courseProgress.totalSeen > 0 
-            ? Math.round((courseProgress.totalWatched / courseProgress.totalSeen) * 100) 
+          // Get progress from local cache (subject/content structure + local completion state)
+          const progress = courseProgress[courseId] || { completed: 0, total: 0 }
+          const progressPercent = progress.total > 0
+            ? Math.round((progress.completed / progress.total) * 100)
             : 0
 
           return (
@@ -124,7 +109,7 @@ export default function MyCourses() {
                   </h3>
 
                   {/* Progress Bar */}
-                  {courseProgress.totalSeen > 0 && (
+                  {progress.total > 0 && (
                     <div className="mb-3">
                       <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
                         <span>Progress</span>
