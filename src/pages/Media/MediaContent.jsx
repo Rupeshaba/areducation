@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import Hls from 'hls.js'
 import {
   ChevronLeft, Play, Pause, Volume2, VolumeX,
@@ -8,7 +8,7 @@ import {
   PictureInPicture2, ExternalLink,
 } from 'lucide-react'
 import api from '../../api/axios'
-import useAuthStore from '../../store/authStore'
+import { markContentCompleted } from '../../utils/progress'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function fmtTime(s) {
@@ -460,24 +460,41 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
 }
 
 // ─── YouTube stage (fills screen, tap-to-play triggers fullscreen landscape) ─
+// Loads the official YouTube IFrame Player API once and reuses it for every
+// video on the page. Using the real API (instead of guessing at raw
+// postMessage shapes) is what makes getCurrentTime/seekTo/onStateChange
+// reliable — that unreliability was why YouTube videos always restarted
+// from 0 instead of resuming like the HLS/native player does.
+let ytApiPromise = null
+function loadYouTubeIframeAPI() {
+  if (window.YT && window.YT.Player) return Promise.resolve(window.YT)
+  if (ytApiPromise) return ytApiPromise
+  ytApiPromise = new Promise((resolve) => {
+    const prevReady = window.onYouTubeIframeAPIReady
+    window.onYouTubeIframeAPIReady = () => {
+      prevReady?.()
+      resolve(window.YT)
+    }
+    if (!document.querySelector('script[data-yt-iframe-api]')) {
+      const tag = document.createElement('script')
+      tag.src = 'https://www.youtube.com/iframe_api'
+      tag.setAttribute('data-yt-iframe-api', 'true')
+      document.head.appendChild(tag)
+    }
+  })
+  return ytApiPromise
+}
+
 function YouTubeStage({ content, onBack, contentId, onEnded }) {
   const ytId = extractYTId(content.url)
   const containerRef = useRef(null)
-  const iframeRef = useRef(null)
+  const playerElRef = useRef(null)
+  const playerRef = useRef(null)
+  const saveIntervalRef = useRef(null)
+  const idKey = `ar_pos_${contentId || content.id || content._id}`
+
   const [started, setStarted] = useState(false)
   const [loading, setLoading] = useState(true)
-
-  // Get saved position from localStorage
-  const [savedPosition, setSavedPosition] = useState(() => {
-    try {
-      const pos = localStorage.getItem(`ar_pos_${contentId || content.id || content._id}`)
-      return pos ? parseInt(pos, 10) : 0
-    } catch { return 0 }
-  })
-
-  const embedSrc = ytId
-    ? `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&start=${Math.floor(savedPosition)}&origin=${encodeURIComponent(window.location.origin)}`
-    : null
 
   useEffect(() => {
     const onFS = () => {
@@ -497,69 +514,72 @@ function YouTubeStage({ content, onBack, contentId, onEnded }) {
     await goFullscreenLandscape(containerRef.current, null)
   }
 
-  // Save position periodically for YouTube
+  // Create the real YT.Player once the user taps play.
   useEffect(() => {
     if (!started || !ytId) return
-    
-    const idKey = `ar_pos_${contentId || content.id || content._id}`
-    const saveInterval = setInterval(() => {
-      const iframe = iframeRef.current
-      if (!iframe) return
-      try {
-        // Request current time from YouTube iframe
-        iframe.contentWindow?.postMessage(JSON.stringify({
-          event: 'command',
-          func: 'getCurrentTime'
-        }), '*')
-      } catch {}
-    }, 5000)
+    let cancelled = false
 
-    // Listen for messages from YouTube iframe
-    const handleMessage = (event) => {
-      if (event.origin !== 'https://www.youtube.com' && event.origin !== 'https://www.youtube-nocookie.com') return
+    loadYouTubeIframeAPI().then((YT) => {
+      if (cancelled || !playerElRef.current) return
+
+      let savedPosition = 0
       try {
-        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
-        if (data?.event === 'infoDelivery' && typeof data.info?.currentTime === 'number') {
-          const pos = data.info.currentTime
-          if (pos > 0) {
-            localStorage.setItem(idKey, String(pos))
-            setSavedPosition(pos)
+        const pos = localStorage.getItem(idKey)
+        savedPosition = pos ? parseFloat(pos) : 0
+      } catch { /* ignore */ }
+
+      playerRef.current = new YT.Player(playerElRef.current, {
+        videoId: ytId,
+        playerVars: {
+          autoplay: 1,
+          rel: 0,
+          modestbranding: 1,
+          playsinline: 1,
+          origin: window.location.origin,
+        },
+        events: {
+          onReady: (e) => {
+            setLoading(false)
+            if (savedPosition > 0) {
+              try { e.target.seekTo(savedPosition, true) } catch { /* ignore */ }
+            }
+            e.target.playVideo()
+          },
+          onStateChange: (e) => {
+            if (e.data === YT.PlayerState.ENDED) {
+              try { localStorage.removeItem(idKey) } catch { /* ignore */ }
+              onEnded?.()
+            }
+          },
+        },
+      })
+
+      // Periodically persist current playback position, same idea as the
+      // native/HLS player's timeupdate-based save.
+      saveIntervalRef.current = setInterval(() => {
+        const p = playerRef.current
+        if (!p || typeof p.getCurrentTime !== 'function') return
+        try {
+          const time = p.getCurrentTime()
+          const dur = p.getDuration?.() || 0
+          if (time > 0 && dur > 0 && Math.abs(time - dur) > 5) {
+            localStorage.setItem(idKey, String(time))
+          } else if (time > 0 && dur > 0 && Math.abs(time - dur) <= 5) {
+            localStorage.removeItem(idKey)
           }
-        }
-        // playerState === 0 means the video has finished playing (YT.PlayerState.ENDED)
-        if (data?.event === 'infoDelivery' && data.info?.playerState === 0) {
-          onEnded?.()
-        }
-      } catch {}
-    }
-    window.addEventListener('message', handleMessage)
-    
+        } catch { /* ignore */ }
+      }, 3000)
+    })
+
     return () => {
-      clearInterval(saveInterval)
-      window.removeEventListener('message', handleMessage)
+      cancelled = true
+      clearInterval(saveIntervalRef.current)
+      try { playerRef.current?.destroy?.() } catch { /* ignore */ }
+      playerRef.current = null
     }
-  }, [started, ytId, contentId, content, onEnded])
+  }, [started, ytId, idKey, onEnded])
 
-  // Seek to saved position when iframe is ready
-  useEffect(() => {
-    if (!started || !ytId || savedPosition <= 0) return
-    
-    const idKey = `ar_pos_${contentId || content.id || content._id}`
-    const seekTimeout = setTimeout(() => {
-      const iframe = iframeRef.current
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage(JSON.stringify({
-          event: 'command',
-          func: 'seekTo',
-          args: [savedPosition, true]
-        }), '*')
-      }
-    }, 1500)
-    
-    return () => clearTimeout(seekTimeout)
-  }, [started, ytId, savedPosition, contentId, content])
-
-  if (!embedSrc) {
+  if (!ytId) {
     return (
       <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-2">
         <AlertTriangle size={28} className="text-danger-400" />
@@ -587,16 +607,9 @@ function YouTubeStage({ content, onBack, contentId, onEnded }) {
               <div className="w-12 h-12 rounded-full border-2 border-danger-500/20 border-t-red-500 animate-spin" />
             </div>
           )}
-          <iframe
-            ref={iframeRef}
-            src={embedSrc}
-            className="w-full h-full absolute inset-0 border-0"
-            allowFullScreen
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerPolicy="strict-origin-when-cross-origin"
-            title="Video"
-            onLoad={() => setLoading(false)}
-          />
+          <div className="w-full h-full absolute inset-0">
+            <div ref={playerElRef} className="w-full h-full" />
+          </div>
         </>
       )}
       <BackIcon onClick={onBack} visible />
@@ -739,7 +752,6 @@ export default function MediaContent() {
   const searchChapterId = searchParams.get('chapterId')
   const chapterId = paramChapterId || searchChapterId
   const navigate  = useNavigate()
-  const user      = useAuthStore(s => s.user)
 
   const { data: contentData, isLoading, isError } = useQuery({
     queryKey: ['content-detail', contentId, chapterId],
@@ -752,20 +764,14 @@ export default function MediaContent() {
     enabled: !!contentId,
   })
 
-  const markCompletedMutation = useMutation({
-    mutationFn: () => api.post(`/user/progress/${contentId}/complete`, { subjectId, courseId }),
-  })
-
   const hasMarkedCompleteRef = useRef(false)
   useEffect(() => { hasMarkedCompleteRef.current = false }, [contentId])
 
   const handleEnded = useCallback(() => {
     if (hasMarkedCompleteRef.current) return
     hasMarkedCompleteRef.current = true
-    if (user) markCompletedMutation.mutate()
-    try { localStorage.setItem(`ar_completed_${contentId}`, 'true') } catch {}
-    window.dispatchEvent(new CustomEvent('ar-completion-changed'))
-  }, [user, markCompletedMutation, contentId])
+    markContentCompleted(contentId)
+  }, [contentId])
 
   const content = contentData?.content || null
 
