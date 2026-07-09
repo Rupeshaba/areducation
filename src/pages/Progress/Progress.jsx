@@ -8,6 +8,7 @@ import { CircularProgressbar, buildStyles } from 'react-circular-progressbar'
 import 'react-circular-progressbar/dist/styles.css'
 import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
+import { useCoursesProgress } from '../../hooks/useCoursesProgress'
 
 /* ─── Shimmer ─── */
 function Shimmer({ className = '' }) {
@@ -213,11 +214,6 @@ function QuizCard({ attempt, index }) {
 export default function Progress() {
   const user = useAuthStore(s => s.user)
 
-  const { data: progressData, isLoading: progressLoading } = useQuery({
-    queryKey: ['user-progress'],
-    queryFn: () => api.get('/user/progress').then(r => r.data),
-  })
-
   const { data: pointsData, isLoading: pointsLoading } = useQuery({
     queryKey: ['my-points'],
     queryFn: () => api.get('/my-points').then(r => r.data),
@@ -226,42 +222,27 @@ export default function Progress() {
   const { data: purchasesData } = useQuery({
     queryKey: ['purchases'],
     queryFn: () => api.get('/store/my-purchases').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
   })
 
-  // Fetch course-wise progress for all purchased courses
+  // Content-completion progress (overall + per-course + per-subject) comes
+  // entirely from local cache/local completion state — see
+  // hooks/useCoursesProgress.js and utils/progress.js.
   const purchases = purchasesData?.purchases || []
-  const { data: courseProgressData, isLoading: courseProgressLoading } = useQuery({
-    queryKey: ['all-courses-progress', purchases.map(p => p.courseId).join(',')],
-    queryFn: async () => {
-      const results = {}
-      for (const purchase of purchases) {
-        const courseId = purchase.courseId
-        if (courseId) {
-          try {
-            const res = await api.get(`/user/progress?courseId=${courseId}`)
-            results[courseId] = res.data
-          } catch (e) {
-            results[courseId] = { progress: { totalSeen: 0, totalWatched: 0 }, subjectProgress: {} }
-          }
-        }
-      }
-      return results
-    },
-    enabled: !!purchases.length,
-    staleTime: 0,
-    gcTime: 60000,
-  })
+  const courseIds = purchases.map(p => p.courseId).filter(Boolean)
+  const { subjectProgress, courseProgress, overall, isLoading: courseProgressLoading } = useCoursesProgress(courseIds)
 
   const recentAttempts = (() => {
     try { return JSON.parse(localStorage.getItem('ar_recent_attempts') || '[]') } catch { return [] }
   })()
 
-  const progress = progressData?.progress || {}
   const points = pointsData?.points || {}
 
-  const completedContent = progress.totalWatched || 0
-  const totalContent = progress.totalSeen || 0
+  const completedContent = overall.completed
+  const totalContent = overall.total
   const completionPct = totalContent > 0 ? Math.round((completedContent / totalContent) * 100) : 0
+
 
   const avgScore = recentAttempts.length > 0
     ? Math.round(recentAttempts.reduce((s, a) => s + a.score, 0) / recentAttempts.length)
@@ -270,7 +251,7 @@ export default function Progress() {
   const bestScore = recentAttempts.length > 0 ? Math.max(...recentAttempts.map(a => a.score)) : 0
   const totalPoints = recentAttempts.reduce((s, a) => s + (a.points || 0), 0)
 
-  const isLoading = progressLoading || pointsLoading
+  const isLoading = pointsLoading
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">
@@ -399,9 +380,9 @@ export default function Progress() {
                 {purchases.map((purchase, i) => {
                   const course = purchase.courseDetails || {}
                   const courseId = course.id || course._id || purchase.courseId
-                  const courseProgress = courseProgressData?.[courseId]?.progress || { totalSeen: 0, totalWatched: 0 }
-                  const progressPct = courseProgress.totalSeen > 0 
-                    ? Math.round((courseProgress.totalWatched / courseProgress.totalSeen) * 100) 
+                  const cProgress = courseProgress[courseId] || { completed: 0, total: 0 }
+                  const progressPct = cProgress.total > 0
+                    ? Math.round((cProgress.completed / cProgress.total) * 100)
                     : 0
                   
                   return (
@@ -413,7 +394,7 @@ export default function Progress() {
                         <span className="text-sm text-gray-300">{purchase.courseName}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-xs text-gray-500">{courseProgress.totalWatched}/{courseProgress.totalSeen}</span>
+                        <span className="text-xs text-gray-500">{cProgress.completed}/{cProgress.total}</span>
                         <div className="w-12 h-12 relative">
                           <svg className="w-12 h-12 -rotate-90" viewBox="0 0 24 24">
                             <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.1)" strokeWidth="2" fill="none" />
@@ -454,15 +435,15 @@ export default function Progress() {
                 {purchases.map((purchase, i) => {
                   const course = purchase.courseDetails || {}
                   const courseId = course.id || course._id || purchase.courseId
-                  const subjectProgress = courseProgressData?.[courseId]?.subjectProgress || {}
+                  const subjectsForCourse = Object.entries(subjectProgress).filter(([, sp]) => sp.courseId === courseId)
                   
-                  return Object.entries(subjectProgress).map(([subjectId, sp], j) => (
+                  return subjectsForCourse.map(([subjectId, sp], j) => (
                     <div key={subjectId} className="flex items-center justify-between py-2 border-b border-white/[0.05] last:border-0">
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ backgroundColor: 'rgba(99,102,241,0.1)' }}>
                           <Layers size={12} className="text-primary-400" />
                         </div>
-                        <span className="text-xs text-gray-400">{subjectId}</span>
+                        <span className="text-xs text-gray-400">{sp.name || subjectId}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-gray-500">{sp.completed}/{sp.total}</span>
