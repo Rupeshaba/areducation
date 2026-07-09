@@ -1,6 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient } from '@tanstack/react-query'
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
 import { Toaster } from 'react-hot-toast'
 import App from './App.jsx'
 import './index.css'
@@ -28,13 +30,42 @@ fetch('/api/public/logo')
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: { staleTime: 2 * 60 * 1000, retry: 1 },
+    queries: {
+      staleTime: 2 * 60 * 1000,
+      // Keep cached data around for a full day so a reload or a re-visit to
+      // a page can render instantly from the persisted cache while a fresh
+      // copy is fetched quietly in the background.
+      gcTime: 24 * 60 * 60 * 1000,
+      retry: 1,
+    },
   },
+})
+
+// ── Persist the entire query cache to localStorage ──────────────────────
+// This is what makes MyCourses / Subjects / Home etc. feel instant: on the
+// very first paint React Query rehydrates whatever was cached last time
+// (courses, subjects, contents, purchases...) and shows it immediately,
+// then silently refetches in the background per each query's staleTime.
+const persister = createSyncStoragePersister({
+  storage: window.localStorage,
+  key: 'AR_EDU_QUERY_CACHE',
+  throttleTime: 1000,
 })
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: 24 * 60 * 60 * 1000,
+        // Don't persist one-off mutation-like queries or anything explicitly
+        // marked ephemeral; everything else (lists, details) is safe to cache.
+        dehydrateOptions: {
+          shouldDehydrateQuery: (query) => query.state.status === 'success',
+        },
+      }}
+    >
       <App />
       <Toaster
         position="top-right"
@@ -43,6 +74,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           success: { iconTheme: { primary: '#6366f1', secondary: '#fff' } },
         }}
       />
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   </React.StrictMode>,
 )
