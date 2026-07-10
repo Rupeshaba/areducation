@@ -7,6 +7,7 @@ import { Toaster } from 'react-hot-toast'
 import App from './App.jsx'
 import './index.css'
 import useAuthStore from './store/authStore'
+import { APP_LOGO_URL } from './constants/branding'
 
 // ── FIX: axios interceptor ko live Zustand store access dena ────────────
 // axios.js mein request interceptor window.__authStore se seedha
@@ -14,17 +15,17 @@ import useAuthStore from './store/authStore'
 // jo refresh ke baad "unauthorized" cause karti thi.
 window.__authStore = useAuthStore
 
-// Dynamically set favicon from app logo API
+// Favicon: use the app's own logo (falls back to the brand default if the
+// backend has no custom one configured — index.html already ships with
+// this same default so there's no flash-of-wrong-icon before this runs).
 fetch('/api/public/logo')
   .then(r => r.json())
   .then(data => {
-    if (data?.logoUrl) {
-      const link = document.querySelector("link[rel='icon']") || document.createElement('link')
-      link.rel = 'icon'
-      link.type = 'image/png'
-      link.href = data.logoUrl
-      document.head.appendChild(link)
-    }
+    const link = document.querySelector("link[rel='icon']") || document.createElement('link')
+    link.rel = 'icon'
+    link.type = 'image/png'
+    link.href = data?.logoUrl || APP_LOGO_URL
+    document.head.appendChild(link)
   })
   .catch(() => {})
 
