@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import api from '../../api/axios'
 import { getCompletedIdsSet, markContentCompleted, unmarkContentCompleted, isContentCompleted } from '../../utils/progress'
+import CardThumbnail from '../../components/CardThumbnail'
 
 /* ═══ HELPERS ═══ */
 function ytId(url) {
@@ -31,66 +32,10 @@ function ctype(c) {
 function isVideoType(c) { const t = ctype(c); return t === 'video' || t === 'youtube' || t === 'hls' }
 function isPdfType(c) { return ctype(c) === 'pdf' }
 
-/* ═══ YT THUMBNAIL — UPDATED: Always fetches highest available quality ═══ */
-const YT_SIZES = ['maxresdefault', 'sddefault', 'hqdefault', 'mqdefault']
-
-function YTThumb({ vid, alt, className }) {
-  const [bestUrl, setBestUrl] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [failed, setFailed] = useState(false)
-
-  useEffect(() => {
-    let isMounted = true
-    setLoading(true)
-    setFailed(false)
-    setBestUrl(null)
-
-    const checkImage = (url) => {
-      return new Promise((resolve) => {
-        const img = new Image()
-        img.onload = () => resolve(true)
-        img.onerror = () => resolve(false)
-        img.src = `${url}?t=${Date.now()}`
-      })
-    }
-
-    const findBestAvailable = async () => {
-      for (const size of YT_SIZES) {
-        if (!isMounted) return
-        const url = `https://img.youtube.com/vi/${vid}/${size}.jpg`
-        const isAvailable = await checkImage(url)
-        if (isAvailable && isMounted) {
-          setBestUrl(url)
-          setLoading(false)
-          return
-        }
-      }
-      if (isMounted) {
-        setFailed(true)
-        setLoading(false)
-      }
-    }
-
-    findBestAvailable()
-
-    return () => {
-      isMounted = false
-    }
-  }, [vid])
-
-  if (loading) return null
-  if (failed) return null
-  
-  return (
-    <img
-      src={bestUrl}
-      alt={alt}
-      loading="lazy"
-      decoding="async"
-      className={className}
-    />
-  )
-}
+/* Thumbnails now come from the shared CardThumbnail component (utils/thumbnail.js),
+   which prefers hqdefault.jpg — reliable for virtually every YouTube video, unlike
+   maxresdefault/sddefault which silently 200-OK with a grey placeholder for videos
+   that don't have that resolution (why thumbnails looked "missing" before). */
 
 /* ═══ TYPE CONFIG ═══ */
 const TYPE_CFG = {
@@ -123,7 +68,6 @@ function ShimmerCard() {
 
 /* ═══ CONTENT CARD ═══ */
 const ContentCard = function ContentCard({ content, courseId, subjectId, chapterId, index, completedContentIds, onMarkCompleted }) {
-  const [imgFailed, setImgFailed] = useState(false)
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [contextPos, setContextPos] = useState({ x: 0, y: 0 })
   const [forceUpdate, setForceUpdate] = useState(0)
@@ -143,11 +87,6 @@ const ContentCard = function ContentCard({ content, courseId, subjectId, chapter
   const linkTo = chapterId
     ? `/courses/${courseId}/subjects/${subjectId}/chapters/${chapterId}/content/${content.id}?chapterId=${chapterId}`
     : `/courses/${courseId}/subjects/${subjectId}/content/${content.id}`
-
-  const vid = type === 'youtube' ? ytId(content.url) : null
-  const showUploadedThumb = content.thumbnailUrl && !imgFailed
-  const showYTThumb       = !showUploadedThumb && !!vid
-  const showFallback      = !showUploadedThumb && !showYTThumb
 
   // Check if content is completed — single source of truth, local only
   const isCompleted = isContentCompleted(content.id)
@@ -216,73 +155,57 @@ const ContentCard = function ContentCard({ content, courseId, subjectId, chapter
       </div>
 
       <Link to={linkTo} className="group block focus:outline-none">
-        <div className="rounded-2xl overflow-hidden transition-all duration-300 active:scale-[0.97]"
-          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+        <div className="relative rounded-2xl overflow-hidden transition-all duration-300 active:scale-[0.97] aspect-[3/4]"
+          style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
 
-          {/* ── Thumbnail ── */}
-          <div className="relative aspect-[16/9] overflow-hidden">
-            {showUploadedThumb && (
-              <img
-                src={content.thumbnailUrl}
-                alt={content.title}
-                loading="lazy"
-                decoding="async"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                onError={() => setImgFailed(true)}
-              />
-            )}
-            {showYTThumb && (
-              <YTThumb
-                vid={vid}
-                alt={content.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-            )}
-            {showFallback && (
-              <div className="w-full h-full flex flex-col items-center justify-center gap-1.5"
+          {/* Thumbnail fills the entire card */}
+          <CardThumbnail
+            item={content}
+            alt={content.title}
+            className="group-hover:scale-105 transition-transform duration-500"
+            fallback={
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5"
                 style={{ background: `radial-gradient(ellipse at center, ${cfg.grad}, rgba(10,10,26,0.97))` }}>
                 <Icon size={24} style={{ color: cfg.iconColor }} strokeWidth={1.5} />
                 <span className="text-[9px] font-bold uppercase tracking-widest opacity-50"
                   style={{ color: cfg.iconColor }}>{cfg.label}</span>
               </div>
-            )}
+            }
+          />
 
-            {/* Bottom fade */}
-            <div className="absolute inset-x-0 bottom-0 h-8 pointer-events-none"
-              style={{ background: 'linear-gradient(to top, #0a0a1a, transparent)' }} />
+          {/* Gradient so the text stays readable over the image */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
 
-            {/* Play overlay */}
-            {isVideo && !showFallback && (
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ background: 'rgba(99,102,241,0.85)', backdropFilter: 'blur(4px)' }}>
-                  <Play size={12} fill="white" color="white" />
-                </div>
+          {/* Play overlay */}
+          {isVideo && (
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ background: 'rgba(99,102,241,0.85)', backdropFilter: 'blur(4px)' }}>
+                <Play size={12} fill="white" color="white" />
               </div>
-            )}
-
-            {/* Type badge */}
-            <div className="absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-md"
-              style={{
-                background: type === 'pdf' ? 'rgba(120,53,15,0.8)' : 'rgba(49,46,129,0.8)',
-                backdropFilter: 'blur(6px)',
-                border: `1px solid ${cfg.iconColor}25`,
-              }}>
-              <Icon size={8} style={{ color: cfg.iconColor }} />
-              <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: cfg.iconColor }}>
-                {cfg.label}
-              </span>
             </div>
+          )}
+
+          {/* Type badge */}
+          <div className="absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-md z-10"
+            style={{
+              background: type === 'pdf' ? 'rgba(120,53,15,0.8)' : 'rgba(49,46,129,0.8)',
+              backdropFilter: 'blur(6px)',
+              border: `1px solid ${cfg.iconColor}25`,
+            }}>
+            <Icon size={8} style={{ color: cfg.iconColor }} />
+            <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: cfg.iconColor }}>
+              {cfg.label}
+            </span>
           </div>
 
-          {/* ── Info ── */}
-          <div className="px-2.5 py-2">
-            <p className="text-[11.5px] font-semibold line-clamp-2 leading-snug"
-              style={{ color: 'rgba(255,255,255,0.75)' }}>
+          {/* Title + duration — pinned to the bottom, over the image */}
+          <div className="absolute inset-x-0 bottom-0 px-2.5 py-2 z-10">
+            <p className="text-[11.5px] font-semibold line-clamp-2 leading-snug text-white drop-shadow-md">
               {content.title}
             </p>
             {content.duration > 0 && (
-              <p className="flex items-center gap-1 mt-1" style={{ color: 'rgba(255,255,255,0.28)', fontSize: '10px' }}>
+              <p className="flex items-center gap-1 mt-1 text-white/50" style={{ fontSize: '10px' }}>
                 <Clock size={9} />{fmtDuration(content.duration)}
               </p>
             )}
