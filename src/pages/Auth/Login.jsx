@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Zap, Lock, Mail } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
+import { APP_LOGO_URL } from '../../constants/branding'
 
 export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' })
@@ -51,8 +52,8 @@ export default function Login() {
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-primary-500 flex items-center justify-center shadow-lg shadow-primary-500/30">
-              <Zap size={22} className="text-white" />
+            <div className="w-11 h-11 rounded-2xl overflow-hidden shadow-lg shadow-primary-500/30">
+              <img src={APP_LOGO_URL} alt="AR Education" className="w-full h-full object-cover" />
             </div>
             <div>
               <div className="text-xl font-bold text-white">AR Education</div>
