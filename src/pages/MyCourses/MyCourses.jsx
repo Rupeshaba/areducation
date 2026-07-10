@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { BookOpen, Play, Clock, ShoppingBag, ChevronRight, Calendar, CheckCircle, TrendingUp } from 'lucide-react'
 import api from '../../api/axios'
 import { useCoursesProgress } from '../../hooks/useCoursesProgress'
+import CardThumbnail from '../../components/CardThumbnail'
 
 export default function MyCourses() {
   const { data: purchasesData, isLoading: purchasesLoading } = useQuery({
@@ -68,54 +69,53 @@ export default function MyCourses() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.06 }}
             >
-              <div className="glass rounded-2xl overflow-hidden border border-white/5 hover:border-primary-500/25 transition-all group">
-                {/* Thumbnail */}
-                <div className="relative h-36 bg-dark-800">
-                  {course.thumbnailUrl ? (
-                    <img
-                      src={course.thumbnailUrl}
-                      alt={purchase.courseName}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-primary-600/20 via-primary-500/10 to-primary-900/20">
+              <div className="glass rounded-2xl overflow-hidden border border-white/5 hover:border-primary-500/25 transition-all group relative h-56">
+                {/* Thumbnail fills the entire card */}
+                <CardThumbnail
+                  item={course}
+                  alt={purchase.courseName}
+                  className="group-hover:scale-105 transition-transform duration-300"
+                  fallback={
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-primary-600/20 via-primary-500/10 to-primary-900/20">
                       <BookOpen size={36} className="text-primary-500/40 mb-1" />
                       <span className="text-primary-400/40 text-xs font-medium uppercase tracking-wider">Course</span>
                     </div>
-                  )}
+                  }
+                />
+                {/* Gradient so the text stays readable over the image */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
 
-                  {/* Free / Expiry badge */}
-                  {isFree ? (
-                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border bg-emerald-500/20 text-emerald-300 border-emerald-500/20">
-                      FREE
-                    </div>
-                  ) : daysLeft !== null && (
-                    <div className={`absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border
-                      ${isExpired
-                        ? 'bg-red-500/20 text-red-300 border-red-500/20'
-                        : isUrgent
-                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/20'
-                        : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/20'}`}>
-                      <Calendar size={10} />
-                      {isExpired ? 'Expired' : `${daysLeft}d left`}
-                    </div>
-                  )}
-                </div>
+                {/* Free / Expiry badge */}
+                {isFree ? (
+                  <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border bg-emerald-500/20 text-emerald-300 border-emerald-500/20">
+                    FREE
+                  </div>
+                ) : daysLeft !== null && (
+                  <div className={`absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border
+                    ${isExpired
+                      ? 'bg-red-500/20 text-red-300 border-red-500/20'
+                      : isUrgent
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/20'
+                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/20'}`}>
+                    <Calendar size={10} />
+                    {isExpired ? 'Expired' : `${daysLeft}d left`}
+                  </div>
+                )}
 
-                {/* Info */}
-                <div className="p-4">
-                  <h3 className="font-bold text-white text-sm mb-2 line-clamp-2 leading-snug group-hover:text-primary-300 transition-colors">
+                {/* Text + actions pinned to the bottom, inside the card, over the image */}
+                <div className="absolute inset-x-0 bottom-0 p-4">
+                  <h3 className="font-bold text-white text-sm mb-2 line-clamp-2 leading-snug drop-shadow-md">
                     {purchase.courseName}
                   </h3>
 
                   {/* Progress Bar */}
                   {progress.total > 0 && (
                     <div className="mb-3">
-                      <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1">
+                      <div className="flex items-center justify-between text-[10px] text-gray-300 mb-1">
                         <span>Progress</span>
                         <span>{progressPercent}%</span>
                       </div>
-                      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-white/15 rounded-full overflow-hidden">
                         <div className="h-full bg-primary-500 rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
                       </div>
                     </div>
