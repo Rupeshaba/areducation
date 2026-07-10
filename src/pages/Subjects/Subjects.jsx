@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import api from '../../api/axios'
 import { useCoursesProgress } from '../../hooks/useCoursesProgress'
+import CardThumbnail from '../../components/CardThumbnail'
 
 /* ═══ SHIMMER ═══ */
 function Shimmer({ className = '' }) {
@@ -44,81 +45,69 @@ function SubjectCard({ subject, courseId, index, subjectProgress }) {
     >
       <Link
         to={`/courses/${courseId}/subjects/${subject.id}`}
-        className="group flex flex-col overflow-hidden rounded-2xl h-full transition-all duration-300 hover:scale-[1.02]"
-        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+        className="group relative flex flex-col overflow-hidden rounded-2xl h-full aspect-[4/5] transition-all duration-300 hover:scale-[1.02]"
+        style={{ border: '1px solid rgba(255,255,255,0.07)' }}
       >
-        {/* Thumbnail — 16:9 */}
-        <div className="relative w-full aspect-[16/9] overflow-hidden flex-shrink-0"
-          style={{ background: `linear-gradient(135deg, ${accent}12, ${accent}06)` }}>
-          {subject.thumbnailUrl ? (
-            <img
-              src={subject.thumbnailUrl}
-              alt={subject.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-600 ease-out"
-              loading="lazy"
-            />
-          ) : subject.icon && subject.icon.length <= 2 ? (
-            <div className="w-full h-full flex items-center justify-center">
-              <span className="text-4xl">{subject.icon}</span>
+        {/* Thumbnail fills the entire card */}
+        <CardThumbnail
+          item={subject}
+          alt={subject.name}
+          className="group-hover:scale-105 transition-transform duration-600 ease-out"
+          fallback={
+            <div className="absolute inset-0 flex items-center justify-center"
+              style={{ background: `linear-gradient(135deg, ${accent}12, ${accent}06)` }}>
+              {subject.icon && subject.icon.length <= 2 ? (
+                <span className="text-4xl">{subject.icon}</span>
+              ) : (
+                <GraduationCap size={36} style={{ color: accent, opacity: 0.3 }} />
+              )}
             </div>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <GraduationCap size={36} style={{ color: accent, opacity: 0.3 }} />
-            </div>
-          )}
+          }
+        />
+        {/* Gradient so the text stays readable over the image */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
 
-          {/* Bottom fade */}
-          <div className="absolute inset-x-0 bottom-0 h-10"
-            style={{ background: 'linear-gradient(to top, #0a0a1a, transparent)' }} />
+        {/* Left accent bar */}
+        <div
+          className="absolute left-0 top-0 bottom-0 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-400 z-10"
+          style={{ background: `linear-gradient(to bottom, ${accent}, ${accent}44)` }}
+        />
 
-          {/* Hover arrow */}
-          <div className="absolute top-2.5 right-2.5 w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0"
-            style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.12)' }}>
-            <ArrowRight size={12} className="text-white" />
+        {/* Progress Circle Overlay */}
+        {progress.total > 0 && (
+          <div className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-dark-900/80 backdrop-blur-sm border border-white/10 flex items-center justify-center z-10">
+            <svg className="w-7 h-7 -rotate-90" viewBox="0 0 20 20">
+              <circle cx="10" cy="10" r="8" stroke="rgba(255,255,255,0.1)" strokeWidth="2" fill="none" />
+              <circle
+                cx="10" cy="10" r="8"
+                stroke="#10b981"
+                strokeWidth="2"
+                fill="none"
+                strokeDasharray={`${2 * Math.PI * 8}`}
+                strokeDashoffset={`${2 * Math.PI * 8 * (1 - progressPct / 100)}`}
+                strokeLinecap="round"
+                className="transition-all duration-500"
+              />
+            </svg>
+            <span className="absolute text-[8px] font-bold text-white">{progressPct}%</span>
           </div>
+        )}
 
-          {/* Left accent bar */}
-          <div
-            className="absolute left-0 top-0 bottom-0 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-400"
-            style={{ background: `linear-gradient(to bottom, ${accent}, ${accent}44)` }}
-          />
-
-          {/* Progress Circle Overlay */}
-          {progress.total > 0 && (
-            <div className="absolute bottom-2 right-2 w-8 h-8 rounded-full bg-dark-900/80 backdrop-blur-sm border border-white/10 flex items-center justify-center">
-              <svg className="w-7 h-7 -rotate-90" viewBox="0 0 20 20">
-                <circle cx="10" cy="10" r="8" stroke="rgba(255,255,255,0.1)" strokeWidth="2" fill="none" />
-                <circle
-                  cx="10" cy="10" r="8"
-                  stroke="#10b981"
-                  strokeWidth="2"
-                  fill="none"
-                  strokeDasharray={`${2 * Math.PI * 8}`}
-                  strokeDashoffset={`${2 * Math.PI * 8 * (1 - progressPct / 100)}`}
-                  strokeLinecap="round"
-                  className="transition-all duration-500"
-                />
-              </svg>
-              <span className="absolute text-[8px] font-bold text-white">{progressPct}%</span>
-            </div>
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+        {/* Content — pinned to the bottom, over the image */}
+        <div className="relative z-10 flex items-center justify-between gap-2 px-3 py-2.5 mt-auto">
           <div className="min-w-0">
-            <h3 className="text-xs font-bold text-white/80 group-hover:text-white line-clamp-1 transition-colors duration-200">
+            <h3 className="text-xs font-bold text-white line-clamp-1 transition-colors duration-200 drop-shadow-md">
               {subject.name}
             </h3>
             {subject.description && (
-              <p className="text-[10px] mt-0.5 line-clamp-1" style={{ color: 'rgba(255,255,255,0.35)' }}>
+              <p className="text-[10px] mt-0.5 line-clamp-1 text-white/50">
                 {subject.description}
               </p>
             )}
           </div>
           <div
-            className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110"
-            style={{ background: `${accent}20`, border: `1px solid ${accent}30` }}
+            className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110 backdrop-blur-sm"
+            style={{ background: `${accent}30`, border: `1px solid ${accent}40` }}
           >
             <ArrowRight size={12} style={{ color: accent }} />
           </div>
