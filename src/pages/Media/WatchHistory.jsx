@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { Play, ArrowRight, ChevronLeft, Clock, BookOpen } from 'lucide-react'
+import CardThumbnail from '../../components/CardThumbnail'
 
 /* ═══ HISTORY CARD ═══ */
 function HistoryCard({ item, index }) {
@@ -26,11 +27,11 @@ function HistoryCard({ item, index }) {
         >
           <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center relative shadow-md bg-white/[0.03]"
             style={{ border: '1px solid rgba(255, 107, 74, 0.15)' }}>
-            {item.thumbnailUrl ? (
-              <img src={item.thumbnailUrl} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <Play size={18} className="text-primary-400" />
-            )}
+            <CardThumbnail
+              item={item}
+              alt=""
+              fallback={<Play size={18} className="text-primary-400" />}
+            />
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <Play size={12} fill="white" color="white" />
             </div>
