@@ -5,6 +5,8 @@ import { BookOpen, Play, ArrowRight, ChevronLeft, Book, CheckCircle } from 'luci
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
+import CardThumbnail from '../../components/CardThumbnail'
+import { DEFAULT_THUMBNAILS } from '../../constants/branding'
 
 /* ═══ COURSE CARD ═══ */
 function FreeCourseCard({ course, index, onEnroll, isEnrolled }) {
@@ -18,42 +20,36 @@ function FreeCourseCard({ course, index, onEnroll, isEnrolled }) {
     >
       <div className="block group">
         <div
-          className="rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-black/30 flex flex-col"
-          style={{
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
-          }}
+          className="relative rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-black/30 aspect-square"
+          style={{ border: '1px solid rgba(255, 255, 255, 0.06)' }}
         >
-          {/* Thumbnail Container - Square */}
-          <div className="relative aspect-square overflow-hidden bg-dark-950">
-            {course.thumbnailUrl ? (
-              <img
-                src={course.thumbnailUrl}
-                alt={course.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #10142A 0%, #151932 100%)' }}>
-                <BookOpen size={28} className="text-white/10" />
-              </div>
-            )}
-            
-            {/* Free Badge */}
-            <span className="absolute top-2 left-2 text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">
-              Free
-            </span>
-          </div>
+          {/* Thumbnail fills the entire card */}
+          <CardThumbnail
+            item={course}
+            alt={course.name}
+            className="group-hover:scale-105 transition-transform duration-700 ease-out"
+            fallback={
+              <img src={DEFAULT_THUMBNAILS.freeCourses} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            }
+          />
+          {/* Gradient so the text stays readable over the image */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
 
-          {/* Details */}
-          <div className="p-3 flex-1 flex flex-col">
-            <h4 className="text-xs font-bold text-white/90 line-clamp-1 group-hover:text-primary-400 transition-colors duration-200">
+          {/* Free Badge */}
+          <span className="absolute top-2 left-2 text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 backdrop-blur-sm z-10">
+            Free
+          </span>
+
+          {/* Details — pinned to the bottom, over the image */}
+          <div className="absolute inset-x-0 bottom-0 p-3">
+            <h4 className="text-xs font-bold text-white line-clamp-1 group-hover:text-primary-400 transition-colors duration-200 drop-shadow-md">
               {course.name}
             </h4>
-            <p className="text-[9px] text-white/40 mt-1 line-clamp-2 flex-1">
+            <p className="text-[9px] text-white/60 mt-1 line-clamp-2">
               {course.description || 'Start learning this free course'}
             </p>
-            <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/[0.04]">
-              <span className="text-[8px] text-white/40 font-medium">
+            <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/10">
+              <span className="text-[8px] text-white/60 font-medium">
                 {course.subjectCount || 0} Subjects
               </span>
               {isEnrolled ? (
