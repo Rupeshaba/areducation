@@ -6,6 +6,7 @@ import {
   Star, Zap, BookOpen, BarChart2, Brain
 } from 'lucide-react'
 import api from '../../api/axios'
+import CardThumbnail from '../../components/CardThumbnail'
 
 function DifficultyBadge({ d }) {
   const cfg = {
@@ -89,44 +90,41 @@ export default function QuizList() {
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.06 }}
-              className="group relative bg-[#13131f] rounded-2xl border border-white/[0.07] hover:border-violet-500/40 transition-all duration-300 overflow-hidden flex flex-col cursor-pointer"
+              className="group relative rounded-2xl border border-white/[0.07] hover:border-violet-500/40 transition-all duration-300 overflow-hidden flex flex-col cursor-pointer min-h-[19rem]"
               onClick={() => navigate(`/quiz/${encodeURIComponent(subject)}/${encodeURIComponent(quiz.name)}/play`)}
             >
-              {/* Thumbnail */}
-              <div className="relative w-full h-36 bg-gradient-to-br from-violet-900/40 via-purple-900/30 to-[#0d0d1a] overflow-hidden flex-shrink-0">
-                {quiz.thumbnailUrl ? (
-                  <img
-                    src={quiz.thumbnailUrl}
-                    alt={quiz.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
+              {/* Thumbnail fills the entire card */}
+              <CardThumbnail
+                item={quiz}
+                alt={quiz.name}
+                className="group-hover:scale-105 transition-transform duration-500"
+                fallback={
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-violet-900/40 via-purple-900/30 to-[#0d0d1a]">
                     <Brain size={40} className="text-violet-500/30" />
                   </div>
-                )}
-                {/* Overlay gradient */}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#13131f] via-transparent to-transparent" />
+                }
+              />
+              {/* Gradient so the text stays readable over the image */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d17] via-[#0d0d17]/70 to-black/10" />
 
-                {/* Attempted badge */}
-                {quiz.myBestScore > 0 && (
-                  <div className="absolute top-2.5 right-2.5">
-                    <ScoreRing score={Math.round(quiz.myBestScore)} />
-                  </div>
-                )}
+              {/* Attempted badge */}
+              {quiz.myBestScore > 0 && (
+                <div className="absolute top-2.5 right-2.5 z-10">
+                  <ScoreRing score={Math.round(quiz.myBestScore)} />
+                </div>
+              )}
 
-                {/* AI badge */}
-                {quiz.youtubeUrl && (
-                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1 bg-black/60 backdrop-blur-sm text-violet-300 text-[10px] font-bold px-2 py-1 rounded-full border border-violet-500/30">
-                    <Zap size={9} /> AI
-                  </div>
-                )}
-              </div>
+              {/* AI badge */}
+              {quiz.youtubeUrl && (
+                <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1 bg-black/60 backdrop-blur-sm text-violet-300 text-[10px] font-bold px-2 py-1 rounded-full border border-violet-500/30">
+                  <Zap size={9} /> AI
+                </div>
+              )}
 
-              {/* Card Body */}
-              <div className="flex flex-col flex-1 p-3.5 gap-2">
+              {/* Card Body — pinned to the bottom, over the image */}
+              <div className="relative z-10 flex flex-col flex-1 justify-end p-3.5 gap-2">
                 <div>
-                  <h3 className="font-bold text-white text-sm leading-snug line-clamp-2 group-hover:text-violet-300 transition-colors">
+                  <h3 className="font-bold text-white text-sm leading-snug line-clamp-2 group-hover:text-violet-300 transition-colors drop-shadow-md">
                     {quiz.name}
                   </h3>
                   {quiz.difficulty && (
@@ -137,7 +135,7 @@ export default function QuizList() {
                 </div>
 
                 {/* Stats row */}
-                <div className="flex items-center gap-3 text-[11px] text-gray-500 flex-wrap mt-auto">
+                <div className="flex items-center gap-3 text-[11px] text-gray-300 flex-wrap">
                   <span className="flex items-center gap-1">
                     <Target size={10} /> {quiz.questionCount || 0} Qs
                   </span>
@@ -182,7 +180,7 @@ export default function QuizList() {
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.min(quiz.myBestScore, 100)}%` }}
                   transition={{ delay: i * 0.06 + 0.4, duration: 0.7, ease: 'easeOut' }}
-                  className={`absolute bottom-0 left-0 h-0.5 ${quiz.myBestScore >= 60 ? 'bg-emerald-500' : quiz.myBestScore >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
+                  className={`absolute bottom-0 left-0 h-0.5 z-10 ${quiz.myBestScore >= 60 ? 'bg-emerald-500' : quiz.myBestScore >= 40 ? 'bg-amber-500' : 'bg-red-500'}`}
                 />
               )}
             </motion.div>
