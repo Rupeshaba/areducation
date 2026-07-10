@@ -11,6 +11,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '../api/axios'
 import { io } from 'socket.io-client'
 import toast from 'react-hot-toast'
+import { APP_LOGO_URL } from '../constants/branding'
 
 const NAV = [
   { to: '/', icon: Home, label: 'Home', exact: true },
@@ -110,50 +111,6 @@ function RichNotificationPopup({ notif, onClose }) {
   )
 }
 
-// Enhanced Bottom Tab Item with glow effect
-function BottomTabItem({ to, icon: Icon, label, exact }) {
-  return (
-    <NavLink
-      to={to}
-      end={exact}
-      className="relative flex-1 flex flex-col items-center justify-center gap-1 py-1.5 text-[10px] font-semibold transition-all duration-300"
-    >
-      {({ isActive }) => (
-        <>
-          {/* Active indicator dot */}
-          {isActive && (
-            <motion.div
-              layoutId="tab-indicator"
-              className="absolute -top-1 w-1.5 h-1.5 rounded-full bg-primary-400"
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            />
-          )}
-          
-          {/* Icon container with glow effect */}
-          <div className={`flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-300 relative
-            ${isActive ? 'shadow-lg shadow-primary-500/30' : ''}`}>
-            {isActive && (
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary-500/25 to-primary-400/15" />
-            )}
-            <Icon 
-              size={18} 
-              className={isActive ? 'text-primary-400' : 'text-gray-500'} 
-              strokeWidth={isActive ? 2.5 : 2} 
-            />
-          </div>
-          
-          {/* Label */}
-          <span className={isActive ? 'text-primary-400 font-bold' : 'text-gray-500'}>
-            {label}
-          </span>
-        </>
-      )}
-    </NavLink>
-  )
-}
-
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [popupNotif, setPopupNotif] = useState(null)
@@ -209,7 +166,7 @@ export default function Layout() {
     staleTime: 60000,
   })
 
-  const logoUrl = appConfig?.logoUrl
+  const logoUrl = appConfig?.logoUrl || APP_LOGO_URL
 
   useEffect(() => {
     if (!user?.uid) return
@@ -571,8 +528,26 @@ export default function Layout() {
         <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 flex items-stretch justify-around
           rounded-t-[28px] bg-dark-800/95 backdrop-blur-2xl border-t border-x border-white/[0.08] shadow-2xl shadow-black/40 pt-2 px-2"
           style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
-          {BOTTOM_NAV.map((tab) => (
-            <BottomTabItem key={tab.to} {...tab} />
+          {BOTTOM_NAV.map(({ to, icon: Icon, label, exact }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={exact}
+              className="relative flex-1 flex flex-col items-center justify-center gap-1 py-1.5 text-[10px] font-semibold transition-all duration-300"
+            >
+              {({ isActive }) => (
+                <>
+                  <div className={`flex items-center justify-center w-11 h-8 rounded-2xl transition-all duration-300 relative
+                    ${isActive ? 'shadow-lg shadow-primary-500/25' : ''}`}>
+                    {isActive && (
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary-500/20 to-primary-400/10" />
+                    )}
+                    <Icon size={18} className={isActive ? 'text-primary-400' : 'text-gray-500'} strokeWidth={isActive ? 2.4 : 2} />
+                  </div>
+                  <span className={isActive ? 'text-primary-400 font-bold' : 'text-gray-500'}>{label}</span>
+                </>
+              )}
+            </NavLink>
           ))}
         </nav>
       )}
