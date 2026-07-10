@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import api from '../../api/axios'
+import { APP_LOGO_URL } from '../../constants/branding'
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 30 },
@@ -107,8 +108,8 @@ export default function About() {
           {/* Logo + brand */}
           <div className="flex-shrink-0 text-center sm:text-left">
             <div className="w-24 h-24 rounded-3xl overflow-hidden border-2 border-primary-500/30 shadow-2xl shadow-primary-500/20 mx-auto sm:mx-0 mb-5 hover:scale-105 transition-transform duration-300">
-              {logoData?.logoUrl
-                ? <img src={logoData.logoUrl} alt="AR Education" className="w-full h-full object-cover" />
+              {(logoData?.logoUrl || APP_LOGO_URL)
+                ? <img src={logoData?.logoUrl || APP_LOGO_URL} alt="AR Education" className="w-full h-full object-cover" />
                 : <div className="w-full h-full bg-gradient-to-br from-primary-600 via-violet-600 to-primary-800 flex items-center justify-center text-3xl font-black text-white">AR</div>
               }
             </div>
