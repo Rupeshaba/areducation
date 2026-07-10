@@ -11,6 +11,7 @@ import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
 import { io } from 'socket.io-client'
 import { useNavigate } from 'react-router-dom'
+import { APP_LOGO_URL } from '../../constants/branding'
 
 // Helper: resolve media URL (handles relative URLs from Render backend)
 const resolveUrl = (url) => {
@@ -30,7 +31,7 @@ export default function DoubtChat() {
   const [input, setInput] = useState('')
   const [socketConnected, setSocketConnected] = useState(false)
   const [onlineCount, setOnlineCount] = useState(0)
-  const [appConfig, setAppConfig] = useState({ logoUrl: null, appName: 'AR Education' })
+  const [appConfig, setAppConfig] = useState({ logoUrl: APP_LOGO_URL, appName: 'AR Education' })
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState('')
   const [showOptionsId, setShowOptionsId] = useState(null)
@@ -43,7 +44,7 @@ export default function DoubtChat() {
   const msgRefs = useRef({})
 
   useEffect(() => {
-    api.get('/chat/config').then(r => setAppConfig(r.data)).catch(() => {})
+    api.get('/chat/config').then(r => setAppConfig({ ...r.data, logoUrl: r.data?.logoUrl || APP_LOGO_URL })).catch(() => {})
   }, [])
 
   useEffect(() => {
