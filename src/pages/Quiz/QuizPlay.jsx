@@ -78,7 +78,11 @@ export default function QuizPlay() {
         const updated = [entry, ...recent.filter(a => !(a.quizName === entry.quizName && a.subject === subject))].slice(0, 20)
         localStorage.setItem('ar_recent_attempts', JSON.stringify(updated))
       } catch {}
-      navigate(`/quiz/result/${data.attemptId}`, { state: { result: data } })
+      // replace: true — so the finished quiz-play screen isn't left sitting
+      // in the browser history. Without it, pressing the phone's back button
+      // from the result page would land back on QuizPlay instead of going
+      // to wherever the user came from (the quiz list).
+      navigate(`/quiz/result/${data.attemptId}`, { state: { result: data }, replace: true })
     },
     onError: () => {
       toast.error('Submit failed')
