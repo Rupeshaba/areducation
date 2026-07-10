@@ -10,6 +10,8 @@ import {
 import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
 import { useCoursesProgress } from '../../hooks/useCoursesProgress'
+import CardThumbnail from '../../components/CardThumbnail'
+import { DEFAULT_THUMBNAILS } from '../../constants/branding'
 
 /* ═══ MODERN PULSE SHIMMER ═══ */
 function Shimmer({ className = '' }) {
@@ -83,31 +85,28 @@ function QuickActionCard({ to, icon: Icon, label, description, accent, delay, th
     >
       <Link to={to} className="block group">
         <div
-          className="rounded-2xl p-4 flex flex-col items-center justify-center text-center transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden aspect-square"
-          style={{
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
-          }}
+          className="rounded-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden aspect-square"
+          style={{ border: '1px solid rgba(255, 255, 255, 0.06)' }}
         >
-          {/* Hover glow effect */}
+          {/* Thumbnail fills the entire card */}
+          {thumbnailUrl && (
+            <img src={thumbnailUrl} alt={label} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          )}
+          {/* Gradient + hover glow so the text stays readable over the image */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
             style={{ background: `radial-gradient(circle at center, ${accent}15 0%, transparent 70%)` }} />
-          
-          {thumbnailUrl ? (
-            <img src={thumbnailUrl} alt={label} className="w-12 h-12 rounded-xl object-cover mb-2" />
-          ) : (
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-2"
-              style={{ background: `${accent}12`, border: `1px solid ${accent}25` }}>
-              <Icon size={22} style={{ color: accent }} />
+
+          {/* Text pinned to the bottom, over the image */}
+          <div className="absolute inset-x-0 bottom-0 p-3 flex items-end justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="text-xs font-bold text-white mb-0.5 drop-shadow-md truncate">{label}</h3>
+              <p className="text-[9px] text-white/60 truncate">{description}</p>
             </div>
-          )}
-          
-          <h3 className="text-xs font-bold text-white/90 mb-1">{label}</h3>
-          <p className="text-[9px] text-white/40">{description}</p>
-          
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center mt-2 transition-all duration-300 group-hover:translate-x-0.5"
-            style={{ background: `${accent}10`, border: `1px solid ${accent}20` }}>
-            <ArrowRight size={12} style={{ color: accent }} />
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:translate-x-0.5 backdrop-blur-sm"
+              style={{ background: `${accent}25`, border: `1px solid ${accent}40` }}>
+              <ArrowRight size={12} style={{ color: accent }} />
+            </div>
           </div>
         </div>
       </Link>
@@ -146,14 +145,17 @@ function WatchHistoryCard({ item, index }) {
             border: '1px solid rgba(255, 107, 74, 0.18)',
           }}
         >
-          {item.thumbnailUrl ? (
-            <img src={item.thumbnailUrl} alt={item.title} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #10142A 0%, #151932 100%)' }}>
-              <Play size={24} className="text-primary-400" />
-            </div>
-          )}
+          {/* Thumbnail fills the entire card */}
+          <CardThumbnail
+            item={item}
+            alt={item.title}
+            fallback={
+              <div className="absolute inset-0 flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #10142A 0%, #151932 100%)' }}>
+                <Play size={24} className="text-primary-400" />
+              </div>
+            }
+          />
           
           {/* Text overlay at bottom */}
           <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
@@ -247,9 +249,9 @@ export default function Home() {
 
   // Static cards with thumbnail support
   const staticCards = [
-    { to: '/free-courses', icon: BookOpen, label: 'Free Courses', description: 'Start learning free', accent: '#10B981', delay: 0.12 },
-    { to: '/books', icon: Book, label: 'Books', description: 'Read PDFs', accent: '#6366F1', delay: 0.18 },
-    { to: '/store', icon: ShoppingBag, label: 'Store', description: 'Premium courses', accent: '#FF6B4A', delay: 0.24 },
+    { to: '/free-courses', icon: BookOpen, label: 'Free Courses', description: 'Start learning free', accent: '#10B981', delay: 0.12, thumbnailUrl: DEFAULT_THUMBNAILS.freeCourses },
+    { to: '/books', icon: Book, label: 'Books', description: 'Read PDFs', accent: '#6366F1', delay: 0.18, thumbnailUrl: DEFAULT_THUMBNAILS.books },
+    { to: '/store', icon: ShoppingBag, label: 'Store', description: 'Premium courses', accent: '#FF6B4A', delay: 0.24, thumbnailUrl: DEFAULT_THUMBNAILS.store },
   ]
 
   // Progress card data
@@ -261,6 +263,7 @@ export default function Home() {
     description: `${progressPercent}% Complete`,
     accent: '#10B981',
     delay: 0.36,
+    thumbnailUrl: DEFAULT_THUMBNAILS.progress,
   }
 
   return (
