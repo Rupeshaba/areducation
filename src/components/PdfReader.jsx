@@ -6,6 +6,33 @@ import { goFullscreenLandscape, exitFullscreenAndUnlock } from '../utils/fullscr
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
+// Extract a Google Drive file id from any share/preview/open link shape.
+function extractDriveId(url) {
+  if (!url) return null
+  const patterns = [
+    /drive\.google\.com\/file\/d\/([^/]+)/,
+    /drive\.google\.com\/open\?id=([^&]+)/,
+    /drive\.google\.com\/uc\?.*id=([^&]+)/,
+    /[?&]id=([^&]+)/,
+  ]
+  for (const p of patterns) {
+    const m = url.match(p)
+    if (m?.[1]) return m[1]
+  }
+  return null
+}
+
+// Every viewing strategy we try, in order, before giving up. Drive links skip
+// straight to the drive stage since canvas/direct fetches on them are almost
+// always CORS-blocked. Everything else tries the clean, chrome-free routes
+// first and only falls back to a third-party viewer if truly nothing else
+// can reach the file (e.g. a strict-CORS custom host).
+function buildStages(url) {
+  const driveId = extractDriveId(url)
+  if (driveId) return ['drive']
+  return ['canvas', 'direct', 'google']
+}
+
 // Minimal icon-only back control — no label text, fades with the rest of the UI.
 function BackIcon({ onClick, visible = true }) {
   return (
