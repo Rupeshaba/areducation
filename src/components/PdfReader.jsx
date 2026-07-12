@@ -67,70 +67,84 @@ function BackIcon({ onClick, visible = true }) {
 }
 
 // A single page: a placeholder that renders itself into a canvas once it
-// scrolls into view (keeps big PDFs light — nothing is rendered up front).
-function PdfPage({ pdfDoc, pageNumber, containerHeight, registerRef }) {
+// scrolls into view (keeps big PDFs light — nothing is rendered up front),
+// and re-renders at higher resolution whenever the committed zoom changes so
+// zoomed-in text stays crisp instead of being stretched.
+function PdfPage({ pdfDoc, pageNumber, containerWidth, zoom, registerRef }) {
   const wrapRef = useRef(null)
   const canvasRef = useRef(null)
   const [rendered, setRendered] = useState(false)
   const [size, setSize] = useState(null) // { width, height } in CSS px
 
   // Work out the page's natural size first so the placeholder reserves the
-  // right amount of space before it's actually rendered (avoids layout jump).
+  // right amount of space before it's actually rendered (avoids layout
+  // jump). Always fits the full device width, scaled further by `zoom`.
   useEffect(() => {
     let cancelled = false
     pdfDoc.getPage(pageNumber).then((page) => {
       if (cancelled) return
       const base = page.getViewport({ scale: 1 })
-      // Fit the page to the available height (landscape-locked screen is
-      // short and wide — this mirrors how the video stage letterboxes
-      // portrait content instead of stretching it).
-      const fitScale = Math.min((containerHeight * 0.94) / base.height, 3)
+      const fitScale = (containerWidth / base.width) * zoom
       setSize({ width: base.width * fitScale, height: base.height * fitScale, fitScale })
     })
     return () => { cancelled = true }
-  }, [pdfDoc, pageNumber, containerHeight])
+  }, [pdfDoc, pageNumber, containerWidth, zoom])
 
   useEffect(() => {
     if (!wrapRef.current || !registerRef) return
     registerRef(pageNumber, wrapRef.current)
   }, [pageNumber, registerRef])
 
+  // Render (or re-render) the canvas at the current size. Runs the first
+  // time the page scrolls into view, and again any time `size` changes
+  // afterwards (i.e. the user pinch-zoomed) so already-visible pages get a
+  // fresh, sharp render instead of a blurry CSS stretch.
   useEffect(() => {
-    if (!size || rendered) return
+    if (!size) return
     const el = wrapRef.current
     if (!el) return
+
+    const doRender = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2.5)
+      pdfDoc.getPage(pageNumber).then((page) => {
+        const viewport = page.getViewport({ scale: size.fitScale * dpr })
+        const canvas = canvasRef.current
+        if (!canvas) return
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+        canvas.style.width = `${size.width}px`
+        canvas.style.height = `${size.height}px`
+        const ctx = canvas.getContext('2d')
+        page.render({ canvasContext: ctx, viewport }).promise.then(() => setRendered(true))
+      })
+    }
+
+    if (rendered) {
+      doRender()
+      return
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
           observer.disconnect()
-          const dpr = Math.min(window.devicePixelRatio || 1, 2.5)
-          pdfDoc.getPage(pageNumber).then((page) => {
-            const viewport = page.getViewport({ scale: size.fitScale * dpr })
-            const canvas = canvasRef.current
-            if (!canvas) return
-            canvas.width = viewport.width
-            canvas.height = viewport.height
-            canvas.style.width = `${size.width}px`
-            canvas.style.height = `${size.height}px`
-            const ctx = canvas.getContext('2d')
-            page.render({ canvasContext: ctx, viewport }).promise.then(() => setRendered(true))
-          })
+          doRender()
         }
       },
       { rootMargin: '400px 0px' }
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [size, rendered, pdfDoc, pageNumber])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [size, pdfDoc, pageNumber])
 
   return (
     <div
       ref={wrapRef}
       className="flex items-center justify-center mx-auto"
       style={{
-        width: size ? `${size.width}px` : '60vw',
-        height: size ? `${size.height}px` : `${containerHeight * 0.9}px`,
+        width: size ? `${size.width}px` : '100%',
+        height: size ? `${size.height}px` : `${containerWidth * 1.3}px`,
       }}
     >
       <canvas ref={canvasRef} className="block" />
@@ -154,9 +168,14 @@ export default function PdfReader({ url, title, onBack }) {
   const [stageIndex, setStageIndex] = useState(0)
   const iframeTimeoutRef = useRef(null)
   const currentStage = stages[stageIndex]
-  const [containerHeight, setContainerHeight] = useState(() =>
-    typeof window !== 'undefined' ? window.innerHeight : 800
+  const [containerWidth, setContainerWidth] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth : 400
   )
+  const [zoom, setZoom] = useState(1)
+  const pagesWrapRef = useRef(null)
+  const pinchRef = useRef(null) // { startDist, startZoom }
+  const MIN_ZOOM = 1
+  const MAX_ZOOM = 4
   const [showBack, setShowBack] = useState(true)
   const hideTimer = useRef(null)
 
@@ -175,7 +194,7 @@ export default function PdfReader({ url, title, onBack }) {
   }, [])
 
   useEffect(() => {
-    const onResize = () => setContainerHeight(window.innerHeight)
+    const onResize = () => setContainerWidth(window.innerWidth)
     window.addEventListener('resize', onResize)
     window.addEventListener('orientationchange', onResize)
     return () => {
@@ -205,7 +224,60 @@ export default function PdfReader({ url, title, onBack }) {
     if (!started || !url) return
     setStages(buildStages(url))
     setStageIndex(0)
+    setZoom(1)
   }, [started, url])
+
+  // Manual pinch-to-zoom. Browsers disable native pinch-zoom while an
+  // element is in Fullscreen mode (which this reader always is), so we
+  // implement it ourselves: track two-finger distance, live-preview the
+  // scale with a cheap CSS transform while fingers move, then "commit" it
+  // by re-rendering the actual canvases at the new resolution on release —
+  // that keeps text crisp instead of a blurry stretched preview, and lets
+  // native scrolling reach the now-larger page normally.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!started || !el) return
+
+    const dist = (t1, t2) => Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
+
+    const onTouchStart = (e) => {
+      if (e.touches.length === 2) {
+        pinchRef.current = { startDist: dist(e.touches[0], e.touches[1]), startZoom: zoom }
+      }
+    }
+    const onTouchMove = (e) => {
+      if (e.touches.length === 2 && pinchRef.current) {
+        e.preventDefault()
+        const d = dist(e.touches[0], e.touches[1])
+        const live = pinchRef.current.startZoom * (d / pinchRef.current.startDist)
+        const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, live))
+        if (pagesWrapRef.current) {
+          pagesWrapRef.current.style.transform = `scale(${clamped / zoom})`
+          pagesWrapRef.current.style.transformOrigin = '50% 50%'
+        }
+        pinchRef.current.liveZoom = clamped
+      }
+    }
+    const onTouchEnd = (e) => {
+      if (e.touches.length < 2 && pinchRef.current) {
+        const finalZoom = pinchRef.current.liveZoom || pinchRef.current.startZoom
+        pinchRef.current = null
+        if (pagesWrapRef.current) pagesWrapRef.current.style.transform = ''
+        setZoom(finalZoom)
+      }
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd, { passive: true })
+    el.addEventListener('touchcancel', onTouchEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+      el.removeEventListener('touchcancel', onTouchEnd)
+    }
+  }, [started, zoom, pdfDoc])
 
   // If we've fallen off the end of the stage list, every strategy failed —
   // show the final error state (with an "open in browser" escape hatch).
@@ -278,6 +350,7 @@ export default function PdfReader({ url, title, onBack }) {
   const handleRetry = () => {
     setError(false)
     setPdfDoc(null)
+    setZoom(1)
     setStarted(false)
     setTimeout(() => setStarted(true), 50)
   }
@@ -387,15 +460,16 @@ export default function PdfReader({ url, title, onBack }) {
             <div
               ref={scrollRef}
               className="w-full h-full overflow-y-auto overflow-x-auto"
-              style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
+              style={{ touchAction: 'pan-x pan-y' }}
             >
-              <div className="flex flex-col items-center gap-3 py-3 min-h-full">
+              <div ref={pagesWrapRef} className="flex flex-col items-center gap-3 py-3 min-h-full">
                 {Array.from({ length: numPages }, (_, i) => i + 1).map((n) => (
                   <PdfPage
                     key={n}
                     pdfDoc={pdfDoc}
                     pageNumber={n}
-                    containerHeight={containerHeight}
+                    containerWidth={containerWidth}
+                    zoom={zoom}
                     registerRef={registerRef}
                   />
                 ))}
