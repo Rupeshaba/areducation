@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { ChevronLeft, FileText, AlertTriangle, RefreshCw } from 'lucide-react'
+import { ChevronLeft, FileText, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react'
 import * as pdfjsLib from 'pdfjs-dist'
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { goFullscreenLandscape, exitFullscreenAndUnlock } from '../utils/fullscreen'
@@ -22,15 +22,30 @@ function extractDriveId(url) {
   return null
 }
 
+const driveEmbedUrl = (id) => `https://drive.google.com/file/d/${id}/preview`
+const googleViewerUrl = (url) => `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
+
 // Every viewing strategy we try, in order, before giving up. Drive links skip
-// straight to the drive stage since canvas/direct fetches on them are almost
-// always CORS-blocked. Everything else tries the clean, chrome-free routes
-// first and only falls back to a third-party viewer if truly nothing else
-// can reach the file (e.g. a strict-CORS custom host).
+// straight to the drive embed since canvas/direct fetches on them are almost
+// always CORS-blocked. Everything else tries the rich in-app canvas reader
+// first, then a plain iframe (browser's own PDF renderer — works even when
+// the host blocks CORS fetches, since this is a navigation not a JS fetch),
+// then Google's viewer proxy as a last resort. This way any link — direct
+// file, Drive share, or an odd third-party host — ends up rendering
+// *somewhere* instead of dead-ending on one failed fetch.
 function buildStages(url) {
   const driveId = extractDriveId(url)
-  if (driveId) return ['drive']
-  return ['canvas', 'direct', 'google']
+  if (driveId) {
+    return [
+      { kind: 'drive', src: driveEmbedUrl(driveId) },
+      { kind: 'google', src: googleViewerUrl(url) },
+    ]
+  }
+  return [
+    { kind: 'canvas' },
+    { kind: 'direct', src: url },
+    { kind: 'google', src: googleViewerUrl(url) },
+  ]
 }
 
 // Minimal icon-only back control — no label text, fades with the rest of the UI.
@@ -131,6 +146,10 @@ export default function PdfReader({ url, title, onBack }) {
   const [pdfDoc, setPdfDoc] = useState(null)
   const [numPages, setNumPages] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
+  const [stages, setStages] = useState([])
+  const [stageIndex, setStageIndex] = useState(0)
+  const iframeTimeoutRef = useRef(null)
+  const currentStage = stages[stageIndex]
   const [containerHeight, setContainerHeight] = useState(() =>
     typeof window !== 'undefined' ? window.innerHeight : 800
   )
@@ -177,12 +196,32 @@ export default function PdfReader({ url, title, onBack }) {
 
   useEffect(() => () => exitFullscreenAndUnlock(), [])
 
-  // Load the document once the user has committed (tapped to open).
+  // Kick off the stage pipeline once the user has committed (tapped to open).
   useEffect(() => {
     if (!started || !url) return
+    setStages(buildStages(url))
+    setStageIndex(0)
+  }, [started, url])
+
+  // If we've fallen off the end of the stage list, every strategy failed —
+  // show the final error state (with an "open in browser" escape hatch).
+  useEffect(() => {
+    if (!started || stages.length === 0) return
+    if (stageIndex >= stages.length) {
+      setLoading(false)
+      setError(true)
+    }
+  }, [started, stages, stageIndex])
+
+  // Canvas stage: fetch + render via pdf.js. A real fetch/parsing failure
+  // (e.g. CORS-blocked host) rejects the promise, so we can reliably
+  // detect it and advance to the next stage automatically.
+  useEffect(() => {
+    if (!started || !currentStage || currentStage.kind !== 'canvas') return
     let cancelled = false
     setLoading(true)
     setError(false)
+    setPdfDoc(null)
 
     const loadingTask = pdfjsLib.getDocument({ url, withCredentials: false })
     loadingTask.promise
@@ -194,15 +233,35 @@ export default function PdfReader({ url, title, onBack }) {
       })
       .catch(() => {
         if (cancelled) return
-        setLoading(false)
-        setError(true)
+        setStageIndex((i) => i + 1)
       })
 
     return () => {
       cancelled = true
       loadingTask.destroy?.()
     }
-  }, [started, url])
+  }, [started, url, currentStage])
+
+  // Iframe stages (direct / drive / google viewer): the browser navigates
+  // to the URL itself, which sidesteps CORS entirely. onLoad isn't a
+  // guarantee the PDF actually rendered (a blocked/blank page still
+  // "loads"), so we also arm a timeout — if nothing loads at all within a
+  // reasonable window (dead link, network failure), move to the next stage.
+  useEffect(() => {
+    if (!started || !currentStage || currentStage.kind === 'canvas') return
+    setLoading(true)
+    setError(false)
+    clearTimeout(iframeTimeoutRef.current)
+    iframeTimeoutRef.current = setTimeout(() => {
+      setStageIndex((i) => i + 1)
+    }, 12000)
+    return () => clearTimeout(iframeTimeoutRef.current)
+  }, [started, currentStage])
+
+  const handleIframeLoad = () => {
+    clearTimeout(iframeTimeoutRef.current)
+    setLoading(false)
+  }
 
   const handleStart = async () => {
     setStarted(true)
@@ -211,6 +270,7 @@ export default function PdfReader({ url, title, onBack }) {
 
   const handleRetry = () => {
     setError(false)
+    setPdfDoc(null)
     setStarted(false)
     setTimeout(() => setStarted(true), 50)
   }
@@ -285,16 +345,38 @@ export default function PdfReader({ url, title, onBack }) {
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#14161c] px-6">
               <AlertTriangle size={30} className="text-red-400" />
               <p className="text-white/60 text-sm text-center">PDF load nahi hua.</p>
-              <button
-                onClick={handleRetry}
-                className="flex items-center gap-1.5 text-sm bg-white/10 hover:bg-white/15 text-white px-4 py-2 rounded-xl transition-all active:scale-95"
-              >
-                <RefreshCw size={14} /> Retry
-              </button>
+              <div className="flex flex-wrap gap-2 justify-center">
+                <button
+                  onClick={handleRetry}
+                  className="flex items-center gap-1.5 text-sm bg-white/10 hover:bg-white/15 text-white px-4 py-2 rounded-xl transition-all active:scale-95"
+                >
+                  <RefreshCw size={14} /> Retry
+                </button>
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-sm bg-primary-500/10 hover:bg-primary-500/20 text-primary-400 px-4 py-2 rounded-xl transition-all active:scale-95"
+                >
+                  <ExternalLink size={14} /> Open in Browser
+                </a>
+              </div>
             </div>
           )}
 
-          {pdfDoc && !error && (
+          {currentStage?.kind !== 'canvas' && currentStage?.src && !error && (
+            <iframe
+              key={currentStage.src}
+              src={currentStage.src}
+              className="w-full h-full border-0"
+              title={title}
+              onLoad={handleIframeLoad}
+              allow="fullscreen"
+              style={{ touchAction: 'pan-x pan-y pinch-zoom' }}
+            />
+          )}
+
+          {currentStage?.kind === 'canvas' && pdfDoc && !error && (
             <div
               ref={scrollRef}
               className="w-full h-full overflow-y-auto overflow-x-auto"
