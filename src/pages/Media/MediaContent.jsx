@@ -5,10 +5,12 @@ import Hls from 'hls.js'
 import {
   ChevronLeft, Play, Pause, Volume2, VolumeX,
   SkipBack, SkipForward, Settings, X, CheckCircle, AlertTriangle,
-  PictureInPicture2, ExternalLink,
+  PictureInPicture2,
 } from 'lucide-react'
 import api from '../../api/axios'
 import { markContentCompleted } from '../../utils/progress'
+import PdfReader from '../../components/PdfReader'
+import { goFullscreenLandscape, exitFullscreenAndUnlock } from '../../utils/fullscreen'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function fmtTime(s) {
@@ -50,30 +52,6 @@ function isHLSURL(url) {
 }
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5, 2.75, 3]
-
-// Try to go fullscreen + lock landscape. Falls back silently where unsupported (iOS etc.)
-async function goFullscreenLandscape(el, videoEl) {
-  try {
-    if (!document.fullscreenElement) {
-      await (el?.requestFullscreen?.() || el?.webkitRequestFullscreen?.())
-    }
-  } catch (e) { /* ignore */ }
-  try {
-    if (window.screen?.orientation?.lock) {
-      await window.screen.orientation.lock('landscape')
-    }
-  } catch (e) { /* not supported / not allowed outside fullscreen */ }
-  // iOS Safari: element fullscreen mostly unsupported — use native video fullscreen
-  // which auto-rotates to landscape for landscape-sized videos.
-  if (!document.fullscreenElement && videoEl?.webkitEnterFullscreen) {
-    try { videoEl.webkitEnterFullscreen() } catch (e) { /* ignore */ }
-  }
-}
-
-function exitFullscreenAndUnlock() {
-  try { if (document.fullscreenElement) document.exitFullscreen?.() } catch (e) {}
-  try { window.screen?.orientation?.unlock?.() } catch (e) {}
-}
 
 // Minimal icon-only back control — no label text, fades with the rest of the UI.
 function BackIcon({ onClick, visible = true }) {
@@ -617,132 +595,10 @@ function YouTubeStage({ content, onBack, contentId, onEnded }) {
   )
 }
 
-// Extract a Google Drive file id from any share/preview/open link shape.
-function extractDriveId(url) {
-  if (!url) return null
-  const patterns = [
-    /drive\.google\.com\/file\/d\/([^/]+)/,
-    /drive\.google\.com\/open\?id=([^&]+)/,
-    /[?&]id=([^&]+)/,
-    /drive\.google\.com\/uc\?.*id=([^&]+)/,
-  ]
-  for (const p of patterns) {
-    const m = url.match(p)
-    if (m?.[1]) return m[1]
-  }
-  return null
-}
-
-// ─── PDF stage — full page, portrait, nothing on screen but the PDF ─────────
+// ─── PDF stage — full app, landscape-locked like the video stage, native
+// pinch-zoom, no third-party toolbar / zoom buttons / "open externally" ────
 function PDFStage({ content, onBack }) {
-  const url = content.url
-  const driveId = extractDriveId(url)
-
-  // Drive links get Drive's own /preview embed — the only shape Google reliably
-  // allows inside an iframe. Everything else goes through the Google Docs viewer
-  // first (works for most publicly reachable PDFs incl. Cloudinary), falling
-  // back to a direct browser-native render if that fails.
-  const [mode, setMode] = useState(driveId ? 'drive' : 'google')
-  const [loading, setLoading] = useState(true)
-  const [failed, setFailed] = useState(false)
-  const [showBack, setShowBack] = useState(true)
-  const hideTimer  = useRef(null)
-  const loadTimer  = useRef(null)
-  const loadedRef  = useRef(false)
-  const attemptedFallback = useRef(false)
-
-  // While viewing the PDF, stop the outer app page from pinch-zooming so the
-  // gesture reaches the PDF viewer inside the iframe instead (which handles
-  // its own zoom). Restored on unmount.
-  useEffect(() => {
-    const meta = document.querySelector('meta[name="viewport"]')
-    const prev = meta?.getAttribute('content')
-    if (meta) meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no')
-    return () => { if (meta && prev) meta.setAttribute('content', prev) }
-  }, [])
-
-  const driveUrl  = driveId ? `https://drive.google.com/file/d/${driveId}/preview` : ''
-  const googleUrl = url ? `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true` : ''
-  const directUrl = url ? `${url}#toolbar=0&navpanes=0&scrollbar=0&statusbar=0&view=FitH` : ''
-  const src = mode === 'drive' ? driveUrl : mode === 'google' ? googleUrl : directUrl
-
-  const fallback = useCallback(() => {
-    if (loadedRef.current) return // already loaded fine, ignore a late/false error
-    if (attemptedFallback.current) { setLoading(false); setFailed(true); return }
-    attemptedFallback.current = true
-    setMode(m => (m === 'google' ? 'direct' : m === 'direct' ? 'google' : 'direct'))
-    setLoading(true)
-  }, [])
-
-  const handleLoad = () => {
-    loadedRef.current = true
-    clearTimeout(loadTimer.current)
-    setLoading(false)
-  }
-  const handleError = () => fallback()
-
-  // Some blocked/broken embeds never fire onLoad or onError (iframe just stays
-  // blank) — a load-timeout catches that case and switches viewer mode.
-  useEffect(() => {
-    loadedRef.current = false
-    setLoading(true)
-    clearTimeout(loadTimer.current)
-    loadTimer.current = setTimeout(fallback, 7000)
-    return () => clearTimeout(loadTimer.current)
-  }, [mode, fallback])
-
-  useEffect(() => {
-    hideTimer.current = setTimeout(() => setShowBack(false), 2500)
-    return () => clearTimeout(hideTimer.current)
-  }, [])
-
-  const wake = () => {
-    setShowBack(true)
-    clearTimeout(hideTimer.current)
-    hideTimer.current = setTimeout(() => setShowBack(false), 2500)
-  }
-
-  if (!url) return (
-    <div className="fixed inset-0 bg-black flex items-center justify-center">
-      <BackIcon onClick={onBack} visible />
-    </div>
-  )
-
-  return (
-    <div
-      className="fixed inset-0 bg-black"
-      style={{ touchAction: 'none' }}
-      onTouchStart={wake}
-      onMouseMove={wake}
-    >
-      {loading && !failed && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
-          <div className="w-10 h-10 rounded-full border-2 border-primary-500 border-t-transparent animate-spin" />
-        </div>
-      )}
-      {failed ? (
-        <button
-          onClick={() => window.open(url, '_blank', 'noopener')}
-          className="absolute inset-0 flex items-center justify-center"
-        >
-          <span className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center">
-            <ExternalLink size={22} className="text-white/70" />
-          </span>
-        </button>
-      ) : (
-        <iframe
-          key={mode}
-          src={src}
-          className="w-full h-full border-0"
-          title="Notes"
-          onLoad={handleLoad}
-          onError={handleError}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-        />
-      )}
-      <BackIcon onClick={onBack} visible={showBack} />
-    </div>
-  )
+  return <PdfReader url={content.url} title={content.title} onBack={onBack} />
 }
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────
