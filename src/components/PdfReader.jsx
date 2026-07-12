@@ -23,26 +23,30 @@ function extractDriveId(url) {
 }
 
 const driveEmbedUrl = (id) => `https://drive.google.com/file/d/${id}/preview`
+// Drive's raw download endpoint — unlike /preview (which Drive intentionally
+// shrinks down to a bare "Open" button on mobile browsers), this returns the
+// actual file bytes and can be fed straight into our own canvas renderer.
+const driveDirectDownloadUrl = (id) => `https://drive.google.com/uc?export=download&id=${id}`
 const googleViewerUrl = (url) => `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
 
-// Every viewing strategy we try, in order, before giving up. Drive links skip
-// straight to the drive embed since canvas/direct fetches on them are almost
-// always CORS-blocked. Everything else tries the rich in-app canvas reader
-// first, then a plain iframe (browser's own PDF renderer — works even when
-// the host blocks CORS fetches, since this is a navigation not a JS fetch),
-// then Google's viewer proxy as a last resort. This way any link — direct
-// file, Drive share, or an odd third-party host — ends up rendering
-// *somewhere* instead of dead-ending on one failed fetch.
+// Every viewing strategy we try, in order, before giving up. We always try
+// the canvas (pdf.js) reader first — it doesn't depend on a browser's own
+// PDF plugin, which desktop Chrome has but mobile browsers largely don't
+// (mobile iframes either show a stripped-down "Open" button for Drive links
+// or fail to render the PDF at all), so canvas is the one strategy that
+// behaves the same on phone and laptop. Only when canvas can't fetch the
+// bytes at all (real CORS block) do we fall back to embeds/viewers.
 function buildStages(url) {
   const driveId = extractDriveId(url)
   if (driveId) {
     return [
+      { kind: 'canvas', src: driveDirectDownloadUrl(driveId) },
       { kind: 'drive', src: driveEmbedUrl(driveId) },
       { kind: 'google', src: googleViewerUrl(url) },
     ]
   }
   return [
-    { kind: 'canvas' },
+    { kind: 'canvas', src: url },
     { kind: 'direct', src: url },
     { kind: 'google', src: googleViewerUrl(url) },
   ]
@@ -223,7 +227,8 @@ export default function PdfReader({ url, title, onBack }) {
     setError(false)
     setPdfDoc(null)
 
-    const loadingTask = pdfjsLib.getDocument({ url, withCredentials: false })
+    const fetchUrl = currentStage.src || url
+    const loadingTask = pdfjsLib.getDocument({ url: fetchUrl, withCredentials: false })
     loadingTask.promise
       .then((doc) => {
         if (cancelled) return
@@ -231,8 +236,9 @@ export default function PdfReader({ url, title, onBack }) {
         setNumPages(doc.numPages)
         setLoading(false)
       })
-      .catch(() => {
+      .catch((e) => {
         if (cancelled) return
+        console.error('[PdfReader] canvas stage failed for', fetchUrl, e)
         setStageIndex((i) => i + 1)
       })
 
@@ -253,6 +259,7 @@ export default function PdfReader({ url, title, onBack }) {
     setError(false)
     clearTimeout(iframeTimeoutRef.current)
     iframeTimeoutRef.current = setTimeout(() => {
+      console.error('[PdfReader] iframe stage timed out:', currentStage.kind, currentStage.src)
       setStageIndex((i) => i + 1)
     }, 12000)
     return () => clearTimeout(iframeTimeoutRef.current)
