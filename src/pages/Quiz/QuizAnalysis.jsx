@@ -6,6 +6,7 @@ import {
   CheckCircle, XCircle, ChevronLeft, ChevronRight, X, BookOpen, Target, Clock
 } from 'lucide-react'
 import api from '../../api/axios'
+import formatText from '../../utils/formatText'
 
 export default function QuizAnalysis() {
   const { attemptId } = useParams()
@@ -13,7 +14,6 @@ export default function QuizAnalysis() {
   const stateResult = location.state?.result
   
   const [currentQIndex, setCurrentQIndex] = useState(0)
-  const [showExplanation, setShowExplanation] = useState(false)
   const [showPalette, setShowPalette] = useState(false)
   const startX = useRef(null)
   const startY = useRef(null)
@@ -157,7 +157,7 @@ export default function QuizAnalysis() {
               >
                 <div className="bg-white border border-[#dfe7ef] rounded-xl p-3 sm:p-4 lg:p-5 mb-3 shadow-sm flex-shrink-0">
                   <p className="text-gray-900 text-sm sm:text-base lg:text-lg font-semibold leading-relaxed whitespace-pre-wrap">
-                    {currentQ?.question}
+                    {formatText(currentQ?.question)}
                   </p>
                 </div>
 
@@ -206,7 +206,7 @@ export default function QuizAnalysis() {
                               {isCorrect ? <CheckCircle size={14} /> : isSelected && !currentQ.isCorrect ? <XCircle size={14} /> : ['A', 'B', 'C', 'D'][j]}
                             </span>
                             <span className={`text-sm sm:text-[15px] flex-1 ${isCorrect ? 'text-gray-900 font-medium' : isSelected && !currentQ.isCorrect ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>
-                              {opt}
+                              {formatText(opt)}
                             </span>
                             {isCorrect && (
                               <span className="text-[10px] font-bold text-mint-400 uppercase flex-shrink-0 bg-mint-500/15 px-2 py-0.5 rounded-full">
@@ -225,23 +225,16 @@ export default function QuizAnalysis() {
                   </div>
                 </div>
 
-                {/* Explanation button - click to show dialog */}
+                {/* Explanation - always shown inline */}
                 {currentQ?.explanation && (
-                  <button
-                    onClick={() => setShowExplanation(true)}
-                    className="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold hover:bg-amber-500/15 transition-all"
-                  >
-                    <BookOpen size={14} />
-                    View Explanation
-                  </button>
+                  <div className="mt-3 rounded-lg bg-amber-500/[0.06] border border-amber-500/20 p-3 sm:p-3.5 flex-shrink-0">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <BookOpen size={14} className="text-amber-500" />
+                      <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">Explanation</span>
+                    </div>
+                    <p className="text-[13px] sm:text-sm text-gray-600 leading-relaxed">{formatText(currentQ.explanation)}</p>
+                  </div>
                 )}
-
-                {/* Swipe hint - mobile only */}
-                <div className="sm:hidden flex items-center justify-center gap-1.5 text-[11px] text-gray-400 mt-3 mb-1 select-none">
-                  <ChevronLeft size={12} />
-                  <span>Swipe to move between questions</span>
-                  <ChevronRight size={12} />
-                </div>
               </motion.div>
             </AnimatePresence>
           </div>
@@ -260,41 +253,6 @@ export default function QuizAnalysis() {
           Next <ChevronRight size={16} />
         </button>
       </div>
-
-      {/* ===== MOBILE EXPLANATION PANEL ===== */}
-      <AnimatePresence>
-        {showExplanation && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="sm:hidden fixed inset-0 bg-black/50 z-50"
-              onClick={() => setShowExplanation(false)}
-            />
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25 }}
-              className="sm:hidden fixed top-0 right-0 bottom-0 w-80 bg-white z-50 flex flex-col"
-            >
-              <div className="flex items-center justify-between p-4 border-b border-[#dfe7ef]">
-                <div className="flex items-center gap-2">
-                  <BookOpen size={18} className="text-amber-400" />
-                  <span className="font-bold text-gray-800">Explanation</span>
-                </div>
-                <button onClick={() => setShowExplanation(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
-                  <X size={18} className="text-gray-500" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4">
-                <p className="text-sm text-gray-600 leading-relaxed">{currentQ?.explanation}</p>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
 
       {/* ===== MOBILE QUESTION PALETTE ===== */}
       <AnimatePresence>
