@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
+import formatText from '../../utils/formatText'
 
 /* ═══ SWIPE HOOK (mobile: swipe left = next, swipe right = prev) ═══ */
 function useSwipeQuestion(onNext, onPrev, disabled) {
@@ -82,7 +83,10 @@ export default function QuizPlay() {
       // in the browser history. Without it, pressing the phone's back button
       // from the result page would land back on QuizPlay instead of going
       // to wherever the user came from (the quiz list).
-      navigate(`/quiz/result/${data.attemptId}`, { state: { result: data }, replace: true })
+      navigate(`/quiz/result/${data.attemptId}`, {
+        state: { result: { ...data, subject, quizName: decodeURIComponent(name) } },
+        replace: true,
+      })
     },
     onError: () => {
       toast.error('Submit failed')
@@ -360,7 +364,7 @@ export default function QuizPlay() {
               >
                 <div className="bg-white border border-[#dfe7ef] rounded-xl p-3 sm:p-4 lg:p-5 mb-3 shadow-sm flex-shrink-0">
                   <p className="text-gray-900 text-sm sm:text-base lg:text-lg font-semibold leading-relaxed whitespace-pre-wrap">
-                    {q?.question}
+                    {formatText(q?.question)}
                   </p>
                 </div>
 
@@ -390,7 +394,7 @@ export default function QuizPlay() {
                               {String.fromCharCode(65 + i)}
                             </span>
                             <span className={`text-sm sm:text-[15px] flex-1 ${isSelected ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>
-                              {opt}
+                              {formatText(opt)}
                             </span>
                             {isSelected && <CheckCircle size={16} className="text-[#1299FD] flex-shrink-0" />}
                           </button>
@@ -400,12 +404,6 @@ export default function QuizPlay() {
                   </div>
                 </div>
 
-                {/* Swipe hint - mobile only */}
-                <div className="sm:hidden flex items-center justify-center gap-1.5 text-[11px] text-gray-400 mt-3 mb-1 select-none">
-                  <ChevronLeft size={12} />
-                  <span>Swipe to move between questions</span>
-                  <ChevronRight size={12} />
-                </div>
               </motion.div>
             </AnimatePresence>
           </div>
