@@ -626,8 +626,8 @@ export default function MediaContent() {
   const handleEnded = useCallback(() => {
     if (hasMarkedCompleteRef.current) return
     hasMarkedCompleteRef.current = true
-    markContentCompleted(contentId)
-  }, [contentId])
+    markContentCompleted(contentId, { subjectId, courseId })
+  }, [contentId, subjectId, courseId])
 
   const content = contentData?.content || null
 
