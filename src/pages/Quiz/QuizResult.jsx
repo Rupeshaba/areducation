@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { useParams, useLocation, Link } from 'react-router-dom'
+import { useParams, useLocation, Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -185,10 +185,10 @@ function ProgressGraph({ attempts, selectedAttemptId }) {
 export default function QuizResult() {
   const { attemptId } = useParams()
   const location = useLocation()
+  const navigate = useNavigate()
   const stateResult = location.state?.result
 
   const [currentQIndex, setCurrentQIndex] = useState(0)
-  const [showAnalysis, setShowAnalysis] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
 
   const cached = findAttemptById(attemptId)
@@ -361,7 +361,7 @@ export default function QuizResult() {
           <RotateCcw size={16} /> Try Again
         </Link>
         <button
-          onClick={() => { setCurrentQIndex(0); setShowAnalysis(true) }}
+          onClick={() => navigate(`/quiz/analysis/${result.attemptId}`, { state: { result } })}
           disabled={questions.length === 0}
           className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] hover:border-primary-500/30 text-gray-200 text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -377,178 +377,6 @@ export default function QuizResult() {
       >
         <ProgressGraph attempts={attempts} selectedAttemptId={result.attemptId} />
       </motion.div>
-
-      {/* ═══ ANALYSIS MODAL ═══ */}
-      <AnimatePresence>
-        {showAnalysis && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowAnalysis(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 30 }}
-              transition={{ duration: 0.3 }}
-              className="relative w-full max-w-2xl max-h-[92vh] sm:max-h-[85vh] overflow-hidden rounded-t-3xl sm:rounded-3xl bg-[#0B0E1A] border border-white/[0.1] shadow-2xl flex flex-col"
-              onClick={e => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-4 sm:p-5 border-b border-white/[0.06] flex-shrink-0">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-primary-500/10 border border-primary-500/20 flex items-center justify-center flex-shrink-0">
-                    <Target size={18} className="text-primary-400" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-base sm:text-lg font-bold text-white">Quiz Analysis</h3>
-                    <p className="text-xs text-gray-500">Question {currentQIndex + 1} of {questions.length}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowAnalysis(false)}
-                  className="w-9 h-9 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.1] transition-all flex-shrink-0"
-                >
-                  <X size={18} />
-                </button>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="w-full h-1 bg-white/[0.05] flex-shrink-0">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-primary-500 to-primary-400"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${((currentQIndex + 1) / questions.length) * 100}%` }}
-                  transition={{ duration: 0.3 }}
-                />
-              </div>
-
-              {/* Question Content (swipeable on touch devices) */}
-              <div
-                className="p-4 sm:p-6 overflow-y-auto flex-1"
-                style={{ touchAction: 'pan-y' }}
-                {...swipeNav}
-              >
-                <AnimatePresence mode="wait">
-                  {currentQ && (
-                    <motion.div
-                      key={currentQIndex}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -20 }}
-                      transition={{ duration: 0.2 }}
-                      className="space-y-4 sm:space-y-5"
-                    >
-                      {/* Status Badge */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                          currentQ.isCorrect
-                            ? 'bg-mint-500/10 text-mint-400 border-mint-500/20'
-                            : currentQ.isSkipped
-                            ? 'bg-white/[0.05] text-gray-400 border-white/[0.1]'
-                            : 'bg-danger-500/10 text-danger-400 border-danger-500/20'
-                        }`}>
-                          {currentQ.isCorrect ? '✓ Correct' : currentQ.isSkipped ? '− Skipped' : '✗ Incorrect'}
-                        </span>
-                        <span className="text-xs text-gray-600">Q{currentQIndex + 1}</span>
-                        {currentQ.timeTaken > 0 && (
-                          <span className="text-[11px] text-gray-500 flex items-center gap-1 ml-auto">
-                            <Clock size={11} /> {formatMMSS(currentQ.timeTaken)}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Question */}
-                      <h4 className="text-sm sm:text-base font-bold text-white leading-relaxed">
-                        {formatText(currentQ.question)}
-                      </h4>
-
-                      {/* Options */}
-                      <div className="space-y-2">
-                        {currentQ.options.map((opt, j) => {
-                          const isCorrect = j === currentQ.correctAnswer
-                          const isSelected = j === currentQ.givenAnswer
-
-                          return (
-                            <div
-                              key={j}
-                              className={`flex items-center gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl border text-sm transition-all ${
-                                isCorrect
-                                  ? 'bg-mint-500/10 border-mint-500/20 text-mint-400'
-                                  : isSelected && !currentQ.isCorrect
-                                  ? 'bg-danger-500/10 border-danger-500/20 text-danger-400'
-                                  : 'bg-white/[0.02] border-white/[0.06] text-gray-400'
-                              }`}
-                            >
-                              <span className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 ${
-                                isCorrect
-                                  ? 'bg-mint-500/20 text-mint-400'
-                                  : isSelected && !currentQ.isCorrect
-                                  ? 'bg-danger-500/20 text-danger-400'
-                                  : 'bg-white/[0.05] text-gray-500'
-                              }`}>
-                                {isCorrect ? <CheckCircle size={14} /> : isSelected && !currentQ.isCorrect ? <XCircle size={14} /> : ['A', 'B', 'C', 'D'][j]}
-                              </span>
-                              <span className="flex-1 text-[13px] sm:text-sm">{formatText(opt)}</span>
-                              {isCorrect && <span className="hidden xs:inline text-[10px] font-bold text-mint-400 uppercase flex-shrink-0">Correct</span>}
-                              {isSelected && !currentQ.isCorrect && <span className="hidden xs:inline text-[10px] font-bold text-danger-400 uppercase flex-shrink-0">Your Answer</span>}
-                            </div>
-                          )
-                        })}
-                      </div>
-
-                      {/* Explanation */}
-                      {currentQ.explanation && (
-                        <div className="rounded-xl bg-amber-500/[0.05] border border-amber-500/15 p-3.5 sm:p-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <BookOpen size={14} className="text-amber-400" />
-                            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Explanation</span>
-                          </div>
-                          <p className="text-[13px] sm:text-sm text-gray-400 leading-relaxed">{formatText(currentQ.explanation)}</p>
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Navigation Footer */}
-              <div className="flex items-center justify-between p-3.5 sm:p-5 border-t border-white/[0.06] bg-white/[0.02] flex-shrink-0">
-                <button
-                  onClick={goPrev}
-                  disabled={currentQIndex === 0}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/[0.05] text-gray-300"
-                >
-                  <ChevronLeft size={16} /> <span className="hidden xs:inline">Previous</span>
-                </button>
-
-                {/* Dots */}
-                <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto max-w-[40%] no-scrollbar">
-                  {questions.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentQIndex(i)}
-                      className={`h-2 rounded-full flex-shrink-0 transition-all ${
-                        i === currentQIndex ? 'w-6 bg-primary-400' : `w-2 ${questions[i].isCorrect ? 'bg-mint-500/40' : questions[i].isSkipped ? 'bg-gray-600' : 'bg-danger-500/40'}`
-                      }`}
-                    />
-                  ))}
-                </div>
-
-                <button
-                  onClick={goNext}
-                  disabled={currentQIndex === questions.length - 1}
-                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-primary-500 hover:bg-primary-400 text-white text-xs sm:text-sm font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg shadow-primary-500/20"
-                >
-                  <span className="hidden xs:inline">Next</span> <ChevronRight size={16} />
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
