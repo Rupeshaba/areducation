@@ -7,25 +7,33 @@ import {
 } from 'lucide-react'
 import api from '../../api/axios'
 import formatText from '../../utils/formatText'
+import { findAttemptById } from '../../utils/quizCache'
 
 export default function QuizAnalysis() {
   const { attemptId } = useParams()
   const location = useLocation()
   const stateResult = location.state?.result
-  
+
   const [currentQIndex, setCurrentQIndex] = useState(0)
   const [showPalette, setShowPalette] = useState(false)
   const startX = useRef(null)
   const startY = useRef(null)
 
+  // Cached attempts always carry a per-question time breakdown (measured
+  // client-side during the quiz), so prefer the cache over the API/nav
+  // state, which may not include it.
+  const cached = findAttemptById(attemptId)
+
   const { data } = useQuery({
     queryKey: ['attempt', attemptId],
     queryFn: () => api.get(`/quiz/attempt/${attemptId}`).then(r => r.data),
-    enabled: !stateResult,
+    enabled: !stateResult && !cached,
   })
 
-  // Use state result if available, otherwise fetch from API
-  const result = stateResult || data?.attempt || data
+  // Prefer cache > nav state > API fetch
+  const result = cached
+    ? { ...(data?.attempt || data), ...stateResult, ...cached.attempt, subject: cached.subject, quizName: cached.quizName }
+    : stateResult || data?.attempt || data
   
   // Get questions - the API response has 'results' array at the top level
   const questions = result?.results || result?.questions || []
