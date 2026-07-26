@@ -4,6 +4,7 @@ import Home from "./pages/Home/Home"
 import About from "./pages/About/About"
 import Contact from "./pages/Contact/Contact"
 import Login from "./pages/Auth/Login"
+import SyncLogin from "./pages/Auth/SyncLogin"
 import Register from "./pages/Auth/Signup"
 import SignupDebug from "./pages/Auth/SignupDebug"
 import ForgotPassword from "./pages/Auth/ForgotPassword"
@@ -35,6 +36,7 @@ function App() {
       <Routes>
         {/* Public Routes - Only Login/Signup */}
         <Route path="/login" element={<Login />} />
+        <Route path="/sync-login" element={<SyncLogin />} />
         <Route path="/signup" element={<Register />} />
         <Route path="/signup-debug" element={<SignupDebug />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
