@@ -5,6 +5,7 @@ import { Camera, Save, Lock, User, Mail, Phone, MapPin, BookOpen, CheckCircle } 
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
+import DeviceSyncSection from './DeviceSyncSection'
 
 export default function Profile() {
   const { user, updateUser } = useAuthStore()
@@ -249,6 +250,11 @@ export default function Profile() {
             </div>
           ))}
         </div>
+      </motion.div>
+
+      {/* Device Sync */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <DeviceSyncSection />
       </motion.div>
     </div>
   )
