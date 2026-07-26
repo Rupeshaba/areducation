@@ -2,12 +2,12 @@
  * Client-side cache of every quiz attempt a user has ever submitted.
  *
  * The backend only exposes a single `/quiz/attempt/:attemptId` lookup and a
- * best-score/attempt-count summary per quiz — there's no endpoint to list
- * every past attempt for a quiz. So instead of round-tripping to the server,
- * every submit result is cached here (localStorage) and everything that
- * needs "attempt history" (Home's recent activity, the result page's
- * attempt dropdown + progress graph, per-question time in analysis) reads
- * from this cache first.
+ * `/quiz/my-attempts` list (account-wide, last 50) — there's no per-quiz
+ * history endpoint. So this cache remains the primary read path for
+ * everything that needs "attempt history" (Home's recent activity, the
+ * result page's attempt dropdown + progress graph, per-question time in
+ * analysis), and `mergeAttempts()` below tops it up from `/quiz/my-attempts`
+ * so attempts made on another device also show up here.
  */
 
 const STORAGE_KEY = 'ar_quiz_cache_v1'
@@ -121,6 +121,48 @@ export function getAllRecentAttempts(limit = 20) {
     })
   })
   return all.sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)).slice(0, limit)
+}
+
+/**
+ * Fold attempts reported by the backend (`GET /quiz/my-attempts`, which is
+ * account-wide and therefore includes attempts made on OTHER devices) into
+ * this local cache, deduping by attemptId. This is what actually makes quiz
+ * history "device-synced" — this cache stays the single read path, we just
+ * top it up from the server instead of only ever writing to it locally.
+ */
+export function mergeAttempts(remoteAttempts = []) {
+  if (!remoteAttempts.length) return
+  const store = readStore()
+
+  remoteAttempts.forEach((r) => {
+    const attemptId = r.id || r.attemptId
+    if (!attemptId) return
+    const key = quizKey(r.subject, r.quizName)
+    if (!store[key]) store[key] = { subject: r.subject, quizName: r.quizName, attempts: [] }
+
+    const already = store[key].attempts.some(a => String(a.attemptId) === String(attemptId))
+    if (!already) {
+      store[key].attempts.push({
+        attemptId,
+        score: r.score,
+        correct: r.correct,
+        wrong: r.wrong,
+        skipped: r.skipped,
+        total: r.total,
+        points: r.points,
+        timeTaken: r.timeTaken,
+        completedAt: r.completedAt,
+      })
+    }
+  })
+
+  Object.values(store).forEach((entry) => {
+    entry.attempts = entry.attempts
+      .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0))
+      .slice(0, MAX_ATTEMPTS_PER_QUIZ)
+  })
+
+  writeStore(store)
 }
 
 /** Find a cached attempt by its attemptId, wherever it lives. */
