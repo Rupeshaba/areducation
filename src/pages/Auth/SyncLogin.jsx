@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
 import { connectSyncSocket } from '../../utils/deviceSync'
+import { importLocalState } from '../../utils/localBackup'
 import { APP_LOGO_URL } from '../../constants/branding'
 
 export default function SyncLogin() {
@@ -20,6 +21,7 @@ export default function SyncLogin() {
 
   const handleApproved = (payload) => {
     setStatus('approved')
+    importLocalState(payload.localData)
     login(payload)
     toast.success(`Welcome back, ${payload.user?.name?.split(' ')[0] || ''}!`)
     setTimeout(() => navigate('/'), 600)
