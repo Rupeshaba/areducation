@@ -5,13 +5,15 @@ import { Link } from 'react-router-dom'
 import {
   BookOpen, Trophy, TrendingUp, Flame, Play, CheckCircle,
   ArrowRight, Clock, Sparkles, ChevronRight, GraduationCap,
-  Compass, Zap, MessageSquare, ShoppingBag, User, Bell, Book, History
+  Compass, Zap, MessageSquare, ShoppingBag, User, Bell, Book, History,
+  FileText, Brain, RotateCcw
 } from 'lucide-react'
 import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
 import { useCoursesProgress } from '../../hooks/useCoursesProgress'
 import CardThumbnail from '../../components/CardThumbnail'
 import { DEFAULT_THUMBNAILS } from '../../constants/branding'
+import { getRecentQuizzes } from '../../utils/quizCache'
 
 /* ═══ MODERN PULSE SHIMMER ═══ */
 function Shimmer({ className = '' }) {
@@ -183,12 +185,84 @@ function WatchHistoryCard({ item, index }) {
   )
 }
 
+/* ═══ HORIZONTAL SCROLL ROW (no visible scrollbar) ═══ */
+function ScrollRow({ icon: Icon, title, count, seeAllTo, children }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-white/40 flex items-center gap-1.5">
+          <Icon size={12} className="text-primary-400" />
+          {title} {count > 0 && `(${count})`}
+        </h3>
+        {seeAllTo && (
+          <Link to={seeAllTo}
+            className="text-xs font-medium text-primary-400 hover:text-primary-300 transition-colors">
+            See All
+          </Link>
+        )}
+      </div>
+      <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0" style={{ scrollSnapType: 'x proximity' }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+/* ═══ QUIZ HISTORY CARD (recent activity → latest attempt for that quiz) ═══ */
+function QuizHistoryCard({ entry, index }) {
+  const latest = entry.attempts[0]
+  const attemptsCount = entry.attempts.length
+  const score = Math.round(latest.score)
+  const scoreColor = score >= 75 ? '#2DD4BF' : score >= 50 ? '#FFB020' : '#FF5C5C'
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.1 + index * 0.05, duration: 0.4 }}
+      className="min-w-[160px] w-[160px] flex-shrink-0"
+      style={{ scrollSnapAlign: 'start' }}
+    >
+      <Link to={`/quiz/result/${latest.attemptId}`} className="block group">
+        <div className="rounded-2xl overflow-hidden transition-all duration-300 relative aspect-square flex flex-col justify-between p-3"
+          style={{
+            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.14) 0%, rgba(139, 92, 246, 0.03) 100%)',
+            border: '1px solid rgba(139, 92, 246, 0.25)',
+          }}
+        >
+          <div className="flex items-center justify-between">
+            <div className="w-8 h-8 rounded-lg bg-violet-500/20 border border-violet-500/30 flex items-center justify-center">
+              <Brain size={15} className="text-violet-300" />
+            </div>
+            <div className="text-right">
+              <div className="text-lg font-black" style={{ color: scoreColor }}>{score}%</div>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-bold text-white line-clamp-2 leading-snug mb-1">
+              {entry.quizName}
+            </p>
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-violet-500/25 text-violet-200">
+                {attemptsCount} attempt{attemptsCount > 1 ? 's' : ''}
+              </span>
+              <RotateCcw size={11} className="text-white/30 group-hover:text-violet-300 transition-colors" />
+            </div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  )
+}
+
 /* ═══ MAIN HOME VIEW ═══ */
 export default function Home() {
   const user = useAuthStore(s => s.user)
   const [recentlyWatched, setRecentlyWatched] = useState([])
+  const [recentQuizzes, setRecentQuizzes] = useState([])
 
-  // Load recently watched items from localStorage on mount
+  // Load recently watched items + quiz attempt history from localStorage on mount
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem('ar_recently_watched') || '[]')
@@ -196,7 +270,15 @@ export default function Home() {
     } catch (e) {
       console.error('Error loading recently watched:', e)
     }
+    try {
+      setRecentQuizzes(getRecentQuizzes(20))
+    } catch (e) {
+      console.error('Error loading quiz history:', e)
+    }
   }, [])
+
+  const classItems = recentlyWatched.filter(item => item.type !== 'pdf')
+  const notesItems = recentlyWatched.filter(item => item.type === 'pdf')
 
   const { data: pointsData, isLoading: pointsLoading } = useQuery({
     queryKey: ['my-points'],
@@ -280,26 +362,31 @@ export default function Home() {
         <QuickActionCard {...progressCard} />
       </div>
 
-      {/* ── WATCH HISTORY SECTION ── */}
-      {recentlyWatched.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white/40 flex items-center gap-1.5">
-              <History size={12} className="text-primary-400" />
-              Recent ({recentlyWatched.length})
-            </h3>
-            <Link to="/watch-history"
-              className="text-xs font-medium text-primary-400 hover:text-primary-300 transition-colors">
-              See All
-            </Link>
-          </div>
+      {/* ── CLASS (recent videos) ── */}
+      {classItems.length > 0 && (
+        <ScrollRow icon={History} title="Class" count={classItems.length} seeAllTo="/watch-history">
+          {classItems.map((item, idx) => (
+            <WatchHistoryCard key={item.contentId || idx} item={item} index={idx} />
+          ))}
+        </ScrollRow>
+      )}
 
-          <div className="grid grid-cols-2 gap-3">
-            {recentlyWatched.slice(0, 4).map((item, idx) => (
-              <WatchHistoryCard key={item.contentId || idx} item={item} index={idx} />
-            ))}
-          </div>
-        </div>
+      {/* ── NOTES (recent PDFs) ── */}
+      {notesItems.length > 0 && (
+        <ScrollRow icon={FileText} title="Notes" count={notesItems.length} seeAllTo="/watch-history">
+          {notesItems.map((item, idx) => (
+            <WatchHistoryCard key={item.contentId || idx} item={item} index={idx} />
+          ))}
+        </ScrollRow>
+      )}
+
+      {/* ── QUIZ (recent attempts, one card per quiz — latest attempt shown) ── */}
+      {recentQuizzes.length > 0 && (
+        <ScrollRow icon={Brain} title="Quiz" count={recentQuizzes.length}>
+          {recentQuizzes.map((entry, idx) => (
+            <QuizHistoryCard key={`${entry.subject}::${entry.quizName}`} entry={entry} index={idx} />
+          ))}
+        </ScrollRow>
       )}
 
       {/* Inline styles for custom wave animation and shimmer keyframes */}
@@ -323,6 +410,8 @@ export default function Home() {
           animation: wave 2.5s infinite;
           transform-origin: 70% 70%;
         }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
     </div>
   )
