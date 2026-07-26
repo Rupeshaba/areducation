@@ -6,6 +6,8 @@
 // disagree with each other.
 // ─────────────────────────────────────────────────────────────────────────
 
+import api from '../api/axios'
+
 const STORAGE_KEY = 'ar_completed_content_ids'
 const MIGRATION_FLAG = 'ar_completed_migrated_v2'
 const LOG_KEY = 'ar_completion_log'
@@ -88,7 +90,7 @@ function removeFromLog(contentId) {
   }
 }
 
-export function markContentCompleted(contentId) {
+export function markContentCompleted(contentId, meta = {}) {
   if (!contentId) return
   const ids = getCompletedIdsSet()
   if (ids.has(contentId)) return
@@ -96,9 +98,18 @@ export function markContentCompleted(contentId) {
   writeRaw([...ids])
   appendLog(contentId)
   window.dispatchEvent(new CustomEvent('ar-completion-changed'))
+
+  // Local state above is instant and always the source of truth for this
+  // device's UI. This is a best-effort mirror to the account so the same
+  // completion shows up when the user opens another (synced) device —
+  // failures here are silently ignored, never block the local UX.
+  api.post(`/user/progress/${contentId}/complete`, {
+    subjectId: meta.subjectId,
+    courseId: meta.courseId,
+  }).catch(() => {})
 }
 
-export function unmarkContentCompleted(contentId) {
+export function unmarkContentCompleted(contentId, meta = {}) {
   if (!contentId) return
   const ids = getCompletedIdsSet()
   if (!ids.has(contentId)) return
@@ -106,6 +117,33 @@ export function unmarkContentCompleted(contentId) {
   writeRaw([...ids])
   removeFromLog(contentId)
   window.dispatchEvent(new CustomEvent('ar-completion-changed'))
+
+  api.post(`/user/content/${contentId}/progress`, {
+    completed: false,
+    subjectId: meta.subjectId,
+    courseId: meta.courseId,
+  }).catch(() => {})
+}
+
+/**
+ * Merge content ids the backend already has marked "completed" for this
+ * account (e.g. done on a different device) into the local set. Used
+ * wherever a page already fetches backend progress for a subject/course.
+ */
+export function mergeCompletedIds(ids = []) {
+  if (!ids.length) return
+  const current = getCompletedIdsSet()
+  let changed = false
+  ids.forEach((id) => {
+    if (!current.has(id)) {
+      current.add(id)
+      changed = true
+    }
+  })
+  if (changed) {
+    writeRaw([...current])
+    window.dispatchEvent(new CustomEvent('ar-completion-changed'))
+  }
 }
 
 /**
