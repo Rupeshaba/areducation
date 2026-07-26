@@ -22,7 +22,7 @@ return (
 className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite]"
 style={{
 background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent)',
-}}
+}}}
 />
 </div>
 )
