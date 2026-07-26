@@ -12,7 +12,7 @@ import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
 import { useCoursesProgress } from '../../hooks/useCoursesProgress'
 import CardThumbnail from '../../components/CardThumbnail'
-import { DEFAULT_THUMBNAILS } from '../../constants/branding'
+import { DEFAULT_THUMBNAILS, APP_LOGO_URL } from '../../constants/branding'
 import { getRecentQuizzes } from '../../utils/quizCache'
 
 /* ═══ MODERN PULSE SHIMMER ═══ */
@@ -125,6 +125,16 @@ const iconMap = {
   MessageSquare,
 }
 
+/* ═══ LOGO FALLBACK (shown when a card has no real thumbnail) ═══ */
+function LogoFallback({ className = '' }) {
+  return (
+    <div className={`absolute inset-0 flex items-center justify-center ${className}`}
+      style={{ background: 'linear-gradient(135deg, #10142A 0%, #151932 100%)' }}>
+      <img src={APP_LOGO_URL} alt="" className="w-1/2 h-1/2 object-contain opacity-40" />
+    </div>
+  )
+}
+
 /* ═══ WATCH HISTORY CARD ═══ */
 function WatchHistoryCard({ item, index }) {
   const itemUrl = item.courseId && item.subjectId && item.contentId
@@ -151,12 +161,7 @@ function WatchHistoryCard({ item, index }) {
           <CardThumbnail
             item={item}
             alt={item.title}
-            fallback={
-              <div className="absolute inset-0 flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #10142A 0%, #151932 100%)' }}>
-                <Play size={24} className="text-primary-400" />
-              </div>
-            }
+            fallback={<LogoFallback />}
           />
           
           {/* Text overlay at bottom */}
@@ -230,6 +235,9 @@ function QuizHistoryCard({ entry, index }) {
             border: '1px solid rgba(139, 92, 246, 0.25)',
           }}
         >
+          {/* Logo watermark — quizzes have no real thumbnail */}
+          <img src={APP_LOGO_URL} alt="" className="absolute inset-0 m-auto w-1/2 h-1/2 object-contain opacity-[0.08] pointer-events-none" />
+
           <div className="flex items-center justify-between">
             <div className="w-8 h-8 rounded-lg bg-violet-500/20 border border-violet-500/30 flex items-center justify-center">
               <Brain size={15} className="text-violet-300" />
