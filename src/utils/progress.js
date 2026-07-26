@@ -8,6 +8,8 @@
 
 const STORAGE_KEY = 'ar_completed_content_ids'
 const MIGRATION_FLAG = 'ar_completed_migrated_v2'
+const LOG_KEY = 'ar_completion_log'
+const MAX_LOG_ENTRIES = 500
 
 function readRaw() {
   try {
@@ -57,12 +59,42 @@ export function isContentCompleted(contentId) {
   return getCompletedIdsSet().has(contentId)
 }
 
+function readLog() {
+  try {
+    const raw = localStorage.getItem(LOG_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function appendLog(contentId) {
+  try {
+    const log = readLog()
+    log.push({ id: contentId, ts: Date.now() })
+    localStorage.setItem(LOG_KEY, JSON.stringify(log.slice(-MAX_LOG_ENTRIES)))
+  } catch {
+    /* ignore */
+  }
+}
+
+function removeFromLog(contentId) {
+  try {
+    const log = readLog().filter((e) => e.id !== contentId)
+    localStorage.setItem(LOG_KEY, JSON.stringify(log))
+  } catch {
+    /* ignore */
+  }
+}
+
 export function markContentCompleted(contentId) {
   if (!contentId) return
   const ids = getCompletedIdsSet()
   if (ids.has(contentId)) return
   ids.add(contentId)
   writeRaw([...ids])
+  appendLog(contentId)
   window.dispatchEvent(new CustomEvent('ar-completion-changed'))
 }
 
@@ -72,7 +104,31 @@ export function unmarkContentCompleted(contentId) {
   if (!ids.has(contentId)) return
   ids.delete(contentId)
   writeRaw([...ids])
+  removeFromLog(contentId)
   window.dispatchEvent(new CustomEvent('ar-completion-changed'))
+}
+
+/**
+ * Last 7 days of content-completion activity (including today), oldest
+ * first — used by the Progress page's weekly activity bar chart. Days
+ * with no completions still appear with count 0 so the chart always
+ * shows a full week.
+ */
+export function getWeeklyActivity() {
+  const log = readLog()
+  const days = []
+  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    d.setHours(0, 0, 0, 0)
+    const start = d.getTime()
+    const end = start + 24 * 60 * 60 * 1000
+    const count = log.filter((e) => e.ts >= start && e.ts < end).length
+    days.push({ label: dayLabels[d.getDay()], count })
+  }
+  return days
 }
 
 export function toggleContentCompleted(contentId) {
