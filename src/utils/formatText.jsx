@@ -20,8 +20,19 @@
 // One combined regex covering every inline token type. Order inside the
 // alternation matters — more specific patterns are tried first so they don't
 // get swallowed by a looser one (e.g. blank runs before underline).
-const INLINE_REGEX =
-  /(_{4,})|(\*\*[^*]+\*\*)|(__[^_]+__)|(\\sqrt\[[^\]]+\]\{[^}]+\})|(\\sqrt\{[^}]+\})|(\\frac\{[^}]+\}\{[^}]+\})|(\^\{[^}]+\})|(\^\S)|(_\{[^}]+\})|(_\d)/g
+//
+// IMPORTANT: this must be created FRESH on every parseInline() call (see
+// below) rather than shared as a single module-level "g" regex. A global
+// regex keeps its scan position (lastIndex) on the object itself, and
+// parseInline() calls itself recursively (for bold/underline content,
+// fraction numerator/denominator, sqrt content, etc.). A shared regex's
+// lastIndex would get reset by the inner recursive call, corrupting the
+// outer loop's position and causing it to loop forever on the same match —
+// freezing the page. A fresh regex per call keeps each call's scan state
+// independent.
+function createInlineRegex() {
+  return /(_{4,})|(\*\*[^*]+\*\*)|(__[^_]+__)|(\\sqrt\[[^\]]+\]\{[^}]+\})|(\\sqrt\{[^}]+\})|(\\frac\{[^}]+\}\{[^}]+\})|(\^\{[^}]+\})|(\^\S)|(_\{[^}]+\})|(_\d)/g
+}
 
 let keySeed = 0
 function nextKey() {
@@ -36,8 +47,8 @@ function parseInline(text) {
   let lastIndex = 0
   let match
 
-  INLINE_REGEX.lastIndex = 0
-  while ((match = INLINE_REGEX.exec(text)) !== null) {
+  const regex = createInlineRegex()
+  while ((match = regex.exec(text)) !== null) {
     if (match.index > lastIndex) {
       nodes.push(text.slice(lastIndex, match.index))
     }
