@@ -7,7 +7,7 @@ import {
   Clock, Trophy, Zap, CheckCircle
 } from 'lucide-react'
 import api from '../../api/axios'
-import { getCompletedIdsSet, markContentCompleted, unmarkContentCompleted, isContentCompleted } from '../../utils/progress'
+import { getCompletedIdsSet, markContentCompleted, unmarkContentCompleted, isContentCompleted, mergeCompletedIds } from '../../utils/progress'
 import CardThumbnail from '../../components/CardThumbnail'
 
 /* ═══ HELPERS ═══ */
@@ -121,9 +121,9 @@ const ContentCard = function ContentCard({ content, courseId, subjectId, chapter
 
   const handleMarkCompleted = () => {
     if (isCompleted) {
-      unmarkContentCompleted(content.id)
+      unmarkContentCompleted(content.id, { subjectId, courseId })
     } else {
-      markContentCompleted(content.id)
+      markContentCompleted(content.id, { subjectId, courseId })
     }
     onMarkCompleted?.(content.id)
     setShowContextMenu(false)
@@ -328,6 +328,21 @@ export default function SubjectDetail() {
     gcTime: 24 * 60 * 60 * 1000,
     retry: 2,
   })
+
+  // Pull this subject's completion state from the account (synced from any
+  // device) and merge it into the local completed-ids cache, so switching
+  // devices doesn't make already-finished content look incomplete here.
+  const { data: backendProgressData } = useQuery({
+    queryKey: ['subject-progress-backend', subjectId],
+    queryFn: () => api.get('/user/progress', { params: { subjectId } }).then(r => r.data),
+    enabled: !!subjectId,
+    staleTime: 60 * 1000,
+  })
+
+  useEffect(() => {
+    const ids = backendProgressData?.progress?.completedContentIds
+    if (ids?.length) mergeCompletedIds(ids)
+  }, [backendProgressData])
 
   const subject     = data?.subject ?? null
   const chapters    = subject?.chapters ?? []
