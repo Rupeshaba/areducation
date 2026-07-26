@@ -6,7 +6,7 @@
 // disagree with each other.
 // ─────────────────────────────────────────────────────────────────────────
 
-import api from '../api/axios'
+import api from '../../api/axios'
 
 const STORAGE_KEY = 'ar_completed_content_ids'
 const MIGRATION_FLAG = 'ar_completed_migrated_v2'
