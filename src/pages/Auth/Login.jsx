@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
+import { Eye, EyeOff, Lock, Mail, QrCode } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
@@ -120,6 +120,13 @@ export default function Login() {
               ) : 'Sign In'}
             </button>
           </form>
+
+          <Link
+            to="/sync-login"
+            className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-400 hover:text-primary-300 border border-white/8 hover:border-primary-500/30 rounded-xl py-2.5 transition-colors"
+          >
+            <QrCode size={15} /> Sync from another device
+          </Link>
 
           <p className="text-center text-gray-500 text-sm mt-5">
             Don't have an account?{' '}
