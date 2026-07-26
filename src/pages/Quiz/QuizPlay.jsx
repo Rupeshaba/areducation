@@ -9,6 +9,7 @@ import {
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import formatText from '../../utils/formatText'
+import { saveAttempt } from '../../utils/quizCache'
 
 /* ═══ SWIPE HOOK (mobile: swipe left = next, swipe right = prev) ═══ */
 function useSwipeQuestion(onNext, onPrev, disabled) {
@@ -48,6 +49,23 @@ export default function QuizPlay() {
   const timerRef = useRef(null)
   const fullscreenLocked = useRef(false)
 
+  // ── Per-question time tracking ──
+  // questionTimeRef accumulates seconds spent on each question index (a
+  // question can be revisited multiple times, so time keeps adding up).
+  // enterElapsedRef remembers the global `elapsed` value at the moment the
+  // currently-open question was entered, so we can compute the delta
+  // whenever the user navigates away from it (or submits).
+  const questionTimeRef = useRef({})
+  const enterElapsedRef = useRef(0)
+
+  const commitQuestionTime = (atElapsed) => {
+    const delta = atElapsed - enterElapsedRef.current
+    if (delta > 0) {
+      questionTimeRef.current[current] = (questionTimeRef.current[current] || 0) + delta
+    }
+    enterElapsedRef.current = atElapsed
+  }
+
   const { data, isLoading } = useQuery({
     queryKey: ['quiz-questions', subject, name],
     queryFn: () => api.get(`/quiz/${subject}/${encodeURIComponent(name)}/questions`).then(r => r.data),
@@ -57,6 +75,7 @@ export default function QuizPlay() {
     mutationFn: () => api.post(`/quiz/${subject}/${encodeURIComponent(name)}/submit`, {
       answers,
       timeTaken: finalTime || elapsed,
+      questionTimes: questionTimeRef.current,
     }).then(r => r.data),
     onSuccess: (data) => {
       fullscreenLocked.current = false
@@ -64,27 +83,51 @@ export default function QuizPlay() {
         document.exitFullscreen().catch(() => {})
       }
       toast.success(`Score: ${data.score}%`)
-      // Save to recent attempts in localStorage
+
+      const decodedName = decodeURIComponent(name)
+      const questionTimes = questionTimeRef.current
+
+      // The backend may or may not echo per-question timing back — make
+      // sure the per-question breakdown always carries the time we
+      // measured client-side, so analysis screens have it either way.
+      const results = Array.isArray(data.results)
+        ? data.results.map((r, i) => ({ ...r, timeTaken: r.timeTaken ?? questionTimes[i] ?? 0 }))
+        : data.results
+
+      const enriched = {
+        ...data,
+        results,
+        subject,
+        quizName: decodedName,
+        questionTimes,
+        completedAt: Date.now(),
+      }
+
+      // Cache the full attempt so Home's recent activity, the result page's
+      // attempt dropdown/progress graph, and analysis all have it later —
+      // without needing a "list attempts" endpoint from the backend.
       try {
-        const recent = JSON.parse(localStorage.getItem('ar_recent_attempts') || '[]')
-        const entry = {
-          quizName: decodeURIComponent(name),
-          subject,
+        saveAttempt(subject, decodedName, {
+          attemptId: data.attemptId,
           score: data.score,
           correct: data.correct,
+          wrong: data.wrong,
+          skipped: data.skipped,
           total: data.total,
           points: data.points,
-          completedAt: Date.now(),
-        }
-        const updated = [entry, ...recent.filter(a => !(a.quizName === entry.quizName && a.subject === subject))].slice(0, 20)
-        localStorage.setItem('ar_recent_attempts', JSON.stringify(updated))
+          timeTaken: finalTime || elapsed,
+          questionTimes,
+          results,
+          completedAt: enriched.completedAt,
+        })
       } catch {}
+
       // replace: true — so the finished quiz-play screen isn't left sitting
       // in the browser history. Without it, pressing the phone's back button
       // from the result page would land back on QuizPlay instead of going
       // to wherever the user came from (the quiz list).
       navigate(`/quiz/result/${data.attemptId}`, {
-        state: { result: { ...data, subject, quizName: decodeURIComponent(name) } },
+        state: { result: enriched },
         replace: true,
       })
     },
@@ -199,7 +242,8 @@ export default function QuizPlay() {
   }
 
   const goToQuestion = (i) => {
-    if (i >= 0 && i < questions.length) {
+    if (i >= 0 && i < questions.length && i !== current) {
+      commitQuestionTime(elapsed)
       setVisited(v => new Set([...v, i]))
       setCurrent(i)
       setShowPalette(false)
@@ -223,6 +267,7 @@ export default function QuizPlay() {
 
   // STOP TIMER when submit is clicked
   const handleSubmitClick = () => {
+    commitQuestionTime(elapsed)
     setTimerStopped(true)
     clearInterval(timerRef.current)
     setFinalTime(elapsed) // Save final time
