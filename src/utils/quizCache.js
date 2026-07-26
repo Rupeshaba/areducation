@@ -96,6 +96,33 @@ export function getRecentQuizzes(limit = 10) {
     .slice(0, limit)
 }
 
+/**
+ * Flattens every attempt across every quiz into one list, most recent
+ * first — used by the Progress page for "recent attempts", quiz average,
+ * best score, and the score-trend graph, so it stays in sync with
+ * whatever Home/QuizResult already cache here (no separate storage key
+ * to keep in sync).
+ */
+export function getAllRecentAttempts(limit = 20) {
+  const store = readStore()
+  const all = []
+  Object.values(store).forEach((entry) => {
+    entry.attempts.forEach((a) => {
+      all.push({
+        attemptId: a.attemptId,
+        subject: entry.subject,
+        quizName: entry.quizName,
+        score: Math.round(a.score),
+        correct: a.correct,
+        total: a.total,
+        points: a.points || 0,
+        completedAt: a.completedAt,
+      })
+    })
+  })
+  return all.sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)).slice(0, limit)
+}
+
 /** Find a cached attempt by its attemptId, wherever it lives. */
 export function findAttemptById(attemptId) {
   if (!attemptId) return null
