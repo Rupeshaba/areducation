@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { QrCode, X, ScanLine, KeyRound, CheckCircle2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
+import { exportLocalState } from '../../utils/localBackup'
 
 export default function DeviceSyncSection() {
   const [open, setOpen] = useState(false)
@@ -15,8 +16,8 @@ export default function DeviceSyncSection() {
   const approve = async (body) => {
     setConnecting(true)
     try {
-      await api.post('/sync/approve', body)
-      toast.success('Device connected! It will sign in automatically.')
+      await api.post('/sync/approve', { ...body, localData: exportLocalState() })
+      toast.success('Device connected — its cache & progress will sync over too.')
       setOpen(false)
       setManualCode('')
     } catch (err) {
