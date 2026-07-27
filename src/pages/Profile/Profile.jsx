@@ -160,12 +160,12 @@ export default function Profile() {
           {/* Header Part */}
           <div className="flex flex-col items-center text-center">
             <div className="relative mb-3">
-              {/* Golden Sparkle Ring */}
+              {/* Golden Sparkle Ring - Black background removed using mix-blend-mode */}
               <div className="absolute -inset-2 w-[120px] h-[120px] -ml-[4px] -mt-[4px] z-0 pointer-events-none">
                 <img 
                   src={dpRingUrl} 
                   alt="Ring" 
-                  className="w-full h-full object-contain animate-pulse" 
+                  className="w-full h-full object-contain mix-blend-screen animate-pulse" 
                   style={{ animationDuration: '3s' }}
                 />
               </div>
@@ -375,46 +375,6 @@ export default function Profile() {
         <DeviceSyncSection />
       </motion.div>
 
-      {/* ── Bottom Action Grid ── */}
-      <motion.div 
-        initial={{ opacity: 0, y: 16 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        transition={{ delay: 0.2, duration: 0.4 }}
-        className="grid grid-cols-3 gap-3"
-      >
-        {[
-          { icon: Lock, label: 'Change Password', color: 'text-primary-400' },
-          { icon: Shield, label: 'Security', color: 'text-mint-400' },
-          { icon: CreditCard, label: 'Payment History', color: 'text-amber-400' },
-        ].map((item, idx) => (
-          <button key={idx} className="flex flex-col items-center justify-center gap-1.5 bg-[#0E101A] border border-white/[0.06] rounded-2xl py-3 hover:bg-white/[0.05] transition-colors group">
-            <div className={`w-8 h-8 rounded-xl bg-white/[0.05] flex items-center justify-center group-hover:scale-110 transition-transform ${item.color}`}>
-              <item.icon size={16} />
-            </div>
-            <span className="text-[9px] font-medium text-white/70 text-center">{item.label}</span>
-          </button>
-        ))}
-      </motion.div>
-      
-      {/* 2nd Row of Actions */}
-      <motion.div 
-        initial={{ opacity: 0, y: 16 }} 
-        animate={{ opacity: 1, y: 0 }} 
-        transition={{ delay: 0.25, duration: 0.4 }}
-        className="grid grid-cols-2 gap-3"
-      >
-        {[
-          { icon: Headphones, label: 'Help & Support', color: 'text-primary-300' },
-          { icon: LogOut, label: 'Logout', color: 'text-red-400', action: () => toast('Logout clicked') },
-        ].map((item, idx) => (
-          <button key={idx} className="flex items-center justify-center gap-2 bg-[#0E101A] border border-white/[0.06] rounded-2xl py-3 hover:bg-white/[0.05] transition-colors group">
-            <div className={`w-8 h-8 rounded-xl bg-white/[0.05] flex items-center justify-center group-hover:scale-110 transition-transform ${item.color}`}>
-              <item.icon size={16} />
-            </div>
-            <span className="text-[10px] font-medium text-white/70">{item.label}</span>
-          </button>
-        ))}
-      </motion.div>
     </div>
   )
 }
