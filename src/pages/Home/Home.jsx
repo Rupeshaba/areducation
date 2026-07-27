@@ -447,11 +447,6 @@ export default function Home() {
 
   return (
     <div className="space-y-7 max-w-2xl mx-auto pb-10">
-      {/* ── TEMP DEBUG MARKER — remove once deploy is confirmed working ── */}
-      <div className="rounded-xl bg-red-600 text-white text-center text-xs font-black py-2 tracking-wider">
-        DEBUG BUILD v2 — {new Date().toLocaleString()}
-      </div>
-
       <WelcomeHero
         user={user}
         isLoading={isLoading}
