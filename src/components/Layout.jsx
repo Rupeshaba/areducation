@@ -9,6 +9,7 @@ import {
 import useAuthStore from '../store/authStore'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '../api/axios'
+import { getDeviceId } from '../utils/deviceId'
 import { io } from 'socket.io-client'
 import toast from 'react-hot-toast'
 import { APP_LOGO_URL } from '../constants/branding'
@@ -181,7 +182,7 @@ export default function Layout() {
     })
     socketRef.current = socket
 
-    socket.on('connect', () => socket.emit('join', { userId: user.uid }))
+    socket.on('connect', () => socket.emit('join', { userId: user.uid, deviceId: getDeviceId() }))
 
     socket.on('notification', (notif) => {
       if (notif.richContent || notif.imageUrl || notif.linkUrl) {
