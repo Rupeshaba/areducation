@@ -19,10 +19,22 @@ export default function DeviceSyncSection() {
     try {
       await api.post('/sync/approve', { ...body, localData: exportLocalState() })
       toast.success('Device connected successfully!')
-      // Close modal on success
-      setOpen(false)
-      setScanning(false)
-      setManualCode('')
+      
+      // CRITICAL FIX: Stop scanner first, then close UI to prevent blank screen hang
+      if (scannerRef.current) {
+        try {
+          await scannerRef.current.stop()
+          await scannerRef.current.clear()
+        } catch (e) {}
+      }
+      
+      // Use timeout to ensure all camera resources are fully released before unmounting UI
+      setTimeout(() => {
+        setOpen(false)
+        setScanning(false)
+        setManualCode('')
+      }, 200)
+      
     } catch (err) {
       toast.error(err.response?.data?.error || 'Could not connect that device')
     } finally {
@@ -39,7 +51,6 @@ export default function DeviceSyncSection() {
     if (!open || !scanning) return
     let cancelled = false
 
-    // Force a small delay to ensure DOM element exists before starting camera
     const timeoutId = setTimeout(() => {
       if (cancelled) return
 
@@ -56,8 +67,11 @@ export default function DeviceSyncSection() {
             (decodedText) => {
               const sessionId = parseScanned(decodedText)
               if (!sessionId) return
-              instance.stop().catch(() => {})
-              setScanning(false)
+              
+              // Don't call setScanning(false) here immediately, let approve handle cleanup
+              if (scannerRef.current) {
+                scannerRef.current.stop().catch(() => {})
+              }
               approve({ sessionId })
             },
             () => {}
@@ -67,7 +81,7 @@ export default function DeviceSyncSection() {
             setScanning(false)
           })
       })
-    }, 400) // Increased timeout to ensure UI renders
+    }, 400)
 
     return () => {
       clearTimeout(timeoutId)
@@ -108,7 +122,13 @@ export default function DeviceSyncSection() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[60] bg-[#05060A] h-screen w-screen overflow-hidden flex flex-col"
-            onClick={() => { setOpen(false); setScanning(false); setManualCode('') }}
+            onClick={() => { 
+              if (!connecting) {
+                setOpen(false); 
+                setScanning(false); 
+                setManualCode('') 
+              }
+            }}
           >
             <motion.div
               initial={{ opacity: 0 }}
@@ -119,8 +139,15 @@ export default function DeviceSyncSection() {
             >
               {/* Close Button */}
               <button
-                onClick={() => { setOpen(false); setScanning(false); setManualCode('') }}
-                className="absolute top-6 right-6 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-20"
+                disabled={connecting}
+                onClick={() => { 
+                  if(!connecting) {
+                    setOpen(false); 
+                    setScanning(false); 
+                    setManualCode('') 
+                  }
+                }}
+                className="absolute top-6 right-6 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-20 disabled:opacity-50"
               >
                 <X size={24} className="text-white/80" />
               </button>
@@ -152,7 +179,6 @@ export default function DeviceSyncSection() {
                   </motion.button>
                 ) : (
                   <div className="w-full h-[320px] relative rounded-3xl overflow-hidden bg-black border border-white/[0.08]">
-                    {/* Added key to force remounting when scanning starts to prevent blank render */}
                     <div key={scanBoxId} id={scanBoxId} className="w-full h-full bg-black" />
                     
                     {/* Scanner UI Overlay */}
@@ -209,7 +235,7 @@ export default function DeviceSyncSection() {
                         data-index={i}
                         className="w-10 h-12 bg-[#0E101A] border border-white/[0.08] rounded-xl text-center text-sm font-semibold text-white focus:outline-none focus:border-primary-400 focus:ring-1 focus:ring-primary-400/50 transition-all"
                         inputMode="numeric"
-                        autoFocus={i === 0}
+                        // FIX: Removed autoFocus to prevent keyboard popup on reload
                       />
                     ))}
                   </div>
