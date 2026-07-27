@@ -34,11 +34,20 @@ export default function PushNotificationSection() {
     if (res.ok) {
       setSubscribed(true)
       toast.success('Push notifications on ho gayi')
-    } else if (res.reason === 'denied') {
-      toast.error('Permission block hai — browser settings me site notifications allow karein')
-    } else {
-      toast.error('Push enable nahi ho payi, dobara try karein')
+      return
     }
+
+    console.error('[Push] Enable failed — full result:', res)
+
+    const messages = {
+      denied: 'Permission block hai — browser settings me site notifications allow karein',
+      'no-vapid-key': 'Server config missing hai (VAPID key) — developer se contact karein',
+      'sw-failed': 'Service worker load nahi hui — page reload karke dobara try karein',
+      'subscribe-failed': 'Browser subscription fail hui — VAPID key backend/frontend me match nahi kar rahi',
+      'save-failed': `Server ne subscription save nahi ki${res.status ? ` (status ${res.status})` : ''} — backend deploy check karein`,
+      unsupported: 'Yeh browser/connection push support nahi karta (HTTPS zaroori hai)',
+    }
+    toast.error(messages[res.reason] || 'Push enable nahi ho payi, console check karein (F12)')
   }
 
   const handleDisable = async () => {
