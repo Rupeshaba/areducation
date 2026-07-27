@@ -170,22 +170,39 @@ export default function Layout() {
 
   const logoUrl = appConfig?.logoUrl || APP_LOGO_URL
 
-  // ── Push notifications: ek baar silently subscribe try karo ─────────────
-  // Sirf tab poochhta hai jab pehle kabhi decide nahi kiya (permission === 'default').
-  // 'denied' ho to dobara nahi poochhta (browser khud bhi ignore karega) —
-  // us case me Profile page se manually settings me jaake enable karna hoga.
+  // ── Push notifications: jab tak user decide na kare, har refresh pe poochho ──
+  // permission === 'default' → abhi tak koi decision nahi liya → phir se poochho
+  // permission === 'granted' → chup-chaap (re)subscribe confirm kar do, popup nahi aayega
+  // permission === 'denied'  → browser khud block karega, hum dobara nahi poochh sakte
+  //                            (user ko browser/site settings se manually allow karna hoga)
   useEffect(() => {
-    if (!user?.uid || !isPushSupported()) return
-    const askedKey = `ar-edu-push-asked-${user.uid}`
-    if (getPushPermissionState() !== 'default') return
-    if (localStorage.getItem(askedKey)) return
+    if (!user?.uid) return
+
+    if (!isPushSupported()) {
+      // Sabse common wajah: HTTP par khula hai (push sirf HTTPS ya localhost par kaam karta hai)
+      console.warn(
+        '[Push] Not supported in this context. Reasons could be: not HTTPS, browser too old, or in an iframe/in-app webview.',
+        { protocol: window.location.protocol, hasSW: 'serviceWorker' in navigator, hasPush: 'PushManager' in window }
+      )
+      return
+    }
+
+    const currentPermission = getPushPermissionState()
+
+    if (currentPermission === 'denied') {
+      console.warn('[Push] Permission denied by user/browser — cannot re-prompt. Enable manually from browser site settings.')
+      return
+    }
 
     const timer = setTimeout(() => {
-      localStorage.setItem(askedKey, '1')
       subscribeToPush(api, getDeviceId()).then((res) => {
-        if (res.ok) toast.success('Push notifications enabled')
+        if (res.ok) {
+          if (currentPermission === 'default') toast.success('Push notifications enabled')
+        } else {
+          console.warn('[Push] subscribeToPush failed:', res.reason)
+        }
       })
-    }, 2500)
+    }, currentPermission === 'granted' ? 500 : 2000)
 
     return () => clearTimeout(timer)
   }, [user?.uid])
