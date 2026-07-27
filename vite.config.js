@@ -9,15 +9,15 @@ export default defineConfig({
     allowedHosts: ['.vercel.run'],
     proxy: {
       '/api': {
-        target: 'https://areducation-backend.onrender.com',
+        target: 'https://areducation-backend-66jq.onrender.com',
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'https://areducation-backend.onrender.com',
+        target: 'https://areducation-backend-66jq.onrender.com',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'https://areducation-backend.onrender.com',
+        target: 'https://areducation-backend-66jq.onrender.com',
         changeOrigin: true,
         ws: true,
       },
