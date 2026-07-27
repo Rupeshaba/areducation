@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Camera, Pencil, CheckCircle, Calendar, Target, Flame, 
-  Shield, User, Mail, Phone, Settings, X, ChevronRight,
+  Shield, User, Mail, Phone, X, ChevronRight,
   MapPin, CalendarDays
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -136,25 +136,9 @@ export default function Profile() {
   const examOptions = ["UPSC", "SSC", "State PCS", "Railway", "Banking", "Other"]
 
   return (
-    <div className="min-h-screen bg-[#05060A] relative pb-28">
-      {/* Background Glows */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-primary-500/10 rounded-full blur-[120px]" />
-        <div className="absolute -bottom-20 -left-40 w-[500px] h-[500px] bg-mint-500/5 rounded-full blur-[100px]" />
-      </div>
-
-      {/* Top App Bar */}
-      <div className="sticky top-0 z-30 bg-[#05060A]/80 backdrop-blur-xl border-b border-white/[0.05] px-4 py-4 flex items-center justify-between">
-        <div className="w-10 h-10 rounded-full bg-white/[0.05] flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer">
-          <ChevronRight size={20} className="text-white/50 rotate-180" />
-        </div>
-        <h1 className="text-[17px] font-bold text-white tracking-tight">Profile</h1>
-        <div className="w-10 h-10 rounded-full bg-white/[0.05] flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer">
-          <Settings size={18} className="text-white/50" />
-        </div>
-      </div>
-
-      <div className="px-4 space-y-6 pt-4">
+    <div className="min-h-screen bg-transparent relative pb-28 px-4 pt-6">
+      <div className="max-w-xl mx-auto space-y-6">
+        
         {/* ── Profile Hero ── */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }} 
