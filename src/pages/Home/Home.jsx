@@ -1,54 +1,68 @@
 import { useQuery } from '@tanstack/react-query'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  BookOpen, Trophy, TrendingUp, Flame, Play, CheckCircle,
-  ArrowRight, Clock, Sparkles, ChevronRight, GraduationCap,
-  Compass, Zap, MessageSquare, ShoppingBag, User, Bell, Book, History,
-  FileText, Brain, RotateCcw
+  BookOpen, Trophy, TrendingUp, Flame, Play, ArrowRight,
+  Sparkles, GraduationCap, MessageSquare, ShoppingBag, Book, History,
+  FileText, Brain, RotateCcw, Zap, ChevronRight,
 } from 'lucide-react'
 import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
 import { useCoursesProgress } from '../../hooks/useCoursesProgress'
 import CardThumbnail from '../../components/CardThumbnail'
-import LogoFallback from '../../components/LogoFallback'
-import HomeSlider from '../../components/HomeSlider'
 import { DEFAULT_THUMBNAILS, APP_LOGO_URL } from '../../constants/branding'
 import { getRecentQuizzes } from '../../utils/quizCache'
 
-/* ═══ MODERN PULSE SHIMMER ═══ */
+/* ═══════════════════════════════════════════════════════════════════════
+   AR Education — Home
+   Redesigned around the app's "Indigo Aurora" system: indigo primary with
+   mint + amber accents over a deep, softly-lit dark canvas.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Shimmer placeholder ─────────────────────────────────────────────── */
 function Shimmer({ className = '' }) {
   return (
-    <div
-      className={`rounded-2xl relative overflow-hidden bg-white/[0.03] ${className}`}
-    >
-      <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite]"
-        style={{
-          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent)',
-        }}
+    <div className={`rounded-2xl relative overflow-hidden bg-white/[0.04] ${className}`}>
+      <div
+        className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite]"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)' }}
       />
     </div>
   )
 }
 
-/* ═══ MOMENTUM STRIP — streak / today's points / progress, at a glance ═══ */
+/* ── Brand logo fallback (for thumbnails that fail to load) ──────────── */
+function LogoFallback() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-dark-700">
+      <img src={APP_LOGO_URL} alt="" className="w-1/3 h-1/3 object-contain opacity-25 grayscale" />
+    </div>
+  )
+}
+
+/* ── Momentum stat chip ──────────────────────────────────────────────── */
 function StatChip({ icon: Icon, value, label, color }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-xl flex-1 min-w-0"
-      style={{ background: `${color}12`, border: `1px solid ${color}25` }}>
-      <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${color}20` }}>
-        <Icon size={13} style={{ color }} />
+    <div
+      className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl flex-1 min-w-0"
+      style={{ background: `${color}14`, border: `1px solid ${color}2e` }}
+    >
+      <div
+        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ background: `${color}26` }}
+      >
+        <Icon size={15} style={{ color }} />
       </div>
       <div className="min-w-0">
-        <div className="text-sm font-black text-white leading-none truncate">{value}</div>
-        <div className="text-[9px] font-semibold uppercase tracking-wider text-white/40 mt-0.5 truncate">{label}</div>
+        <div className="text-base font-black text-white leading-none truncate">{value}</div>
+        <div className="text-[9px] font-semibold uppercase tracking-wider text-white/45 mt-1 truncate">{label}</div>
       </div>
     </div>
   )
 }
 
-/* ═══ ENHANCED WELCOME HERO ═══ */
+/* ── Welcome hero ────────────────────────────────────────────────────── */
 function WelcomeHero({ user, isLoading, streak, todayPoints, progressPercent }) {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
@@ -57,9 +71,13 @@ function WelcomeHero({ user, isLoading, streak, todayPoints, progressPercent }) 
   if (isLoading) {
     return (
       <div className="space-y-3 pt-2">
-        <Shimmer className="h-4 w-28" />
-        <Shimmer className="h-10 w-64" />
-        <Shimmer className="h-12 w-full" />
+        <Shimmer className="h-4 w-32" />
+        <Shimmer className="h-9 w-56" />
+        <div className="flex gap-2">
+          <Shimmer className="h-14 flex-1" />
+          <Shimmer className="h-14 flex-1" />
+          <Shimmer className="h-14 flex-1" />
+        </div>
       </div>
     )
   }
@@ -71,36 +89,84 @@ function WelcomeHero({ user, isLoading, streak, todayPoints, progressPercent }) 
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
       className="relative pt-2"
     >
-      {/* Subtle colorful background radial wash */}
-      <div className="absolute -top-10 -left-10 w-72 h-72 bg-primary-500/10 rounded-full blur-[80px] pointer-events-none" />
-      <div className="absolute top-0 right-10 w-48 h-48 bg-indigo-500/10 rounded-full blur-[60px] pointer-events-none" />
+      {/* soft aurora wash */}
+      <div className="absolute -top-12 -left-10 w-72 h-72 bg-primary-500/15 rounded-full blur-[90px] pointer-events-none" />
+      <div className="absolute -top-6 right-0 w-52 h-52 bg-mint-500/10 rounded-full blur-[70px] pointer-events-none" />
 
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-white/[0.04] text-white/50 border border-white/[0.05] flex items-center gap-1.5">
+      <div className="relative">
+        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-white/[0.05] text-white/55 border border-white/[0.06]">
           <Sparkles size={10} className="text-primary-400" />
           {greeting}
         </span>
-      </div>
-      
-      <h1 className="text-3xl sm:text-4xl font-black text-white leading-tight tracking-tight mb-3">
-        Hey, <span style={{
-          background: 'linear-gradient(135deg, #FF9270 0%, #FF6B4A 50%, #FF85A2 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-        }}>{firstName}</span> <span className="inline-block origin-[70%_70%] animate-wave">👋</span>
-      </h1>
 
-      {/* Momentum strip — the day's numbers, always visible, never buried in a sub-page */}
-      <div className="flex gap-2">
-        <StatChip icon={Flame} value={streak} label="Day streak" color="#FB923C" />
-        <StatChip icon={Trophy} value={todayPoints} label="Points today" color="#FBBF24" />
-        <StatChip icon={TrendingUp} value={`${progressPercent}%`} label="Course progress" color="#10B981" />
+        <h1 className="text-3xl sm:text-4xl font-black text-white leading-tight tracking-tight mt-2.5 mb-4">
+          Hey,{' '}
+          <span
+            style={{
+              background: 'linear-gradient(120deg, #8B7CFF 0%, #6D5EF5 45%, #2DD4BF 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            {firstName}
+          </span>{' '}
+          <span className="inline-block animate-wave">👋</span>
+        </h1>
+
+        <div className="flex gap-2">
+          <StatChip icon={Flame} value={streak} label="Day streak" color="#FFB020" />
+          <StatChip icon={Trophy} value={todayPoints} label="Points today" color="#2DD4BF" />
+          <StatChip icon={TrendingUp} value={`${progressPercent}%`} label="Progress" color="#8B7CFF" />
+        </div>
       </div>
     </motion.div>
   )
 }
 
-/* ═══ QUICK ACTION CARD ═══ */
+/* ── Continue learning banner ────────────────────────────────────────── */
+function ContinueLearning({ item, title, to }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <Link to={to} className="block group">
+        <div
+          className="relative overflow-hidden rounded-3xl border border-primary-500/25"
+          style={{ background: 'linear-gradient(120deg, rgba(109,94,245,0.18), rgba(45,212,191,0.06))' }}
+        >
+          <div className="flex items-stretch gap-3 p-3">
+            {/* thumbnail */}
+            <div className="relative w-28 sm:w-36 aspect-video rounded-2xl overflow-hidden flex-shrink-0 bg-dark-700">
+              <CardThumbnail item={item} alt={title} fallback={<LogoFallback />} />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+                <div className="w-9 h-9 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+                  <Play size={16} className="text-dark-900 ml-0.5" fill="currentColor" />
+                </div>
+              </div>
+            </div>
+
+            {/* copy */}
+            <div className="flex flex-col justify-center min-w-0 flex-1 pr-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-primary-300 mb-1">
+                Continue learning
+              </span>
+              <h3 className="text-sm sm:text-base font-bold text-white leading-snug line-clamp-2">
+                {title || 'Resume your last lesson'}
+              </h3>
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-mint-400 mt-2 group-hover:gap-2 transition-all">
+                Resume <ChevronRight size={13} />
+              </span>
+            </div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  )
+}
+
+/* ── Quick action card ───────────────────────────────────────────────── */
 function QuickActionCard({ to, icon: Icon, label, description, accent, delay, thumbnailUrl }) {
   return (
     <motion.div
@@ -110,26 +176,38 @@ function QuickActionCard({ to, icon: Icon, label, description, accent, delay, th
     >
       <Link to={to} className="block group">
         <div
-          className="rounded-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden aspect-square"
-          style={{ border: '1px solid rgba(255, 255, 255, 0.06)' }}
+          className="rounded-3xl transition-all duration-300 group-hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden aspect-square border border-white/[0.07]"
         >
-          {/* Thumbnail fills the entire card */}
           {thumbnailUrl && (
-            <img src={thumbnailUrl} alt={label} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <img
+              src={thumbnailUrl}
+              alt={label}
+              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
           )}
-          {/* Gradient + hover glow so the text stays readable over the image */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-            style={{ background: `radial-gradient(circle at center, ${accent}15 0%, transparent 70%)` }} />
+          <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/40 to-transparent" />
+          <div
+            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+            style={{ background: `radial-gradient(circle at 50% 70%, ${accent}22 0%, transparent 70%)` }}
+          />
 
-          {/* Text pinned to the bottom, over the image */}
+          {/* icon badge top-left */}
+          <div
+            className="absolute top-2.5 left-2.5 w-8 h-8 rounded-xl flex items-center justify-center backdrop-blur-sm"
+            style={{ background: `${accent}2e`, border: `1px solid ${accent}45` }}
+          >
+            <Icon size={15} style={{ color: accent }} />
+          </div>
+
           <div className="absolute inset-x-0 bottom-0 p-3 flex items-end justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="text-xs font-bold text-white mb-0.5 drop-shadow-md truncate">{label}</h3>
-              <p className="text-[9px] text-white/60 truncate">{description}</p>
+              <h3 className="text-[13px] font-bold text-white mb-0.5 drop-shadow-md truncate">{label}</h3>
+              <p className="text-[10px] text-white/65 truncate">{description}</p>
             </div>
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:translate-x-0.5 backdrop-blur-sm"
-              style={{ background: `${accent}25`, border: `1px solid ${accent}40` }}>
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:translate-x-0.5 backdrop-blur-sm"
+              style={{ background: `${accent}2e`, border: `1px solid ${accent}45` }}
+            >
               <ArrowRight size={12} style={{ color: accent }} />
             </div>
           </div>
@@ -139,64 +217,73 @@ function QuickActionCard({ to, icon: Icon, label, description, accent, delay, th
   )
 }
 
-// Icon mapping for dynamic cards
-const iconMap = {
-  BookOpen,
-  Book,
-  GraduationCap,
-  ShoppingBag,
-  MessageSquare,
+/* ── Horizontal scroll row ───────────────────────────────────────────── */
+function ScrollRow({ icon: Icon, title, count, seeAllTo, children }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-white/45 flex items-center gap-1.5">
+          <Icon size={13} className="text-primary-400" />
+          {title} {count > 0 && <span className="text-white/30">({count})</span>}
+        </h3>
+        {seeAllTo && (
+          <Link to={seeAllTo} className="text-xs font-semibold text-primary-400 hover:text-primary-300 transition-colors">
+            See all
+          </Link>
+        )}
+      </div>
+      <div
+        className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0"
+        style={{ scrollSnapType: 'x proximity' }}
+      >
+        {children}
+      </div>
+    </div>
+  )
 }
 
-/* ═══ LOGO FALLBACK (shown when a card has no real thumbnail) ═══ */
-/* ═══ WATCH HISTORY CARD ═══ */
+/* ── Watch history card (video / pdf) ────────────────────────────────── */
 function WatchHistoryCard({ item, index }) {
   const itemUrl = item.courseId && item.subjectId && item.contentId
     ? `/courses/${item.courseId}/subjects/${item.subjectId}/content/${item.contentId}`
     : item.courseId && item.subjectId
     ? `/courses/${item.courseId}/subjects/${item.subjectId}`
     : '#'
+  const isPdf = item.type === 'pdf'
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 + index * 0.05, duration: 0.4 }}
-      className="min-w-[160px] w-[160px] flex-shrink-0"
+      transition={{ delay: 0.05 + index * 0.05, duration: 0.4 }}
+      className="min-w-[150px] w-[150px] flex-shrink-0"
+      style={{ scrollSnapAlign: 'start' }}
     >
       <Link to={itemUrl} className="block group">
-        <div className="rounded-2xl overflow-hidden transition-all duration-300 relative aspect-square"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 107, 74, 0.08) 0%, rgba(255, 107, 74, 0.02) 100%)',
-            border: '1px solid rgba(255, 107, 74, 0.18)',
-          }}
-        >
-          {/* Thumbnail fills the entire card */}
-          <CardThumbnail
-            item={item}
-            alt={item.title}
-            fallback={<LogoFallback />}
-          />
-          
-          {/* Text overlay at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-            <p className="text-xs font-bold text-white text-center line-clamp-1">
+        <div className="rounded-2xl overflow-hidden transition-all duration-300 relative aspect-square border border-white/[0.08] bg-dark-700">
+          <CardThumbnail item={item} alt={item.title} fallback={<LogoFallback />} />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
+
+          <span
+            className="absolute top-2 left-2 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded"
+            style={{
+              background: isPdf ? 'rgba(255,92,92,0.9)' : 'rgba(109,94,245,0.9)',
+              color: 'white',
+            }}
+          >
+            {isPdf ? 'PDF' : 'Video'}
+          </span>
+
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+            <div className="w-9 h-9 rounded-full bg-white/90 flex items-center justify-center">
+              {isPdf ? <FileText size={15} className="text-dark-900" /> : <Play size={15} className="text-dark-900 ml-0.5" fill="currentColor" />}
+            </div>
+          </div>
+
+          <div className="absolute bottom-0 left-0 right-0 p-2.5">
+            <p className="text-[11px] font-bold text-white line-clamp-2 leading-snug">
               {item.title || 'Untitled Lesson'}
             </p>
-            <span className="text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded inline-block mt-0.5"
-              style={{
-                background: item.type === 'pdf' ? 'rgba(239, 68, 68, 0.8)' : 'rgba(255, 107, 74, 0.8)',
-                color: 'white',
-              }}>
-              {item.type === 'pdf' ? 'PDF' : 'Video'}
-            </span>
-          </div>
-          
-          {/* Play overlay on hover */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-            <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center">
-              <Play size={14} fill="white" color="white" />
-            </div>
           </div>
         </div>
       </Link>
@@ -204,30 +291,7 @@ function WatchHistoryCard({ item, index }) {
   )
 }
 
-/* ═══ HORIZONTAL SCROLL ROW (no visible scrollbar) ═══ */
-function ScrollRow({ icon: Icon, title, count, seeAllTo, children }) {
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-white/40 flex items-center gap-1.5">
-          <Icon size={12} className="text-primary-400" />
-          {title} {count > 0 && `(${count})`}
-        </h3>
-        {seeAllTo && (
-          <Link to={seeAllTo}
-            className="text-xs font-medium text-primary-400 hover:text-primary-300 transition-colors">
-            See All
-          </Link>
-        )}
-      </div>
-      <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0" style={{ scrollSnapType: 'x proximity' }}>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-/* ═══ QUIZ HISTORY CARD (recent activity → latest attempt for that quiz) ═══ */
+/* ── Quiz history card ───────────────────────────────────────────────── */
 function QuizHistoryCard({ entry, index }) {
   const latest = entry.attempts[0]
   const attemptsCount = entry.attempts.length
@@ -238,38 +302,36 @@ function QuizHistoryCard({ entry, index }) {
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 + index * 0.05, duration: 0.4 }}
-      className="min-w-[160px] w-[160px] flex-shrink-0"
+      transition={{ delay: 0.05 + index * 0.05, duration: 0.4 }}
+      className="min-w-[150px] w-[150px] flex-shrink-0"
       style={{ scrollSnapAlign: 'start' }}
     >
       <Link to={`/quiz/result/${latest.attemptId}`} className="block group">
-        <div className="rounded-2xl overflow-hidden transition-all duration-300 relative aspect-square flex flex-col justify-between p-3"
+        <div
+          className="rounded-2xl overflow-hidden transition-all duration-300 relative aspect-square flex flex-col justify-between p-3 group-hover:scale-[1.02]"
           style={{
-            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.14) 0%, rgba(139, 92, 246, 0.03) 100%)',
-            border: '1px solid rgba(139, 92, 246, 0.25)',
+            background: 'linear-gradient(140deg, rgba(109,94,245,0.16) 0%, rgba(109,94,245,0.03) 100%)',
+            border: '1px solid rgba(109,94,245,0.28)',
           }}
         >
-          {/* Logo watermark — quizzes have no real thumbnail */}
-          <img src={APP_LOGO_URL} alt="" className="absolute inset-0 m-auto w-1/2 h-1/2 object-contain opacity-[0.08] pointer-events-none" />
+          <img src={APP_LOGO_URL} alt="" className="absolute inset-0 m-auto w-1/2 h-1/2 object-contain opacity-[0.06] pointer-events-none" />
 
           <div className="flex items-center justify-between">
-            <div className="w-8 h-8 rounded-lg bg-violet-500/20 border border-violet-500/30 flex items-center justify-center">
-              <Brain size={15} className="text-violet-300" />
+            <div className="w-8 h-8 rounded-xl bg-primary-500/20 border border-primary-500/30 flex items-center justify-center">
+              <Brain size={15} className="text-primary-300" />
             </div>
-            <div className="text-right">
-              <div className="text-lg font-black" style={{ color: scoreColor }}>{score}%</div>
-            </div>
+            <div className="text-lg font-black" style={{ color: scoreColor }}>{score}%</div>
           </div>
 
           <div>
-            <p className="text-xs font-bold text-white line-clamp-2 leading-snug mb-1">
+            <p className="text-[11px] font-bold text-white line-clamp-2 leading-snug mb-1.5">
               {entry.quizName}
             </p>
             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-violet-500/25 text-violet-200">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary-500/25 text-primary-200">
                 {attemptsCount} attempt{attemptsCount > 1 ? 's' : ''}
               </span>
-              <RotateCcw size={11} className="text-white/30 group-hover:text-violet-300 transition-colors" />
+              <RotateCcw size={11} className="text-white/30 group-hover:text-primary-300 transition-colors" />
             </div>
           </div>
         </div>
@@ -278,24 +340,45 @@ function QuizHistoryCard({ entry, index }) {
   )
 }
 
-/* ═══ MAIN HOME VIEW ═══ */
+/* ── Empty state (new users) ─────────────────────────────────────────── */
+function EmptyState() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3, duration: 0.5 }}
+      className="rounded-3xl border border-white/[0.07] bg-white/[0.02] p-6 text-center"
+    >
+      <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-primary-500/15 border border-primary-500/25 mb-3">
+        <GraduationCap size={22} className="text-primary-400" />
+      </div>
+      <h3 className="text-base font-bold text-white mb-1">Start your journey</h3>
+      <p className="text-xs text-white/50 mb-4 max-w-xs mx-auto leading-relaxed">
+        Your recent lessons and quizzes will show up here. Pick a course to get going.
+      </p>
+      <Link to="/free-courses" className="btn-primary inline-flex items-center gap-1.5 text-sm">
+        <Zap size={15} /> Explore free courses
+      </Link>
+    </motion.div>
+  )
+}
+
+/* ═══════════════════════════ MAIN ═══════════════════════════ */
 export default function Home() {
   const user = useAuthStore(s => s.user)
   const [recentlyWatched, setRecentlyWatched] = useState([])
   const [recentQuizzes, setRecentQuizzes] = useState([])
 
-  // Load recently watched items + quiz attempt history from localStorage on mount
   useEffect(() => {
     try {
-      const stored = JSON.parse(localStorage.getItem('ar_recently_watched') || '[]')
-      setRecentlyWatched(stored)
+      setRecentlyWatched(JSON.parse(localStorage.getItem('ar_recently_watched') || '[]'))
     } catch (e) {
-      console.error('Error loading recently watched:', e)
+      console.error('[v0] Error loading recently watched:', e)
     }
     try {
       setRecentQuizzes(getRecentQuizzes(20))
     } catch (e) {
-      console.error('Error loading quiz history:', e)
+      console.error('[v0] Error loading quiz history:', e)
     }
   }, [])
 
@@ -323,8 +406,6 @@ export default function Home() {
   const lastWatched = lastWatchedData?.progress || {}
   const purchases = purchasesData?.purchases || []
 
-  // Overall "% complete" — computed locally from cached subject structure +
-  // local completion state, same source every page in the app agrees on.
   const courseIds = purchases.map(p => p.courseId).filter(Boolean)
   const { overall } = useCoursesProgress(courseIds)
 
@@ -332,11 +413,11 @@ export default function Home() {
   const lastSubjectId = lastWatched.lastContentSubjectId
   const lastCourseId = lastWatched.lastContentCourseId
 
-  const { data: lastContentData, isLoading: contentLoading } = useQuery({
+  const { data: lastContentData } = useQuery({
     queryKey: ['last-content-detail', lastContentId],
     queryFn: () =>
       api.get(`/content/${lastContentId}${lastSubjectId ? `?subjectId=${lastSubjectId}` : ''}`).then(r => r.data),
-    enabled: !!lastContentId && recentlyWatched.length === 0,
+    enabled: !!lastContentId,
     staleTime: 60000,
   })
 
@@ -351,43 +432,71 @@ export default function Home() {
 
   const isLoading = pointsLoading || purchasesLoading
 
-  // Static cards with thumbnail support
+  const progressPercent = overall.total > 0 ? Math.round((overall.completed / overall.total) * 100) : 0
+  const streak = user?.streak || 0
+  const todayPoints = points.daily || 0
+
   const staticCards = [
-    { to: '/free-courses', icon: BookOpen, label: 'Free Courses', description: 'Start learning free', accent: '#10B981', delay: 0.12, thumbnailUrl: DEFAULT_THUMBNAILS.freeCourses },
-    { to: '/books', icon: Book, label: 'Books', description: 'Read PDFs', accent: '#6366F1', delay: 0.18, thumbnailUrl: DEFAULT_THUMBNAILS.books },
-    { to: '/store', icon: ShoppingBag, label: 'Store', description: 'Premium courses', accent: '#FF6B4A', delay: 0.24, thumbnailUrl: DEFAULT_THUMBNAILS.store },
+    { to: '/free-courses', icon: BookOpen, label: 'Free Courses', description: 'Start learning free', accent: '#2DD4BF', delay: 0.12, thumbnailUrl: DEFAULT_THUMBNAILS.freeCourses },
+    { to: '/books', icon: Book, label: 'Books', description: 'Read PDFs', accent: '#8B7CFF', delay: 0.18, thumbnailUrl: DEFAULT_THUMBNAILS.books },
+    { to: '/store', icon: ShoppingBag, label: 'Store', description: 'Premium courses', accent: '#FFB020', delay: 0.24, thumbnailUrl: DEFAULT_THUMBNAILS.store },
+    { to: '/progress', icon: TrendingUp, label: 'Progress', description: `${progressPercent}% complete`, accent: '#6D5EF5', delay: 0.30, thumbnailUrl: DEFAULT_THUMBNAILS.progress },
   ]
 
-  // Progress card data
-  const progressPercent = overall.total > 0 ? Math.round((overall.completed / overall.total) * 100) : 0
-  const progressCard = {
-    to: '/progress',
-    icon: TrendingUp,
-    label: 'Progress',
-    description: `${progressPercent}% Complete`,
-    accent: '#10B981',
-    delay: 0.36,
-    thumbnailUrl: DEFAULT_THUMBNAILS.progress,
-  }
+  const hasRecent = classItems.length > 0 || notesItems.length > 0 || recentQuizzes.length > 0
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto pb-10">
+    <div className="space-y-7 max-w-2xl mx-auto pb-10">
+      <WelcomeHero
+        user={user}
+        isLoading={isLoading}
+        streak={streak}
+        todayPoints={todayPoints}
+        progressPercent={progressPercent}
+      />
 
-      {/* ── CLEAN WELCOME HERO ── */}
-      <WelcomeHero user={user} isLoading={isLoading} />
+      {continueUrl && (
+        <ContinueLearning
+          item={lastContent || lastWatched}
+          title={lastContent?.title || lastWatched.lastContentTitle}
+          to={continueUrl}
+        />
+      )}
 
-      {/* ── HOME SLIDER (admin-managed banners) ── */}
-      <HomeSlider />
-
-      {/* ── QUICK ACTION CARDS ── */}
-      <div className="grid grid-cols-2 gap-3">
-        {staticCards.map((card, i) => (
-          <QuickActionCard key={i} {...card} />
-        ))}
-        <QuickActionCard {...progressCard} />
+      {/* Quick actions */}
+      <div>
+        <h3 className="text-xs font-bold uppercase tracking-wider text-white/45 mb-3 flex items-center gap-1.5">
+          <Sparkles size={13} className="text-primary-400" />
+          Explore
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          {staticCards.map((card, i) => (
+            <QuickActionCard key={i} {...card} />
+          ))}
+        </div>
       </div>
 
-      {/* ── CLASS (recent videos) ── */}
+      {/* Doubt chat CTA */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.36, duration: 0.5 }}
+      >
+        <Link to="/doubt-chat" className="block group">
+          <div className="flex items-center gap-3 rounded-2xl p-3.5 border border-mint-500/25 bg-mint-500/[0.07] transition-colors group-hover:bg-mint-500/[0.12]">
+            <div className="w-10 h-10 rounded-xl bg-mint-500/20 border border-mint-500/30 flex items-center justify-center flex-shrink-0">
+              <MessageSquare size={18} className="text-mint-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-white">Have a doubt?</p>
+              <p className="text-[11px] text-white/50 truncate">Ask our mentors and get quick answers</p>
+            </div>
+            <ArrowRight size={16} className="text-mint-400 group-hover:translate-x-0.5 transition-transform" />
+          </div>
+        </Link>
+      </motion.div>
+
+      {/* Recent activity */}
       {classItems.length > 0 && (
         <ScrollRow icon={History} title="Class" count={classItems.length} seeAllTo="/watch-history">
           {classItems.map((item, idx) => (
@@ -396,7 +505,6 @@ export default function Home() {
         </ScrollRow>
       )}
 
-      {/* ── NOTES (recent PDFs) ── */}
       {notesItems.length > 0 && (
         <ScrollRow icon={FileText} title="Notes" count={notesItems.length} seeAllTo="/watch-history">
           {notesItems.map((item, idx) => (
@@ -405,7 +513,6 @@ export default function Home() {
         </ScrollRow>
       )}
 
-      {/* ── QUIZ (recent attempts, one card per quiz — latest attempt shown) ── */}
       {recentQuizzes.length > 0 && (
         <ScrollRow icon={Brain} title="Quiz" count={recentQuizzes.length}>
           {recentQuizzes.map((entry, idx) => (
@@ -414,27 +521,17 @@ export default function Home() {
         </ScrollRow>
       )}
 
-      {/* Inline styles for custom wave animation and shimmer keyframes */}
+      {!hasRecent && !continueUrl && !isLoading && <EmptyState />}
+
       <style>{`
-        @keyframes shimmer {
-          100% {
-            transform: translateX(100%);
-          }
-        }
+        @keyframes shimmer { 100% { transform: translateX(100%); } }
         @keyframes wave {
-          0% { transform: rotate( 0.0deg) }
-          10% { transform: rotate(14.0deg) }
-          20% { transform: rotate(-8.0deg) }
-          30% { transform: rotate(14.0deg) }
-          40% { transform: rotate(-4.0deg) }
-          50% { transform: rotate(10.0deg) }
-          60% { transform: rotate( 0.0deg) }
-          100% { transform: rotate( 0.0deg) }
+          0% { transform: rotate(0deg) } 10% { transform: rotate(14deg) }
+          20% { transform: rotate(-8deg) } 30% { transform: rotate(14deg) }
+          40% { transform: rotate(-4deg) } 50% { transform: rotate(10deg) }
+          60% { transform: rotate(0deg) } 100% { transform: rotate(0deg) }
         }
-        .animate-wave {
-          animation: wave 2.5s infinite;
-          transform-origin: 70% 70%;
-        }
+        .animate-wave { animation: wave 2.5s infinite; transform-origin: 70% 70%; display: inline-block; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
