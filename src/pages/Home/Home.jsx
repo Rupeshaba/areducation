@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
   BookOpen, Trophy, TrendingUp, Flame, Play, ArrowRight,
@@ -266,7 +266,7 @@ function WelcomeHero({ user, isLoading, streak, todayPoints, progressPercent }) 
 }
 
 /* ── Continue learning banner ────────────────────────────────────────── */
-function ContinueLearning({ item, title, to, progressPercent }) {
+function ContinueLearning({ item, title, to, videoPercent }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -275,43 +275,43 @@ function ContinueLearning({ item, title, to, progressPercent }) {
     >
       <Link to={to} className="block group">
         <div
-          className="relative overflow-hidden rounded-3xl border border-primary-500/25"
+          className="relative overflow-hidden rounded-2xl border border-primary-500/25"
           style={{ background: 'linear-gradient(120deg, rgba(109,94,245,0.18), rgba(45,212,191,0.06))' }}
         >
-          <div className="flex items-stretch gap-3 p-3">
+          <div className="flex items-stretch gap-2.5 p-2">
             {/* thumbnail */}
-            <div className="relative w-28 sm:w-36 aspect-video rounded-2xl overflow-hidden flex-shrink-0 bg-dark-700">
+            <div className="relative w-20 sm:w-28 aspect-video rounded-xl overflow-hidden flex-shrink-0 bg-dark-700">
               <CardThumbnail item={item} alt={title} fallback={<LogoFallback />} />
               <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
-                <div className="w-9 h-9 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                  <Play size={16} className="text-dark-900 ml-0.5" fill="currentColor" />
+                <div className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+                  <Play size={13} className="text-dark-900 ml-0.5" fill="currentColor" />
                 </div>
               </div>
             </div>
 
             {/* copy */}
             <div className="flex flex-col justify-center min-w-0 flex-1 pr-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-primary-300 mb-1">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-primary-300 mb-0.5">
                 Continue learning
               </span>
-              <h3 className="text-sm sm:text-base font-bold text-white leading-snug line-clamp-2">
+              <h3 className="text-[13px] sm:text-sm font-bold text-white leading-snug line-clamp-1">
                 {title || 'Resume your last lesson'}
               </h3>
 
-              {progressPercent > 0 && (
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden">
+              {videoPercent > 0 && (
+                <div className="flex items-center gap-2 mt-1.5">
+                  <div className="h-1 flex-1 rounded-full bg-white/10 overflow-hidden">
                     <div
                       className="h-full rounded-full"
-                      style={{ width: `${progressPercent}%`, background: 'linear-gradient(90deg, #6D5EF5, #2DD4BF)' }}
+                      style={{ width: `${videoPercent}%`, background: 'linear-gradient(90deg, #6D5EF5, #2DD4BF)' }}
                     />
                   </div>
-                  <span className="text-[10px] font-semibold text-white/50 flex-shrink-0">{progressPercent}% completed</span>
+                  <span className="text-[9px] font-semibold text-white/50 flex-shrink-0">{videoPercent}% completed</span>
                 </div>
               )}
 
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-mint-400 mt-2 group-hover:gap-2 transition-all">
-                Resume Learning <ChevronRight size={13} />
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-mint-400 mt-1.5 group-hover:gap-2 transition-all">
+                Resume Learning <ChevronRight size={12} />
               </span>
             </div>
           </div>
@@ -384,17 +384,17 @@ function WatchHistoryCard({ item, index }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.05 + index * 0.05, duration: 0.4 }}
-      className="min-w-[150px] w-[150px] flex-shrink-0"
+      className="min-w-[118px] w-[118px] flex-shrink-0"
       style={{ scrollSnapAlign: 'start' }}
     >
       <Link to={itemUrl} className="block group">
-        <div className="rounded-2xl overflow-hidden border border-white/[0.08] bg-white/[0.02]">
+        <div className="rounded-xl overflow-hidden border border-white/[0.08] bg-white/[0.02]">
           <div className="relative aspect-video bg-dark-700">
             <CardThumbnail item={item} alt={item.title} fallback={<LogoFallback />} />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
             <span
-              className="absolute top-1.5 left-1.5 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded"
+              className="absolute top-1 left-1 text-[7px] font-extrabold uppercase tracking-wider px-1 py-0.5 rounded"
               style={{
                 background: isPdf ? 'rgba(255,92,92,0.9)' : 'rgba(109,94,245,0.9)',
                 color: 'white',
@@ -404,14 +404,14 @@ function WatchHistoryCard({ item, index }) {
             </span>
 
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-              <div className="w-8 h-8 rounded-full bg-white/90 flex items-center justify-center">
-                {isPdf ? <FileText size={14} className="text-dark-900" /> : <Play size={14} className="text-dark-900 ml-0.5" fill="currentColor" />}
+              <div className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center">
+                {isPdf ? <FileText size={12} className="text-dark-900" /> : <Play size={12} className="text-dark-900 ml-0.5" fill="currentColor" />}
               </div>
             </div>
           </div>
 
-          <div className="p-2.5">
-            <p className="text-[11px] font-bold text-white line-clamp-2 leading-snug">
+          <div className="p-1.5">
+            <p className="text-[10px] font-bold text-white line-clamp-1 leading-snug">
               {item.title || 'Untitled Lesson'}
             </p>
           </div>
@@ -433,12 +433,12 @@ function QuizHistoryCard({ entry, index }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.05 + index * 0.05, duration: 0.4 }}
-      className="min-w-[150px] w-[150px] flex-shrink-0"
+      className="min-w-[118px] w-[118px] flex-shrink-0"
       style={{ scrollSnapAlign: 'start' }}
     >
       <Link to={`/quiz/result/${latest.attemptId}`} className="block group">
         <div
-          className="rounded-2xl overflow-hidden transition-all duration-300 relative aspect-square flex flex-col justify-between p-3 group-hover:scale-[1.02]"
+          className="rounded-xl overflow-hidden transition-all duration-300 relative aspect-[4/3.4] flex flex-col justify-between p-2 group-hover:scale-[1.02]"
           style={{
             background: 'linear-gradient(140deg, rgba(109,94,245,0.16) 0%, rgba(109,94,245,0.03) 100%)',
             border: '1px solid rgba(109,94,245,0.28)',
@@ -447,91 +447,26 @@ function QuizHistoryCard({ entry, index }) {
           <img src={APP_LOGO_URL} alt="" className="absolute inset-0 m-auto w-1/2 h-1/2 object-contain opacity-[0.06] pointer-events-none" />
 
           <div className="flex items-center justify-between">
-            <div className="w-8 h-8 rounded-xl bg-primary-500/20 border border-primary-500/30 flex items-center justify-center">
-              <Brain size={15} className="text-primary-300" />
+            <div className="w-6 h-6 rounded-lg bg-primary-500/20 border border-primary-500/30 flex items-center justify-center">
+              <Brain size={12} className="text-primary-300" />
             </div>
-            <div className="text-lg font-black" style={{ color: scoreColor }}>{score}%</div>
+            <div className="text-sm font-black" style={{ color: scoreColor }}>{score}%</div>
           </div>
 
           <div>
-            <p className="text-[11px] font-bold text-white line-clamp-2 leading-snug mb-1.5">
+            <p className="text-[10px] font-bold text-white line-clamp-1 leading-snug mb-1">
               {entry.quizName}
             </p>
             <div className="flex items-center justify-between">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary-500/25 text-primary-200">
-                {attemptsCount} attempt{attemptsCount > 1 ? 's' : ''}
+              <span className="text-[8px] font-extrabold uppercase tracking-wider px-1 py-0.5 rounded bg-primary-500/25 text-primary-200">
+                {attemptsCount}x
               </span>
-              <RotateCcw size={11} className="text-white/30 group-hover:text-primary-300 transition-colors" />
+              <RotateCcw size={10} className="text-white/30 group-hover:text-primary-300 transition-colors" />
             </div>
           </div>
         </div>
       </Link>
     </motion.div>
-  )
-}
-
-/* ── Quiz performance card (subject-wise, from real attempt history) ──── */
-function QuizPerformanceCard({ subject, score, attemptsCount, index }) {
-  const scoreColor = score >= 75 ? '#2DD4BF' : score >= 50 ? '#FFB020' : '#FF5C5C'
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.05 + index * 0.05, duration: 0.4 }}
-      className="min-w-0 rounded-2xl px-1.5 py-2.5 border border-white/[0.08] bg-white/[0.02] flex flex-col items-center text-center gap-1"
-    >
-      <div className="w-7 h-7 rounded-lg bg-primary-500/15 border border-primary-500/25 flex items-center justify-center flex-shrink-0">
-        <Brain size={13} className="text-primary-300" />
-      </div>
-      <p className="text-[9.5px] font-semibold text-white/60 leading-tight truncate w-full">{subject}</p>
-      <p className="text-base font-black leading-none" style={{ color: scoreColor }}>{score}%</p>
-      <p className="text-[9px] text-white/40">{attemptsCount} attempt{attemptsCount > 1 ? 's' : ''}</p>
-    </motion.div>
-  )
-}
-
-function QuizPerformanceSection({ quizzes, seeAllTo }) {
-  const bySubject = useMemo(() => {
-    const map = new Map()
-    for (const entry of quizzes) {
-      const key = entry.subject || 'General'
-      const latestScore = Math.round(entry.attempts[0]?.score || 0)
-      const attemptsCount = entry.attempts.length
-      if (!map.has(key)) {
-        map.set(key, { subject: key, score: latestScore, attemptsCount, lastAt: entry.attempts[0]?.completedAt || 0 })
-      } else {
-        const existing = map.get(key)
-        existing.attemptsCount += attemptsCount
-        if ((entry.attempts[0]?.completedAt || 0) > existing.lastAt) {
-          existing.score = latestScore
-          existing.lastAt = entry.attempts[0]?.completedAt || 0
-        }
-      }
-    }
-    return Array.from(map.values()).sort((a, b) => b.lastAt - a.lastAt).slice(0, 4)
-  }, [quizzes])
-
-  if (bySubject.length === 0) return null
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-white/45 flex items-center gap-1.5">
-          <Brain size={13} className="text-primary-400" />
-          Quiz Performance
-        </h3>
-        {seeAllTo && (
-          <Link to={seeAllTo} className="text-xs font-semibold text-primary-400 hover:text-primary-300 transition-colors">
-            View all
-          </Link>
-        )}
-      </div>
-      <div className="grid grid-cols-4 gap-2">
-        {bySubject.map((s, i) => (
-          <QuizPerformanceCard key={s.subject} subject={s.subject} score={s.score} attemptsCount={s.attemptsCount} index={i} />
-        ))}
-      </div>
-    </div>
   )
 }
 
@@ -604,26 +539,50 @@ export default function Home() {
   const courseIds = purchases.map(p => p.courseId).filter(Boolean)
   const { overall } = useCoursesProgress(courseIds)
 
-  const lastContentId = lastWatched.lastContentId
-  const lastSubjectId = lastWatched.lastContentSubjectId
-  const lastCourseId = lastWatched.lastContentCourseId
+  // ── Continue learning: prefer the most recently watched video from this
+  // device (classItems[0] — freshest, updated the instant a video is
+  // opened) and only fall back to the server's last-progress record when
+  // there's no local history yet (e.g. a brand-new device/browser).
+  const recentVideo = classItems[0] || null
 
-  const { data: lastContentData } = useQuery({
-    queryKey: ['last-content-detail', lastContentId],
+  const continueContentId = recentVideo?.contentId || lastWatched.lastContentId
+  const continueSubjectId = recentVideo?.subjectId || lastWatched.lastContentSubjectId
+  const continueCourseId = recentVideo?.courseId || lastWatched.lastContentCourseId
+
+  const { data: continueContentData } = useQuery({
+    queryKey: ['continue-content-detail', continueContentId],
     queryFn: () =>
-      api.get(`/content/${lastContentId}${lastSubjectId ? `?subjectId=${lastSubjectId}` : ''}`).then(r => r.data),
-    enabled: !!lastContentId,
+      api.get(`/content/${continueContentId}${continueSubjectId ? `?subjectId=${continueSubjectId}` : ''}`).then(r => r.data),
+    enabled: !!continueContentId,
     staleTime: 60000,
   })
 
-  const lastContent = lastContentData?.content
+  const continueContent = continueContentData?.content
 
   const continueUrl =
-    lastContentId && lastCourseId && lastSubjectId
-      ? `/courses/${lastCourseId}/subjects/${lastSubjectId}/content/${lastContentId}`
-      : lastSubjectId && lastCourseId
-      ? `/courses/${lastCourseId}/subjects/${lastSubjectId}`
+    continueContentId && continueCourseId && continueSubjectId
+      ? `/courses/${continueCourseId}/subjects/${continueSubjectId}/content/${continueContentId}`
+      : continueSubjectId && continueCourseId
+      ? `/courses/${continueCourseId}/subjects/${continueSubjectId}`
       : null
+
+  const continueTitle = recentVideo?.title || continueContent?.title || lastWatched.lastContentTitle
+  const continueThumbItem = recentVideo || continueContent || lastWatched
+
+  // Real per-video progress: resume position (the same `ar_pos_<id>` key
+  // the player itself reads to resume playback) divided by the content's
+  // actual total duration — not the overall course completion percent.
+  let videoPercent = 0
+  if (continueContentId && continueContent?.duration > 0) {
+    try {
+      const savedPos = parseFloat(localStorage.getItem(`ar_pos_${continueContentId}`))
+      if (!isNaN(savedPos) && savedPos > 0) {
+        videoPercent = Math.min(100, Math.round((savedPos / continueContent.duration) * 100))
+      }
+    } catch {
+      // localStorage unavailable — leave at 0, bar just won't show
+    }
+  }
 
   const isLoading = pointsLoading || purchasesLoading
 
@@ -632,16 +591,16 @@ export default function Home() {
   const todayPoints = points.daily || 0
 
   const staticCards = [
-    { to: '/free-courses', icon: BookOpen, label: 'Free Courses', description: 'Start learning free', accent: '#2DD4BF', delay: 0.12 },
-    { to: '/books', icon: Book, label: 'Books', description: 'Read PDFs', accent: '#8B7CFF', delay: 0.18 },
-    { to: '/store', icon: ShoppingBag, label: 'Store', description: 'Premium courses', accent: '#FFB020', delay: 0.24 },
-    { to: '/progress', icon: TrendingUp, label: 'Progress', description: 'Track your journey', accent: '#6D5EF5', delay: 0.30 },
+    { to: '/free-courses', icon: BookOpen, label: 'Free Courses', accent: '#2DD4BF', delay: 0.12 },
+    { to: '/books', icon: Book, label: 'Books', accent: '#8B7CFF', delay: 0.18 },
+    { to: '/store', icon: ShoppingBag, label: 'Store', accent: '#FFB020', delay: 0.24 },
+    { to: '/progress', icon: TrendingUp, label: 'Progress', accent: '#6D5EF5', delay: 0.30 },
   ]
 
   const hasRecent = classItems.length > 0 || notesItems.length > 0 || recentQuizzes.length > 0
 
   return (
-    <div className="space-y-7 max-w-2xl mx-auto pb-10">
+    <div className="space-y-5 max-w-2xl mx-auto pb-10">
       <HeroSlider />
 
       <WelcomeHero
@@ -654,47 +613,22 @@ export default function Home() {
 
       {continueUrl && (
         <ContinueLearning
-          item={lastContent || lastWatched}
-          title={lastContent?.title || lastWatched.lastContentTitle}
+          item={continueThumbItem}
+          title={continueTitle}
           to={continueUrl}
-          progressPercent={progressPercent}
+          videoPercent={videoPercent}
         />
       )}
 
       {/* Quick access */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-white/45">Quick Access</h3>
-          <Link to="/free-courses" className="text-xs font-semibold text-primary-400 hover:text-primary-300 transition-colors">
-            View all
-          </Link>
-        </div>
+        <h3 className="text-xs font-bold uppercase tracking-wider text-white/45 mb-2.5">Quick Access</h3>
         <div className="grid grid-cols-4 gap-2">
           {staticCards.map((card, i) => (
             <QuickAccessCard key={i} {...card} />
           ))}
         </div>
       </div>
-
-      {/* Doubt chat CTA */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.36, duration: 0.5 }}
-      >
-        <Link to="/doubt-chat" className="block group">
-          <div className="flex items-center gap-3 rounded-2xl p-3.5 border border-mint-500/25 bg-mint-500/[0.07] transition-colors group-hover:bg-mint-500/[0.12]">
-            <div className="w-10 h-10 rounded-xl bg-mint-500/20 border border-mint-500/30 flex items-center justify-center flex-shrink-0">
-              <MessageSquare size={18} className="text-mint-400" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-white">Have a doubt?</p>
-              <p className="text-[11px] text-white/50 truncate">Ask our mentors and get quick answers</p>
-            </div>
-            <ArrowRight size={16} className="text-mint-400 group-hover:translate-x-0.5 transition-transform" />
-          </div>
-        </Link>
-      </motion.div>
 
       {/* Recent activity */}
       {classItems.length > 0 && (
@@ -719,10 +653,6 @@ export default function Home() {
             <QuizHistoryCard key={`${entry.subject}::${entry.quizName}`} entry={entry} index={idx} />
           ))}
         </ScrollRow>
-      )}
-
-      {recentQuizzes.length > 0 && (
-        <QuizPerformanceSection quizzes={recentQuizzes} seeAllTo="/leaderboard" />
       )}
 
       {!hasRecent && !continueUrl && !isLoading && <EmptyState />}
