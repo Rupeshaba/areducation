@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getDeviceId } from '../utils/deviceId'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
@@ -44,12 +45,13 @@ function getRefreshToken() {
   return null
 }
 
-// Request interceptor - attach token
+// Request interceptor - attach token + device id
 api.interceptors.request.use((config) => {
   const accessToken = getAuthToken()
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`
   }
+  config.headers['X-Device-Id'] = getDeviceId()
   return config
 })
 
@@ -82,7 +84,8 @@ function isRefreshTokenInvalid(err) {
     status === 401 &&
     (
       errMsg === 'Invalid refresh token' ||
-      errMsg === 'Invalid or expired refresh token'
+      errMsg === 'Invalid or expired refresh token' ||
+      errMsg === 'device_revoked'
     )
   )
 }
@@ -108,6 +111,15 @@ api.interceptors.response.use(
       useAuthStore.getState().logout()
       const msg = error.response.data.message || 'Your account has been blocked.'
       window.location.href = `/login?blocked=1&msg=${encodeURIComponent(msg)}`
+      return Promise.reject(error)
+    }
+
+    // This specific device was force-logged-out by an admin → sign out
+    // immediately, don't bother attempting a refresh (it would fail anyway).
+    if (error.response?.status === 401 && error.response?.data?.error === 'device_revoked') {
+      const { default: useAuthStore } = await import('../store/authStore')
+      useAuthStore.getState().logout()
+      window.location.href = '/login?device_revoked=1'
       return Promise.reject(error)
     }
 
