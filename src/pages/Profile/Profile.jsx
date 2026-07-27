@@ -3,8 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Camera, Pencil, CheckCircle, Calendar, Target, Flame, 
-  Shield, User, Mail, Phone, Lock, CreditCard, Headphones, 
-  LogOut, QrCode, ChevronRight
+  Shield, User, Mail, Phone, ChevronRight
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
@@ -139,7 +138,9 @@ export default function Profile() {
   }
 
   const displayAvatar = avatarPreview || user?.avatarUrl
-  const dpRingUrl = "https://i.pinimg.com/vwebp/736x/cf/35/05/cf3505765b8a6681653b2e12000d66dc.webp"
+  
+  // Aapki nayi transparent PNG image ka link
+  const dpRingUrl = "https://res.cloudinary.com/dhniudiwg/image/upload/v1785142069/33500a6c52b6e73b93ca7123997c8088-removebg-preview_efmtjw.png"
 
   const examOptions = ["UPSC", "SSC", "State PCS", "Railway", "Banking", "Other"]
 
@@ -161,25 +162,13 @@ export default function Profile() {
           <div className="flex flex-col items-center text-center">
             <div className="relative mb-3">
               
-              {/* Golden Sparkle Ring - Black background 100% remove via Mask Image */}
+              {/* Golden Sparkle Ring - Transparent PNG */}
               <div className="absolute -inset-2 w-[120px] h-[120px] -ml-[4px] -mt-[4px] z-0 pointer-events-none">
-                <div 
-                  className="w-full h-full bg-cover bg-center animate-pulse"
-                  style={{ 
-                    backgroundImage: `url(${dpRingUrl})`,
-                    animationDuration: '3s',
-                    /* CSS Mask to strip out the black background entirely */
-                    WebkitMaskImage: `url(${dpRingUrl})`,
-                    maskImage: `url(${dpRingUrl})`,
-                    WebkitMaskMode: 'alpha',
-                    maskMode: 'alpha',
-                    WebkitMaskRepeat: 'no-repeat',
-                    maskRepeat: 'no-repeat',
-                    WebkitMaskSize: 'contain',
-                    maskSize: 'contain',
-                    WebkitMaskPosition: 'center',
-                    maskPosition: 'center'
-                  }}
+                <img 
+                  src={dpRingUrl} 
+                  alt="Ring" 
+                  className="w-full h-full object-contain animate-pulse drop-shadow-[0_0_15px_rgba(255,215,0,0.3)]" 
+                  style={{ animationDuration: '3s' }}
                 />
               </div>
               
