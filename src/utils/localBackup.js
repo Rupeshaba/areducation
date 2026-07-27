@@ -7,9 +7,12 @@
  *  - `AR_EDU_QUERY_CACHE` — just a React Query response cache; it refetches
  *                           from the API on its own and would only bloat
  *                           the transfer payload for no benefit.
+ *  - `ar_device_id`       — this device's own persistent identity (see
+ *                           utils/deviceId.js). Copying it would make two
+ *                           devices report as the same one to the backend.
  */
 
-const EXCLUDED_KEYS = new Set(['ar-edu-auth', 'AR_EDU_QUERY_CACHE'])
+const EXCLUDED_KEYS = new Set(['ar-edu-auth', 'AR_EDU_QUERY_CACHE', 'ar_device_id'])
 
 function isAppKey(key) {
   return key === 'chatBg' || key.startsWith('ar_') || key.startsWith('ar-')
