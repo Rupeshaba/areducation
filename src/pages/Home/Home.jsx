@@ -145,8 +145,8 @@ function HeroSlider() {
 
 /* ── Circular progress ring ───────────────────────────────────────────── */
 function ProgressRing({ percent }) {
-  const size = 96
-  const stroke = 9
+  const size = 82
+  const stroke = 8
   const r = (size - stroke) / 2
   const circumference = 2 * Math.PI * r
   const offset = circumference - (Math.min(100, Math.max(0, percent)) / 100) * circumference
@@ -181,15 +181,15 @@ function ProgressRing({ percent }) {
 function StatCard({ icon: Icon, value, label, sublabel, color }) {
   return (
     <div
-      className="flex-1 min-w-0 rounded-2xl p-3 border-l-2"
+      className="flex-1 min-w-0 rounded-2xl p-2.5 border-l-2"
       style={{ background: `${color}12`, borderColor: color }}
     >
-      <div className="w-8 h-8 rounded-xl flex items-center justify-center mb-2" style={{ background: `${color}22` }}>
-        <Icon size={15} style={{ color }} />
+      <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-1.5" style={{ background: `${color}22` }}>
+        <Icon size={13} style={{ color }} />
       </div>
-      <div className="text-xl font-black text-white leading-none truncate">{value}</div>
-      <div className="text-[11px] font-semibold text-white/70 mt-1.5 truncate">{label}</div>
-      {sublabel && <div className="text-[10px] text-white/40 mt-0.5 truncate">{sublabel}</div>}
+      <div className="text-base font-black text-white leading-none truncate">{value}</div>
+      <div className="text-[10px] font-semibold text-white/70 mt-1 truncate">{label}</div>
+      {sublabel && <div className="text-[9px] text-white/40 mt-0.5 truncate">{sublabel}</div>}
     </div>
   )
 }
@@ -232,7 +232,7 @@ function WelcomeHero({ user, isLoading, streak, todayPoints, progressPercent }) 
             {greeting}
           </span>
 
-          <h1 className="text-3xl sm:text-4xl font-black text-white leading-tight tracking-tight mt-2.5 mb-1.5">
+          <h1 className="text-2xl sm:text-4xl font-black text-white leading-tight tracking-tight mt-2.5 mb-1.5">
             Hey,{' '}
             <span
               style={{
@@ -322,28 +322,23 @@ function ContinueLearning({ item, title, to, progressPercent }) {
 }
 
 /* ── Quick access card (flat icon-top style) ─────────────────────────── */
-function QuickAccessCard({ to, icon: Icon, label, description, accent, delay }) {
+function QuickAccessCard({ to, icon: Icon, label, accent, delay }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      className="min-w-0"
     >
       <Link to={to} className="block group">
         <div
-          className="rounded-2xl p-3.5 border transition-all duration-300 group-hover:scale-[1.02] active:scale-[0.98]"
+          className="rounded-2xl px-1.5 py-3 border flex flex-col items-center gap-1.5 text-center transition-all duration-300 group-hover:scale-[1.03] active:scale-[0.97]"
           style={{ background: `${accent}12`, borderColor: `${accent}2e` }}
         >
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-6" style={{ background: `${accent}22` }}>
-            <Icon size={18} style={{ color: accent }} />
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${accent}22` }}>
+            <Icon size={15} style={{ color: accent }} />
           </div>
-          <div className="flex items-end justify-between gap-1">
-            <div className="min-w-0">
-              <h3 className="text-[13px] font-bold text-white truncate">{label}</h3>
-              <p className="text-[10px] text-white/45 truncate">{description}</p>
-            </div>
-            <ChevronRight size={15} className="text-white/30 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" style={{ color: accent }} />
-          </div>
+          <h3 className="text-[10.5px] font-bold text-white leading-tight truncate w-full">{label}</h3>
         </div>
       </Link>
     </motion.div>
@@ -483,14 +478,14 @@ function QuizPerformanceCard({ subject, score, attemptsCount, index }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.05 + index * 0.05, duration: 0.4 }}
-      className="rounded-2xl p-3.5 border border-white/[0.08] bg-white/[0.02]"
+      className="min-w-0 rounded-2xl px-1.5 py-2.5 border border-white/[0.08] bg-white/[0.02] flex flex-col items-center text-center gap-1"
     >
-      <div className="w-9 h-9 rounded-xl bg-primary-500/15 border border-primary-500/25 flex items-center justify-center mb-2.5">
-        <Brain size={16} className="text-primary-300" />
+      <div className="w-7 h-7 rounded-lg bg-primary-500/15 border border-primary-500/25 flex items-center justify-center flex-shrink-0">
+        <Brain size={13} className="text-primary-300" />
       </div>
-      <p className="text-[11px] font-semibold text-white/60 truncate mb-1">{subject}</p>
-      <p className="text-2xl font-black leading-none" style={{ color: scoreColor }}>{score}%</p>
-      <p className="text-[10px] text-white/40 mt-1.5">{attemptsCount} attempt{attemptsCount > 1 ? 's' : ''}</p>
+      <p className="text-[9.5px] font-semibold text-white/60 leading-tight truncate w-full">{subject}</p>
+      <p className="text-base font-black leading-none" style={{ color: scoreColor }}>{score}%</p>
+      <p className="text-[9px] text-white/40">{attemptsCount} attempt{attemptsCount > 1 ? 's' : ''}</p>
     </motion.div>
   )
 }
@@ -531,7 +526,7 @@ function QuizPerformanceSection({ quizzes, seeAllTo }) {
           </Link>
         )}
       </div>
-      <div className="grid grid-cols-2 xs:grid-cols-4 gap-3">
+      <div className="grid grid-cols-4 gap-2">
         {bySubject.map((s, i) => (
           <QuizPerformanceCard key={s.subject} subject={s.subject} score={s.score} attemptsCount={s.attemptsCount} index={i} />
         ))}
@@ -674,7 +669,7 @@ export default function Home() {
             View all
           </Link>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-4 gap-2">
           {staticCards.map((card, i) => (
             <QuickAccessCard key={i} {...card} />
           ))}
