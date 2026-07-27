@@ -160,13 +160,26 @@ export default function Profile() {
           {/* Header Part */}
           <div className="flex flex-col items-center text-center">
             <div className="relative mb-3">
-              {/* Golden Sparkle Ring - Black background removed using mix-blend-mode */}
+              
+              {/* Golden Sparkle Ring - Black background 100% remove via Mask Image */}
               <div className="absolute -inset-2 w-[120px] h-[120px] -ml-[4px] -mt-[4px] z-0 pointer-events-none">
-                <img 
-                  src={dpRingUrl} 
-                  alt="Ring" 
-                  className="w-full h-full object-contain mix-blend-screen animate-pulse" 
-                  style={{ animationDuration: '3s' }}
+                <div 
+                  className="w-full h-full bg-cover bg-center animate-pulse"
+                  style={{ 
+                    backgroundImage: `url(${dpRingUrl})`,
+                    animationDuration: '3s',
+                    /* CSS Mask to strip out the black background entirely */
+                    WebkitMaskImage: `url(${dpRingUrl})`,
+                    maskImage: `url(${dpRingUrl})`,
+                    WebkitMaskMode: 'alpha',
+                    maskMode: 'alpha',
+                    WebkitMaskRepeat: 'no-repeat',
+                    maskRepeat: 'no-repeat',
+                    WebkitMaskSize: 'contain',
+                    maskSize: 'contain',
+                    WebkitMaskPosition: 'center',
+                    maskPosition: 'center'
+                  }}
                 />
               </div>
               
