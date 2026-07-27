@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   BookOpen, Trophy, TrendingUp, Flame, Play, ArrowRight,
-  Sparkles, GraduationCap, MessageSquare, ShoppingBag, Book, History,
-  FileText, Brain, RotateCcw, Zap, ChevronRight,
+  GraduationCap, MessageSquare, ShoppingBag, Book, FileText,
+  Brain, ChevronRight, Zap, Sparkles,
 } from 'lucide-react'
 import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
@@ -15,24 +15,12 @@ import { DEFAULT_THUMBNAILS, APP_LOGO_URL } from '../../constants/branding'
 import { getRecentQuizzes } from '../../utils/quizCache'
 
 /* ═══════════════════════════════════════════════════════════════════════
-   AR Education — Home
-   Redesigned around the app's "Indigo Aurora" system: indigo primary with
-   mint + amber accents over a deep, softly-lit dark canvas.
+   AR Education — Home  (fresh "clean dashboard" redesign)
+   Flat dark surfaces, one signature hero card, unified stat strip, and
+   calm colored-icon tiles. Indigo primary + mint / amber accents.
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ── Shimmer placeholder ─────────────────────────────────────────────── */
-function Shimmer({ className = '' }) {
-  return (
-    <div className={`rounded-2xl relative overflow-hidden bg-white/[0.04] ${className}`}>
-      <div
-        className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite]"
-        style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)' }}
-      />
-    </div>
-  )
-}
-
-/* ── Brand logo fallback (for thumbnails that fail to load) ──────────── */
+/* ── Brand logo fallback ─────────────────────────────────────────────── */
 function LogoFallback() {
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-dark-700">
@@ -41,208 +29,187 @@ function LogoFallback() {
   )
 }
 
-/* ── Momentum stat chip ──────────────────────────────────────────────── */
-function StatChip({ icon: Icon, value, label, color }) {
+/* ── Skeleton block ──────────────────────────────────────────────────── */
+function Skeleton({ className = '' }) {
+  return <div className={`bg-white/[0.05] animate-pulse rounded-2xl ${className}`} />
+}
+
+/* ── Compact top header: avatar + greeting + streak ──────────────────── */
+function TopBar({ user, streak }) {
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const firstName = user?.name?.split(' ')[0] || 'Student'
+  const initial = firstName.charAt(0).toUpperCase()
+
   return (
-    <div
-      className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl flex-1 min-w-0"
-      style={{ background: `${color}14`, border: `1px solid ${color}2e` }}
-    >
-      <div
-        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ background: `${color}26` }}
-      >
-        <Icon size={15} style={{ color }} />
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-11 h-11 rounded-2xl bg-primary-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary-500/25">
+          <span className="text-lg font-black text-white">{initial}</span>
+        </div>
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold text-white/45 leading-none">{greeting}</p>
+          <h1 className="text-lg font-black text-white leading-tight truncate mt-1">{firstName}</h1>
+        </div>
       </div>
-      <div className="min-w-0">
-        <div className="text-base font-black text-white leading-none truncate">{value}</div>
-        <div className="text-[9px] font-semibold uppercase tracking-wider text-white/45 mt-1 truncate">{label}</div>
+
+      <div className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-amber-500/12 border border-amber-500/25 flex-shrink-0">
+        <Flame size={15} className="text-amber-400" fill="currentColor" />
+        <span className="text-sm font-black text-white">{streak}</span>
       </div>
     </div>
   )
 }
 
-/* ── Welcome hero ────────────────────────────────────────────────────── */
-function WelcomeHero({ user, isLoading, streak, todayPoints, progressPercent }) {
-  const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-  const firstName = user?.name?.split(' ')[0] || 'Student'
-
-  if (isLoading) {
+/* ── Signature hero card ─────────────────────────────────────────────── */
+function HeroCard({ continueItem, continueTitle, continueUrl, progressPercent }) {
+  // Continue-learning variant
+  if (continueUrl) {
     return (
-      <div className="space-y-3 pt-2">
-        <Shimmer className="h-4 w-32" />
-        <Shimmer className="h-9 w-56" />
-        <div className="flex gap-2">
-          <Shimmer className="h-14 flex-1" />
-          <Shimmer className="h-14 flex-1" />
-          <Shimmer className="h-14 flex-1" />
-        </div>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <Link to={continueUrl} className="block group">
+          <div className="relative overflow-hidden rounded-3xl bg-dark-800 border border-white/[0.07]">
+            {/* thumbnail top */}
+            <div className="relative aspect-[16/9] w-full bg-dark-700 overflow-hidden">
+              <CardThumbnail item={continueItem} alt={continueTitle} fallback={<LogoFallback />} />
+              <div className="absolute inset-0 bg-gradient-to-t from-dark-800 via-dark-800/20 to-transparent" />
+              <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-black/40 backdrop-blur-sm text-white">
+                <span className="w-1.5 h-1.5 rounded-full bg-mint-400 animate-pulse" />
+                Continue watching
+              </span>
+              <div className="absolute right-3 bottom-3 w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-xl group-active:scale-90 transition-transform">
+                <Play size={18} className="text-dark-900 ml-0.5" fill="currentColor" />
+              </div>
+            </div>
+
+            {/* copy + progress */}
+            <div className="p-4">
+              <h3 className="text-[15px] font-bold text-white leading-snug line-clamp-2">
+                {continueTitle || 'Resume your last lesson'}
+              </h3>
+              <div className="mt-3 flex items-center gap-3">
+                <div className="flex-1 h-1.5 rounded-full bg-white/[0.08] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary-500"
+                    style={{ width: `${Math.max(progressPercent, 4)}%` }}
+                  />
+                </div>
+                <span className="text-[11px] font-bold text-primary-300 flex-shrink-0">{progressPercent}%</span>
+              </div>
+            </div>
+          </div>
+        </Link>
+      </motion.div>
     )
   }
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-      className="relative pt-2"
-    >
-      {/* soft aurora wash */}
-      <div className="absolute -top-12 -left-10 w-72 h-72 bg-primary-500/15 rounded-full blur-[90px] pointer-events-none" />
-      <div className="absolute -top-6 right-0 w-52 h-52 bg-mint-500/10 rounded-full blur-[70px] pointer-events-none" />
-
-      <div className="relative">
-        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-white/[0.05] text-white/55 border border-white/[0.06]">
-          <Sparkles size={10} className="text-primary-400" />
-          {greeting}
-        </span>
-
-        <h1 className="text-3xl sm:text-4xl font-black text-white leading-tight tracking-tight mt-2.5 mb-4">
-          Hey,{' '}
-          <span
-            style={{
-              background: 'linear-gradient(120deg, #8B7CFF 0%, #6D5EF5 45%, #2DD4BF 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            {firstName}
-          </span>{' '}
-          <span className="inline-block animate-wave">👋</span>
-        </h1>
-
-        <div className="flex gap-2">
-          <StatChip icon={Flame} value={streak} label="Day streak" color="#FFB020" />
-          <StatChip icon={Trophy} value={todayPoints} label="Points today" color="#2DD4BF" />
-          <StatChip icon={TrendingUp} value={`${progressPercent}%`} label="Progress" color="#8B7CFF" />
-        </div>
-      </div>
-    </motion.div>
-  )
-}
-
-/* ── Continue learning banner ────────────────────────────────────────── */
-function ContinueLearning({ item, title, to }) {
+  // Welcome variant (no history yet)
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
     >
-      <Link to={to} className="block group">
-        <div
-          className="relative overflow-hidden rounded-3xl border border-primary-500/25"
-          style={{ background: 'linear-gradient(120deg, rgba(109,94,245,0.18), rgba(45,212,191,0.06))' }}
-        >
-          <div className="flex items-stretch gap-3 p-3">
-            {/* thumbnail */}
-            <div className="relative w-28 sm:w-36 aspect-video rounded-2xl overflow-hidden flex-shrink-0 bg-dark-700">
-              <CardThumbnail item={item} alt={title} fallback={<LogoFallback />} />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
-                <div className="w-9 h-9 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                  <Play size={16} className="text-dark-900 ml-0.5" fill="currentColor" />
-                </div>
-              </div>
-            </div>
-
-            {/* copy */}
-            <div className="flex flex-col justify-center min-w-0 flex-1 pr-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-primary-300 mb-1">
-                Continue learning
-              </span>
-              <h3 className="text-sm sm:text-base font-bold text-white leading-snug line-clamp-2">
-                {title || 'Resume your last lesson'}
-              </h3>
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-mint-400 mt-2 group-hover:gap-2 transition-all">
-                Resume <ChevronRight size={13} />
-              </span>
-            </div>
-          </div>
-        </div>
-      </Link>
-    </motion.div>
-  )
-}
-
-/* ── Quick action card ───────────────────────────────────────────────── */
-function QuickActionCard({ to, icon: Icon, label, description, accent, delay, thumbnailUrl }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-    >
-      <Link to={to} className="block group">
-        <div
-          className="rounded-3xl transition-all duration-300 group-hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden aspect-square border border-white/[0.07]"
-        >
-          {thumbnailUrl && (
-            <img
-              src={thumbnailUrl}
-              alt={label}
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/40 to-transparent" />
-          <div
-            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-            style={{ background: `radial-gradient(circle at 50% 70%, ${accent}22 0%, transparent 70%)` }}
-          />
-
-          {/* icon badge top-left */}
-          <div
-            className="absolute top-2.5 left-2.5 w-8 h-8 rounded-xl flex items-center justify-center backdrop-blur-sm"
-            style={{ background: `${accent}2e`, border: `1px solid ${accent}45` }}
+      <div className="relative overflow-hidden rounded-3xl bg-primary-500 p-5">
+        <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white/10" />
+        <div className="absolute -right-2 top-10 w-24 h-24 rounded-full bg-white/10" />
+        <div className="relative">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-white/20 text-white">
+            <Sparkles size={11} /> Welcome
+          </span>
+          <h3 className="text-xl font-black text-white leading-tight mt-3 text-balance">
+            Ready to start learning?
+          </h3>
+          <p className="text-[13px] text-white/85 mt-1.5 leading-relaxed">
+            Pick a course and build your streak today.
+          </p>
+          <Link
+            to="/free-courses"
+            className="inline-flex items-center gap-1.5 mt-4 bg-white text-primary-600 font-bold text-sm px-4 py-2.5 rounded-xl active:scale-95 transition-transform"
           >
-            <Icon size={15} style={{ color: accent }} />
-          </div>
-
-          <div className="absolute inset-x-0 bottom-0 p-3 flex items-end justify-between gap-2">
-            <div className="min-w-0">
-              <h3 className="text-[13px] font-bold text-white mb-0.5 drop-shadow-md truncate">{label}</h3>
-              <p className="text-[10px] text-white/65 truncate">{description}</p>
-            </div>
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:translate-x-0.5 backdrop-blur-sm"
-              style={{ background: `${accent}2e`, border: `1px solid ${accent}45` }}
-            >
-              <ArrowRight size={12} style={{ color: accent }} />
-            </div>
-          </div>
+            <Zap size={15} /> Explore courses
+          </Link>
         </div>
-      </Link>
+      </div>
     </motion.div>
   )
 }
 
-/* ── Horizontal scroll row ───────────────────────────────────────────── */
-function ScrollRow({ icon: Icon, title, count, seeAllTo, children }) {
+/* ── Unified stat strip ──────────────────────────────────────────────── */
+function StatStrip({ todayPoints, streak, progressPercent }) {
+  const stats = [
+    { icon: Trophy, value: todayPoints, label: 'Points', color: '#2DD4BF' },
+    { icon: Flame, value: streak, label: 'Streak', color: '#FFB020' },
+    { icon: TrendingUp, value: `${progressPercent}%`, label: 'Progress', color: '#8B7CFF' },
+  ]
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-white/45 flex items-center gap-1.5">
-          <Icon size={13} className="text-primary-400" />
-          {title} {count > 0 && <span className="text-white/30">({count})</span>}
-        </h3>
-        {seeAllTo && (
-          <Link to={seeAllTo} className="text-xs font-semibold text-primary-400 hover:text-primary-300 transition-colors">
-            See all
-          </Link>
-        )}
-      </div>
-      <div
-        className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0"
-        style={{ scrollSnapType: 'x proximity' }}
-      >
-        {children}
-      </div>
+    <div className="flex items-stretch rounded-3xl bg-dark-800 border border-white/[0.07] overflow-hidden">
+      {stats.map((s, i) => (
+        <div
+          key={s.label}
+          className={`flex-1 flex flex-col items-center justify-center py-4 gap-1.5 ${i > 0 ? 'border-l border-white/[0.07]' : ''}`}
+        >
+          <s.icon size={17} style={{ color: s.color }} />
+          <span className="text-lg font-black text-white leading-none">{s.value}</span>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">{s.label}</span>
+        </div>
+      ))}
     </div>
   )
 }
 
-/* ── Watch history card (video / pdf) ────────────────────────────────── */
+/* ── Section heading ─────────────────────────────────────────────────── */
+function SectionTitle({ children, seeAllTo, count }) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <h2 className="text-sm font-black text-white flex items-center gap-2">
+        {children}
+        {count > 0 && <span className="text-white/30 font-bold">{count}</span>}
+      </h2>
+      {seeAllTo && (
+        <Link to={seeAllTo} className="text-xs font-semibold text-primary-400 active:text-primary-300">
+          See all
+        </Link>
+      )}
+    </div>
+  )
+}
+
+/* ── Clean category tile ─────────────────────────────────────────────── */
+function CategoryTile({ to, icon: Icon, label, description, accent, delay }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <Link
+        to={to}
+        className="block h-full rounded-3xl bg-dark-800 border border-white/[0.07] p-4 active:scale-[0.97] transition-transform"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div
+            className="w-11 h-11 rounded-2xl flex items-center justify-center"
+            style={{ background: `${accent}1f`, border: `1px solid ${accent}3a` }}
+          >
+            <Icon size={19} style={{ color: accent }} />
+          </div>
+          <div className="w-7 h-7 rounded-full bg-white/[0.05] flex items-center justify-center">
+            <ArrowRight size={13} className="text-white/50" />
+          </div>
+        </div>
+        <h3 className="text-sm font-bold text-white leading-tight">{label}</h3>
+        <p className="text-[11px] text-white/45 mt-0.5 truncate">{description}</p>
+      </Link>
+    </motion.div>
+  )
+}
+
+/* ── Watch history card ──────────────────────────────────────────────── */
 function WatchHistoryCard({ item, index }) {
   const itemUrl = item.courseId && item.subjectId && item.contentId
     ? `/courses/${item.courseId}/subjects/${item.subjectId}/content/${item.contentId}`
@@ -253,39 +220,32 @@ function WatchHistoryCard({ item, index }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.05 + index * 0.05, duration: 0.4 }}
-      className="min-w-[150px] w-[150px] flex-shrink-0"
+      initial={{ opacity: 0, x: 16 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.04 * index, duration: 0.4 }}
+      className="min-w-[160px] w-[160px] flex-shrink-0"
       style={{ scrollSnapAlign: 'start' }}
     >
       <Link to={itemUrl} className="block group">
-        <div className="rounded-2xl overflow-hidden transition-all duration-300 relative aspect-square border border-white/[0.08] bg-dark-700">
+        <div className="relative aspect-video rounded-2xl overflow-hidden bg-dark-700 border border-white/[0.07]">
           <CardThumbnail item={item} alt={item.title} fallback={<LogoFallback />} />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
-
+          <div className="absolute inset-0 bg-black/25 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-full bg-white/95 flex items-center justify-center">
+              {isPdf
+                ? <FileText size={15} className="text-dark-900" />
+                : <Play size={15} className="text-dark-900 ml-0.5" fill="currentColor" />}
+            </div>
+          </div>
           <span
-            className="absolute top-2 left-2 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded"
-            style={{
-              background: isPdf ? 'rgba(255,92,92,0.9)' : 'rgba(109,94,245,0.9)',
-              color: 'white',
-            }}
+            className="absolute top-2 left-2 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded text-white"
+            style={{ background: isPdf ? 'rgba(255,92,92,0.92)' : 'rgba(109,94,245,0.92)' }}
           >
             {isPdf ? 'PDF' : 'Video'}
           </span>
-
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-            <div className="w-9 h-9 rounded-full bg-white/90 flex items-center justify-center">
-              {isPdf ? <FileText size={15} className="text-dark-900" /> : <Play size={15} className="text-dark-900 ml-0.5" fill="currentColor" />}
-            </div>
-          </div>
-
-          <div className="absolute bottom-0 left-0 right-0 p-2.5">
-            <p className="text-[11px] font-bold text-white line-clamp-2 leading-snug">
-              {item.title || 'Untitled Lesson'}
-            </p>
-          </div>
         </div>
+        <p className="text-[12px] font-semibold text-white/90 line-clamp-2 leading-snug mt-2 px-0.5">
+          {item.title || 'Untitled Lesson'}
+        </p>
       </Link>
     </motion.div>
   )
@@ -300,70 +260,45 @@ function QuizHistoryCard({ entry, index }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.05 + index * 0.05, duration: 0.4 }}
-      className="min-w-[150px] w-[150px] flex-shrink-0"
+      initial={{ opacity: 0, x: 16 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: 0.04 * index, duration: 0.4 }}
+      className="min-w-[160px] w-[160px] flex-shrink-0"
       style={{ scrollSnapAlign: 'start' }}
     >
-      <Link to={`/quiz/result/${latest.attemptId}`} className="block group">
-        <div
-          className="rounded-2xl overflow-hidden transition-all duration-300 relative aspect-square flex flex-col justify-between p-3 group-hover:scale-[1.02]"
-          style={{
-            background: 'linear-gradient(140deg, rgba(109,94,245,0.16) 0%, rgba(109,94,245,0.03) 100%)',
-            border: '1px solid rgba(109,94,245,0.28)',
-          }}
-        >
-          <img src={APP_LOGO_URL} alt="" className="absolute inset-0 m-auto w-1/2 h-1/2 object-contain opacity-[0.06] pointer-events-none" />
-
-          <div className="flex items-center justify-between">
-            <div className="w-8 h-8 rounded-xl bg-primary-500/20 border border-primary-500/30 flex items-center justify-center">
-              <Brain size={15} className="text-primary-300" />
+      <Link to={`/quiz/result/${latest.attemptId}`} className="block">
+        <div className="rounded-2xl bg-dark-800 border border-white/[0.07] p-3.5 h-full active:scale-[0.97] transition-transform">
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-9 h-9 rounded-xl bg-primary-500/15 border border-primary-500/25 flex items-center justify-center">
+              <Brain size={16} className="text-primary-300" />
             </div>
-            <div className="text-lg font-black" style={{ color: scoreColor }}>{score}%</div>
+            <span className="text-lg font-black" style={{ color: scoreColor }}>{score}%</span>
           </div>
-
-          <div>
-            <p className="text-[11px] font-bold text-white line-clamp-2 leading-snug mb-1.5">
-              {entry.quizName}
-            </p>
-            <div className="flex items-center justify-between">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary-500/25 text-primary-200">
-                {attemptsCount} attempt{attemptsCount > 1 ? 's' : ''}
-              </span>
-              <RotateCcw size={11} className="text-white/30 group-hover:text-primary-300 transition-colors" />
-            </div>
-          </div>
+          <p className="text-[12px] font-bold text-white line-clamp-2 leading-snug min-h-[2rem]">
+            {entry.quizName}
+          </p>
+          <span className="inline-block mt-2 text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white/[0.06] text-white/50">
+            {attemptsCount} attempt{attemptsCount > 1 ? 's' : ''}
+          </span>
         </div>
       </Link>
     </motion.div>
   )
 }
 
-/* ── Empty state (new users) ─────────────────────────────────────────── */
-function EmptyState() {
+/* ── Horizontal scroll row ───────────────────────────────────────────── */
+function ScrollRow({ children }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3, duration: 0.5 }}
-      className="rounded-3xl border border-white/[0.07] bg-white/[0.02] p-6 text-center"
+    <div
+      className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4"
+      style={{ scrollSnapType: 'x proximity' }}
     >
-      <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-primary-500/15 border border-primary-500/25 mb-3">
-        <GraduationCap size={22} className="text-primary-400" />
-      </div>
-      <h3 className="text-base font-bold text-white mb-1">Start your journey</h3>
-      <p className="text-xs text-white/50 mb-4 max-w-xs mx-auto leading-relaxed">
-        Your recent lessons and quizzes will show up here. Pick a course to get going.
-      </p>
-      <Link to="/free-courses" className="btn-primary inline-flex items-center gap-1.5 text-sm">
-        <Zap size={15} /> Explore free courses
-      </Link>
-    </motion.div>
+      {children}
+    </div>
   )
 }
 
-/* ═══════════════════════════ MAIN ═══════════════════════════ */
+/* ═══════════════════════════════ MAIN ══════════════════════════════════ */
 export default function Home() {
   const user = useAuthStore(s => s.user)
   const [recentlyWatched, setRecentlyWatched] = useState([])
@@ -436,102 +371,128 @@ export default function Home() {
   const streak = user?.streak || 0
   const todayPoints = points.daily || 0
 
-  const staticCards = [
-    { to: '/free-courses', icon: BookOpen, label: 'Free Courses', description: 'Start learning free', accent: '#2DD4BF', delay: 0.12, thumbnailUrl: DEFAULT_THUMBNAILS.freeCourses },
-    { to: '/books', icon: Book, label: 'Books', description: 'Read PDFs', accent: '#8B7CFF', delay: 0.18, thumbnailUrl: DEFAULT_THUMBNAILS.books },
-    { to: '/store', icon: ShoppingBag, label: 'Store', description: 'Premium courses', accent: '#FFB020', delay: 0.24, thumbnailUrl: DEFAULT_THUMBNAILS.store },
-    { to: '/progress', icon: TrendingUp, label: 'Progress', description: `${progressPercent}% complete`, accent: '#6D5EF5', delay: 0.30, thumbnailUrl: DEFAULT_THUMBNAILS.progress },
+  const categories = [
+    { to: '/free-courses', icon: BookOpen, label: 'Free Courses', description: 'Start learning free', accent: '#2DD4BF', delay: 0.05 },
+    { to: '/books', icon: Book, label: 'Books', description: 'Read PDFs', accent: '#8B7CFF', delay: 0.10 },
+    { to: '/store', icon: ShoppingBag, label: 'Store', description: 'Premium courses', accent: '#FFB020', delay: 0.15 },
+    { to: '/progress', icon: TrendingUp, label: 'Progress', description: `${progressPercent}% complete`, accent: '#6D5EF5', delay: 0.20 },
   ]
 
   const hasRecent = classItems.length > 0 || notesItems.length > 0 || recentQuizzes.length > 0
 
   return (
-    <div className="space-y-7 max-w-2xl mx-auto pb-10">
-      <WelcomeHero
-        user={user}
-        isLoading={isLoading}
-        streak={streak}
-        todayPoints={todayPoints}
-        progressPercent={progressPercent}
-      />
+    <div className="space-y-6 max-w-2xl mx-auto pb-10">
+      <TopBar user={user} streak={streak} />
 
-      {continueUrl && (
-        <ContinueLearning
-          item={lastContent || lastWatched}
-          title={lastContent?.title || lastWatched.lastContentTitle}
-          to={continueUrl}
-        />
+      {isLoading ? (
+        <>
+          <Skeleton className="h-56 w-full rounded-3xl" />
+          <Skeleton className="h-24 w-full rounded-3xl" />
+        </>
+      ) : (
+        <>
+          <HeroCard
+            continueItem={lastContent || lastWatched}
+            continueTitle={lastContent?.title || lastWatched.lastContentTitle}
+            continueUrl={continueUrl}
+            progressPercent={progressPercent}
+          />
+
+          <StatStrip todayPoints={todayPoints} streak={streak} progressPercent={progressPercent} />
+        </>
       )}
 
-      {/* Quick actions */}
-      <div>
-        <h3 className="text-xs font-bold uppercase tracking-wider text-white/45 mb-3 flex items-center gap-1.5">
-          <Sparkles size={13} className="text-primary-400" />
-          Explore
-        </h3>
+      {/* Explore */}
+      <section>
+        <SectionTitle>
+          <Sparkles size={15} className="text-primary-400" /> Explore
+        </SectionTitle>
         <div className="grid grid-cols-2 gap-3">
-          {staticCards.map((card, i) => (
-            <QuickActionCard key={i} {...card} />
+          {categories.map((c) => (
+            <CategoryTile key={c.to} {...c} />
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* Doubt chat CTA */}
+      {/* Doubt chat */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.36, duration: 0.5 }}
+        transition={{ delay: 0.25, duration: 0.4 }}
       >
         <Link to="/doubt-chat" className="block group">
-          <div className="flex items-center gap-3 rounded-2xl p-3.5 border border-mint-500/25 bg-mint-500/[0.07] transition-colors group-hover:bg-mint-500/[0.12]">
-            <div className="w-10 h-10 rounded-xl bg-mint-500/20 border border-mint-500/30 flex items-center justify-center flex-shrink-0">
-              <MessageSquare size={18} className="text-mint-400" />
+          <div className="flex items-center gap-3 rounded-3xl p-4 bg-mint-500/[0.08] border border-mint-500/25 active:scale-[0.98] transition-transform">
+            <div className="w-11 h-11 rounded-2xl bg-mint-500/18 border border-mint-500/30 flex items-center justify-center flex-shrink-0">
+              <MessageSquare size={19} className="text-mint-400" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-white">Have a doubt?</p>
-              <p className="text-[11px] text-white/50 truncate">Ask our mentors and get quick answers</p>
+              <p className="text-[11px] text-white/50 truncate">Ask our mentors, get quick answers</p>
             </div>
-            <ArrowRight size={16} className="text-mint-400 group-hover:translate-x-0.5 transition-transform" />
+            <ChevronRight size={18} className="text-mint-400 flex-shrink-0" />
           </div>
         </Link>
       </motion.div>
 
       {/* Recent activity */}
       {classItems.length > 0 && (
-        <ScrollRow icon={History} title="Class" count={classItems.length} seeAllTo="/watch-history">
-          {classItems.map((item, idx) => (
-            <WatchHistoryCard key={item.contentId || idx} item={item} index={idx} />
-          ))}
-        </ScrollRow>
+        <section>
+          <SectionTitle seeAllTo="/watch-history" count={classItems.length}>
+            <Play size={14} className="text-primary-400" fill="currentColor" /> Recent classes
+          </SectionTitle>
+          <ScrollRow>
+            {classItems.map((item, idx) => (
+              <WatchHistoryCard key={item.contentId || idx} item={item} index={idx} />
+            ))}
+          </ScrollRow>
+        </section>
       )}
 
       {notesItems.length > 0 && (
-        <ScrollRow icon={FileText} title="Notes" count={notesItems.length} seeAllTo="/watch-history">
-          {notesItems.map((item, idx) => (
-            <WatchHistoryCard key={item.contentId || idx} item={item} index={idx} />
-          ))}
-        </ScrollRow>
+        <section>
+          <SectionTitle seeAllTo="/watch-history" count={notesItems.length}>
+            <FileText size={14} className="text-primary-400" /> Notes
+          </SectionTitle>
+          <ScrollRow>
+            {notesItems.map((item, idx) => (
+              <WatchHistoryCard key={item.contentId || idx} item={item} index={idx} />
+            ))}
+          </ScrollRow>
+        </section>
       )}
 
       {recentQuizzes.length > 0 && (
-        <ScrollRow icon={Brain} title="Quiz" count={recentQuizzes.length}>
-          {recentQuizzes.map((entry, idx) => (
-            <QuizHistoryCard key={`${entry.subject}::${entry.quizName}`} entry={entry} index={idx} />
-          ))}
-        </ScrollRow>
+        <section>
+          <SectionTitle count={recentQuizzes.length}>
+            <Brain size={14} className="text-primary-400" /> Recent quizzes
+          </SectionTitle>
+          <ScrollRow>
+            {recentQuizzes.map((entry, idx) => (
+              <QuizHistoryCard key={`${entry.subject}::${entry.quizName}`} entry={entry} index={idx} />
+            ))}
+          </ScrollRow>
+        </section>
       )}
 
-      {!hasRecent && !continueUrl && !isLoading && <EmptyState />}
+      {/* Empty state */}
+      {!hasRecent && !continueUrl && !isLoading && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
+          className="rounded-3xl border border-white/[0.07] bg-dark-800 p-6 text-center"
+        >
+          <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-primary-500/15 border border-primary-500/25 mb-3">
+            <GraduationCap size={22} className="text-primary-400" />
+          </div>
+          <h3 className="text-base font-bold text-white mb-1">No activity yet</h3>
+          <p className="text-xs text-white/50 leading-relaxed max-w-xs mx-auto">
+            Your recent lessons and quizzes will appear here once you start learning.
+          </p>
+        </motion.div>
+      )}
 
       <style>{`
-        @keyframes shimmer { 100% { transform: translateX(100%); } }
-        @keyframes wave {
-          0% { transform: rotate(0deg) } 10% { transform: rotate(14deg) }
-          20% { transform: rotate(-8deg) } 30% { transform: rotate(14deg) }
-          40% { transform: rotate(-4deg) } 50% { transform: rotate(10deg) }
-          60% { transform: rotate(0deg) } 100% { transform: rotate(0deg) }
-        }
-        .animate-wave { animation: wave 2.5s infinite; transform-origin: 70% 70%; display: inline-block; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
