@@ -1,0 +1,102 @@
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import { Bell, BellOff, BellRing } from 'lucide-react'
+import toast from 'react-hot-toast'
+import api from '../../api/axios'
+import { getDeviceId } from '../../utils/deviceId'
+import {
+  isPushSupported,
+  getPushPermissionState,
+  subscribeToPush,
+  unsubscribeFromPush,
+} from '../../utils/pushNotifications'
+
+export default function PushNotificationSection() {
+  const [permission, setPermission] = useState('default')
+  const [subscribed, setSubscribed] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const supported = isPushSupported()
+
+  useEffect(() => {
+    if (!supported) return
+    setPermission(getPushPermissionState())
+    navigator.serviceWorker?.getRegistration().then(async (reg) => {
+      const sub = await reg?.pushManager.getSubscription()
+      setSubscribed(!!sub)
+    })
+  }, [supported])
+
+  const handleEnable = async () => {
+    setLoading(true)
+    const res = await subscribeToPush(api, getDeviceId())
+    setLoading(false)
+    setPermission(getPushPermissionState())
+    if (res.ok) {
+      setSubscribed(true)
+      toast.success('Push notifications on ho gayi')
+    } else if (res.reason === 'denied') {
+      toast.error('Permission block hai — browser settings me site notifications allow karein')
+    } else {
+      toast.error('Push enable nahi ho payi, dobara try karein')
+    }
+  }
+
+  const handleDisable = async () => {
+    setLoading(true)
+    await unsubscribeFromPush(api)
+    setLoading(false)
+    setSubscribed(false)
+    toast.success('Push notifications off kar di')
+  }
+
+  if (!supported) return null
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2, duration: 0.5 }}
+      className="space-y-3"
+    >
+      <h2 className="text-[13px] font-semibold text-white/60 px-1">Push Notifications</h2>
+
+      <div className="flex items-center justify-between p-4 rounded-2xl bg-[#0E101A] border border-white/[0.05]">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="w-9 h-9 rounded-xl bg-white/[0.05] flex items-center justify-center flex-shrink-0">
+            {subscribed ? (
+              <BellRing size={16} className="text-primary-400" />
+            ) : (
+              <BellOff size={16} className="text-white/40" />
+            )}
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-semibold text-white">
+              {subscribed ? 'Enabled' : permission === 'denied' ? 'Blocked' : 'Disabled'}
+            </span>
+            <span className="text-[11px] text-white/40 mt-0.5">
+              {permission === 'denied'
+                ? 'Phone/browser settings se allow karna hoga'
+                : subscribed
+                ? 'App band ho tab bhi notification aayegi'
+                : 'Naye courses aur updates ka alert paayein'}
+            </span>
+          </div>
+        </div>
+
+        {permission !== 'denied' && (
+          <button
+            disabled={loading}
+            onClick={subscribed ? handleDisable : handleEnable}
+            className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+              subscribed
+                ? 'bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300'
+                : 'bg-primary-500 hover:bg-primary-600 text-white'
+            }`}
+          >
+            {loading ? '...' : subscribed ? 'Turn Off' : 'Enable'}
+          </button>
+        )}
+      </div>
+    </motion.div>
+  )
+}
