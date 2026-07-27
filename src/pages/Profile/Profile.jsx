@@ -10,7 +10,7 @@ import {
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
-import DeviceSyncSection from './DeviceSyncSection'
+import DeviceSyncSection from './DeviceSyncSection' // Same import!
 
 /* ── Reusable Info Row ───────────────────────────────────────────────── */
 function InfoRow({ icon: Icon, label, value, onClick, isStatus = false }) {
