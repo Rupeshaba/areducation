@@ -6,9 +6,7 @@ export default defineConfig({
   server: {
     host: true, // ya "0.0.0.0"
     port: 5173,
-    allowedHosts: [
-      'sb-3ur4rztd7lww.vercel.run',
-    ],
+    allowedHosts: ['.vercel.run'],
     proxy: {
       '/api': {
         target: 'https://areducation-backend.onrender.com',
