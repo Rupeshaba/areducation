@@ -11,6 +11,7 @@ import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import useAuthStore from '../../store/authStore'
 import DeviceSyncSection from './DeviceSyncSection' // Same import!
+import PushNotificationSection from './PushNotificationSection'
 
 /* ── Reusable Info Row ───────────────────────────────────────────────── */
 function InfoRow({ icon: Icon, label, value, onClick, isStatus = false }) {
@@ -272,6 +273,9 @@ export default function Profile() {
             <InfoRow icon={MapPin} label="Address" value={user?.address || 'Not added'} />
           </div>
         </motion.div>
+
+        {/* ── Push Notifications ── */}
+        <PushNotificationSection />
 
         {/* ── Device Sync ── */}
         <DeviceSyncSection />
