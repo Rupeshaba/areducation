@@ -42,14 +42,25 @@ export async function registerServiceWorker() {
 
 // Permission maango, subscribe karo, aur subscription backend ko bhejo
 export async function subscribeToPush(api, deviceId) {
-  if (!isPushSupported()) return { ok: false, reason: 'unsupported' }
+  if (!isPushSupported()) {
+    console.warn('[Push] Not supported:', {
+      protocol: window.location.protocol,
+      hasSW: 'serviceWorker' in navigator,
+      hasPushManager: 'PushManager' in window,
+      hasNotification: 'Notification' in window,
+    })
+    return { ok: false, reason: 'unsupported' }
+  }
   if (!VAPID_PUBLIC_KEY) {
-    console.warn('VITE_VAPID_PUBLIC_KEY set nahi hai — push subscribe skip ho raha hai')
+    console.error('[Push] VITE_VAPID_PUBLIC_KEY is missing/empty at build time. Set it in your .env and REBUILD + REDEPLOY the frontend — Vite env vars are baked in at build time, editing .env alone does nothing until you rebuild.')
     return { ok: false, reason: 'no-vapid-key' }
   }
 
   const permission = await Notification.requestPermission()
-  if (permission !== 'granted') return { ok: false, reason: permission }
+  if (permission !== 'granted') {
+    console.warn('[Push] Permission not granted:', permission)
+    return { ok: false, reason: permission }
+  }
 
   const reg = await registerServiceWorker()
   if (!reg) return { ok: false, reason: 'sw-failed' }
@@ -59,17 +70,24 @@ export async function subscribeToPush(api, deviceId) {
 
   let subscription = await reg.pushManager.getSubscription()
   if (!subscription) {
-    subscription = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-    })
+    try {
+      subscription = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      })
+    } catch (e) {
+      // Sabse aam wajah: VAPID_PUBLIC_KEY galat/corrupt hai (backend ki
+      // VAPID_PRIVATE_KEY se match nahi karti), ya key format sahi nahi hai.
+      console.error('[Push] pushManager.subscribe() failed:', e.name, e.message)
+      return { ok: false, reason: 'subscribe-failed', error: e.message }
+    }
   }
 
   try {
     await api.post('/notifications/push-subscribe', { subscription, deviceId })
   } catch (e) {
-    console.error('Push subscription backend save failed:', e)
-    return { ok: false, reason: 'save-failed' }
+    console.error('[Push] Saving subscription to backend failed:', e.response?.status, e.response?.data || e.message)
+    return { ok: false, reason: 'save-failed', error: e.response?.data?.error || e.message, status: e.response?.status }
   }
 
   return { ok: true, subscription }
