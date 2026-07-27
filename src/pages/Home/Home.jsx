@@ -16,8 +16,7 @@ import { getRecentQuizzes } from '../../utils/quizCache'
 
 /* ═══════════════════════════════════════════════════════════════════════
    AR Education — Home
-   Redesigned around the app's "Indigo Aurora" system: indigo primary with
-   mint + amber accents over a deep, softly-lit dark canvas.
+   Redesigned to match the provided "Indigo Aurora" dark mode mockup.
    ═══════════════════════════════════════════════════════════════════════ */
 
 /* ── Shimmer placeholder ─────────────────────────────────────────────── */
@@ -32,31 +31,58 @@ function Shimmer({ className = '' }) {
   )
 }
 
-/* ── Brand logo fallback (for thumbnails that fail to load) ──────────── */
+/* ── Brand logo fallback ─────────────────────────────────────────────── */
 function LogoFallback() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-dark-700">
+    <div className="absolute inset-0 flex items-center justify-center bg-[#10121A]">
       <img src={APP_LOGO_URL} alt="" className="w-1/3 h-1/3 object-contain opacity-25 grayscale" />
     </div>
   )
 }
 
-/* ── Momentum stat chip ──────────────────────────────────────────────── */
-function StatChip({ icon: Icon, value, label, color }) {
+/* ── Circular Progress Indicator ─────────────────────────────────────── */
+function CircularProgress({ percent }) {
+  const size = 100
+  const strokeWidth = 8
+  const radius = (size - strokeWidth) / 2
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference - (percent / 100) * circumference
+
   return (
-    <div
-      className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl flex-1 min-w-0"
-      style={{ background: `${color}14`, border: `1px solid ${color}2e` }}
-    >
-      <div
-        className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ background: `${color}26` }}
-      >
-        <Icon size={15} style={{ color }} />
-      </div>
-      <div className="min-w-0">
-        <div className="text-base font-black text-white leading-none truncate">{value}</div>
-        <div className="text-[9px] font-semibold uppercase tracking-wider text-white/45 mt-1 truncate">{label}</div>
+    <div className="relative w-[100px] h-[100px] flex-shrink-0">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+        <defs>
+          <linearGradient id="circleProgress" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#2DD4BF" />
+            <stop offset="100%" stopColor="#8B7CFF" />
+          </linearGradient>
+        </defs>
+        {/* Background Track */}
+        <circle
+          className="text-white/10"
+          stroke="currentColor"
+          strokeWidth={strokeWidth}
+          fill="transparent"
+          r={radius}
+          cx={size / 2}
+          cy={size / 2}
+        />
+        {/* Progress Ring */}
+        <circle
+          stroke="url(#circleProgress)"
+          strokeWidth={strokeWidth}
+          fill="transparent"
+          r={radius}
+          cx={size / 2}
+          cy={size / 2}
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <span className="text-xl font-black text-white leading-none">{percent}%</span>
+        <span className="text-[8px] font-bold text-white/60 mt-0.5 leading-tight">Overall<br />Progress</span>
       </div>
     </div>
   )
@@ -87,36 +113,72 @@ function WelcomeHero({ user, isLoading, streak, todayPoints, progressPercent }) 
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-      className="relative pt-2"
+      className="relative pt-1"
     >
-      {/* soft aurora wash */}
-      <div className="absolute -top-12 -left-10 w-72 h-72 bg-primary-500/15 rounded-full blur-[90px] pointer-events-none" />
-      <div className="absolute -top-6 right-0 w-52 h-52 bg-mint-500/10 rounded-full blur-[70px] pointer-events-none" />
+      {/* Soft ambient glow */}
+      <div className="absolute -top-12 -left-10 w-64 h-64 bg-primary-500/15 rounded-full blur-[90px] pointer-events-none" />
+      <div className="absolute -top-6 right-20 w-40 h-40 bg-mint-500/10 rounded-full blur-[70px] pointer-events-none" />
 
-      <div className="relative">
-        <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-white/[0.05] text-white/55 border border-white/[0.06]">
-          <Sparkles size={10} className="text-primary-400" />
-          {greeting}
-        </span>
+      <div className="flex justify-between items-start">
+        {/* Left Content */}
+        <div className="flex-1">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-white/[0.05] text-white/55 border border-white/[0.06]">
+            <Sparkles size={10} className="text-mint-400" />
+            {greeting}
+          </span>
 
-        <h1 className="text-3xl sm:text-4xl font-black text-white leading-tight tracking-tight mt-2.5 mb-4">
-          Hey,{' '}
-          <span
-            style={{
-              background: 'linear-gradient(120deg, #8B7CFF 0%, #6D5EF5 45%, #2DD4BF 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
-          >
-            {firstName}
-          </span>{' '}
-          <span className="inline-block animate-wave">👋</span>
-        </h1>
+          <h1 className="text-3xl font-black text-white leading-tight tracking-tight mt-2.5 mb-1">
+            Hey,{' '}
+            <span
+              style={{
+                background: 'linear-gradient(120deg, #8B7CFF 0%, #6D5EF5 45%, #2DD4BF 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              {firstName}
+            </span>{' '}
+            <span className="inline-block animate-wave">👋</span>
+          </h1>
+          <p className="text-xs text-white/60 font-medium">Today is a great day to learn something new! ✨</p>
+        </div>
 
-        <div className="flex gap-2">
-          <StatChip icon={Flame} value={streak} label="Day streak" color="#FFB020" />
-          <StatChip icon={Trophy} value={todayPoints} label="Points today" color="#2DD4BF" />
-          <StatChip icon={TrendingUp} value={`${progressPercent}%`} label="Progress" color="#8B7CFF" />
+        {/* Right: Circular Progress */}
+        <div className="flex-shrink-0 -mt-2">
+          <CircularProgress percent={progressPercent} />
+        </div>
+      </div>
+
+      {/* Stat Chips */}
+      <div className="flex gap-2 mt-5">
+        <div className="bg-[#13161F] rounded-2xl flex-1 p-3 border border-white/[0.05] flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-orange-500/20 flex items-center justify-center flex-shrink-0 border border-orange-500/20">
+            <Flame size={16} className="text-orange-400" />
+          </div>
+          <div>
+            <div className="text-base font-black text-white leading-none">{streak}</div>
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-white/40 mt-0.5">Day Streak</div>
+          </div>
+        </div>
+
+        <div className="bg-[#13161F] rounded-2xl flex-1 p-3 border border-white/[0.05] flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-mint-500/20 flex items-center justify-center flex-shrink-0 border border-mint-500/20">
+            <Trophy size={16} className="text-mint-400" />
+          </div>
+          <div>
+            <div className="text-base font-black text-white leading-none">{todayPoints}</div>
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-white/40 mt-0.5">Points Today</div>
+          </div>
+        </div>
+
+        <div className="bg-[#13161F] rounded-2xl flex-1 p-3 border border-white/[0.05] flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-primary-500/20 flex items-center justify-center flex-shrink-0 border border-primary-500/20">
+            <TrendingUp size={16} className="text-primary-400" />
+          </div>
+          <div>
+            <div className="text-base font-black text-white leading-none">{progressPercent}%</div>
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-white/40 mt-0.5">Course Progress</div>
+          </div>
         </div>
       </div>
     </motion.div>
@@ -125,6 +187,8 @@ function WelcomeHero({ user, isLoading, streak, todayPoints, progressPercent }) 
 
 /* ── Continue learning banner ────────────────────────────────────────── */
 function ContinueLearning({ item, title, to }) {
+  const progressPercent = Math.min(Math.round((item?.progress || 0) * 100), 100)
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -132,31 +196,35 @@ function ContinueLearning({ item, title, to }) {
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
     >
       <Link to={to} className="block group">
-        <div
-          className="relative overflow-hidden rounded-3xl border border-primary-500/25"
-          style={{ background: 'linear-gradient(120deg, rgba(109,94,245,0.18), rgba(45,212,191,0.06))' }}
-        >
-          <div className="flex items-stretch gap-3 p-3">
-            {/* thumbnail */}
-            <div className="relative w-28 sm:w-36 aspect-video rounded-2xl overflow-hidden flex-shrink-0 bg-dark-700">
-              <CardThumbnail item={item} alt={title} fallback={<LogoFallback />} />
-              <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
-                <div className="w-9 h-9 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                  <Play size={16} className="text-dark-900 ml-0.5" fill="currentColor" />
-                </div>
+        <div className="relative overflow-hidden rounded-3xl border border-white/[0.06] bg-[#181C2C] p-3 flex gap-4">
+          {/* Thumbnail */}
+          <div className="w-[120px] aspect-video rounded-2xl overflow-hidden flex-shrink-0 bg-[#141827] relative">
+            <CardThumbnail item={item} alt={title} fallback={<LogoFallback />} />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/20 transition-colors">
+              <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-xl">
+                <Play size={18} className="text-dark-900 ml-0.5 fill-current" />
               </div>
             </div>
+          </div>
 
-            {/* copy */}
-            <div className="flex flex-col justify-center min-w-0 flex-1 pr-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-primary-300 mb-1">
-                Continue learning
-              </span>
-              <h3 className="text-sm sm:text-base font-bold text-white leading-snug line-clamp-2">
+          {/* Content */}
+          <div className="flex-1 flex flex-col justify-between py-0.5">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-primary-400">Continue Learning</span>
+              <h3 className="text-[15px] font-bold text-white leading-tight mt-0.5 line-clamp-2">
                 {title || 'Resume your last lesson'}
               </h3>
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-mint-400 mt-2 group-hover:gap-2 transition-all">
-                Resume <ChevronRight size={13} />
+            </div>
+
+            <div className="flex items-center justify-between mt-2 gap-2">
+              <div className="flex-1">
+                <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-primary-400 to-mint-400 rounded-full" style={{ width: `${progressPercent}%` }} />
+                </div>
+                <span className="text-[9px] text-white/40 font-semibold mt-1 block">{progressPercent}% completed</span>
+              </div>
+              <span className="text-[11px] font-bold text-mint-400 bg-mint-400/10 border border-mint-400/20 px-3 py-1.5 rounded-full flex items-center gap-1 group-hover:bg-mint-400/20 transition-colors">
+                Resume Learning <ChevronRight size={14} />
               </span>
             </div>
           </div>
@@ -167,7 +235,7 @@ function ContinueLearning({ item, title, to }) {
 }
 
 /* ── Quick action card ───────────────────────────────────────────────── */
-function QuickActionCard({ to, icon: Icon, label, description, accent, delay, thumbnailUrl }) {
+function QuickActionCard({ to, icon: Icon, label, description, accent, delay }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -175,40 +243,20 @@ function QuickActionCard({ to, icon: Icon, label, description, accent, delay, th
       transition={{ delay, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
     >
       <Link to={to} className="block group">
-        <div
-          className="rounded-3xl transition-all duration-300 group-hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden aspect-square border border-white/[0.07]"
-        >
-          {thumbnailUrl && (
-            <img
-              src={thumbnailUrl}
-              alt={label}
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-dark-900/40 to-transparent" />
-          <div
-            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-            style={{ background: `radial-gradient(circle at 50% 70%, ${accent}22 0%, transparent 70%)` }}
-          />
-
-          {/* icon badge top-left */}
-          <div
-            className="absolute top-2.5 left-2.5 w-8 h-8 rounded-xl flex items-center justify-center backdrop-blur-sm"
-            style={{ background: `${accent}2e`, border: `1px solid ${accent}45` }}
-          >
-            <Icon size={15} style={{ color: accent }} />
+        <div className="rounded-3xl border border-white/[0.06] bg-[#13161F] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden aspect-square flex flex-col justify-between p-4">
+          {/* Top: Icon */}
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${accent}20`, border: `1px solid ${accent}30` }}>
+            <Icon size={18} style={{ color: accent }} />
           </div>
 
-          <div className="absolute inset-x-0 bottom-0 p-3 flex items-end justify-between gap-2">
+          {/* Bottom: Text + Arrow */}
+          <div className="flex items-end justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="text-[13px] font-bold text-white mb-0.5 drop-shadow-md truncate">{label}</h3>
-              <p className="text-[10px] text-white/65 truncate">{description}</p>
+              <h3 className="text-[14px] font-bold text-white leading-tight truncate">{label}</h3>
+              <p className="text-[10px] text-white/40 truncate">{description}</p>
             </div>
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:translate-x-0.5 backdrop-blur-sm"
-              style={{ background: `${accent}2e`, border: `1px solid ${accent}45` }}
-            >
-              <ArrowRight size={12} style={{ color: accent }} />
+            <div className="w-7 h-7 rounded-full flex items-center justify-center bg-white/5 border border-white/10 transition-all duration-300 group-hover:translate-x-0.5">
+              <ArrowRight size={12} className="text-white/70" />
             </div>
           </div>
         </div>
@@ -222,18 +270,18 @@ function ScrollRow({ icon: Icon, title, count, seeAllTo, children }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-white/45 flex items-center gap-1.5">
-          <Icon size={13} className="text-primary-400" />
-          {title} {count > 0 && <span className="text-white/30">({count})</span>}
+        <h3 className="text-xs font-black uppercase tracking-wider text-white/40 flex items-center gap-1.5">
+          <Icon size={14} className="text-primary-400" />
+          {title} {count > 0 && <span className="text-white/20">({count})</span>}
         </h3>
         {seeAllTo && (
-          <Link to={seeAllTo} className="text-xs font-semibold text-primary-400 hover:text-primary-300 transition-colors">
-            See all
+          <Link to={seeAllTo} className="text-[10px] font-bold text-primary-400 hover:text-primary-300 transition-colors flex items-center gap-0.5">
+            View all <ChevronRight size={14} />
           </Link>
         )}
       </div>
       <div
-        className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0"
+        className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 pb-1"
         style={{ scrollSnapType: 'x proximity' }}
       >
         {children}
@@ -250,40 +298,53 @@ function WatchHistoryCard({ item, index }) {
     ? `/courses/${item.courseId}/subjects/${item.subjectId}`
     : '#'
   const isPdf = item.type === 'pdf'
+  const progress = Math.min(Math.round((item.progress || 0) * 100), 100)
+  const duration = item.duration || '00:00'
+  const accentColor = isPdf ? '#FF5C5C' : '#8B7CFF'
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.05 + index * 0.05, duration: 0.4 }}
-      className="min-w-[150px] w-[150px] flex-shrink-0"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: 0.05 + index * 0.06, duration: 0.3 }}
+      className="min-w-[160px] w-[160px] flex-shrink-0"
       style={{ scrollSnapAlign: 'start' }}
     >
       <Link to={itemUrl} className="block group">
-        <div className="rounded-2xl overflow-hidden transition-all duration-300 relative aspect-square border border-white/[0.08] bg-dark-700">
+        <div className="rounded-2xl overflow-hidden transition-all duration-300 relative aspect-[3/4] bg-[#10121A] border border-white/[0.06]">
           <CardThumbnail item={item} alt={item.title} fallback={<LogoFallback />} />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
-
-          <span
-            className="absolute top-2 left-2 text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded"
-            style={{
-              background: isPdf ? 'rgba(255,92,92,0.9)' : 'rgba(109,94,245,0.9)',
-              color: 'white',
-            }}
-          >
+          
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0A0B12] via-transparent to-transparent opacity-90" />
+          
+          {/* Badge */}
+          <span className="absolute top-2 left-2 text-[8px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border" style={{ background: `${accentColor}25`, borderColor: `${accentColor}40`, color: accentColor }}>
             {isPdf ? 'PDF' : 'Video'}
           </span>
 
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-            <div className="w-9 h-9 rounded-full bg-white/90 flex items-center justify-center">
-              {isPdf ? <FileText size={15} className="text-dark-900" /> : <Play size={15} className="text-dark-900 ml-0.5" fill="currentColor" />}
-            </div>
+          {/* Play overlay */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity">
+            {isPdf ? (
+              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/10">
+                <FileText size={16} className="text-white" />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/10">
+                <Play size={16} className="text-white ml-0.5" fill="currentColor" />
+              </div>
+            )}
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 p-2.5">
-            <p className="text-[11px] font-bold text-white line-clamp-2 leading-snug">
+          {/* Footer */}
+          <div className="absolute bottom-0 inset-x-0 p-2.5 flex flex-col gap-1">
+            <p className="text-[10px] font-bold text-white line-clamp-2 leading-tight">
               {item.title || 'Untitled Lesson'}
             </p>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                <div className="h-full bg-primary-400 rounded-full" style={{ width: `${progress}%` }} />
+              </div>
+              <span className="text-[8px] font-bold text-white/40">{isPdf ? `${progress}%` : duration}</span>
+            </div>
           </div>
         </div>
       </Link>
@@ -302,36 +363,28 @@ function QuizHistoryCard({ entry, index }) {
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.05 + index * 0.05, duration: 0.4 }}
-      className="min-w-[150px] w-[150px] flex-shrink-0"
+      transition={{ delay: 0.05 + index * 0.06, duration: 0.3 }}
+      className="min-w-[160px] w-[160px] flex-shrink-0"
       style={{ scrollSnapAlign: 'start' }}
     >
       <Link to={`/quiz/result/${latest.attemptId}`} className="block group">
-        <div
-          className="rounded-2xl overflow-hidden transition-all duration-300 relative aspect-square flex flex-col justify-between p-3 group-hover:scale-[1.02]"
-          style={{
-            background: 'linear-gradient(140deg, rgba(109,94,245,0.16) 0%, rgba(109,94,245,0.03) 100%)',
-            border: '1px solid rgba(109,94,245,0.28)',
-          }}
-        >
-          <img src={APP_LOGO_URL} alt="" className="absolute inset-0 m-auto w-1/2 h-1/2 object-contain opacity-[0.06] pointer-events-none" />
-
-          <div className="flex items-center justify-between">
-            <div className="w-8 h-8 rounded-xl bg-primary-500/20 border border-primary-500/30 flex items-center justify-center">
+        <div className="rounded-2xl overflow-hidden transition-all duration-300 relative aspect-[3/4] bg-[#10121A] border border-white/[0.06] p-3 flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-8 h-8 rounded-xl bg-primary-500/20 border border-primary-500/20 flex items-center justify-center">
               <Brain size={15} className="text-primary-300" />
             </div>
-            <div className="text-lg font-black" style={{ color: scoreColor }}>{score}%</div>
+            <div className="text-xl font-black" style={{ color: scoreColor }}>{score}%</div>
           </div>
 
-          <div>
-            <p className="text-[11px] font-bold text-white line-clamp-2 leading-snug mb-1.5">
+          <div className="mt-auto">
+            <p className="text-[11px] font-bold text-white line-clamp-2 leading-snug mb-4">
               {entry.quizName}
             </p>
-            <div className="flex items-center justify-between">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary-500/25 text-primary-200">
-                {attemptsCount} attempt{attemptsCount > 1 ? 's' : ''}
+            <div className="flex items-center justify-between border-t border-white/[0.06] pt-2">
+              <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider">
+                {attemptsCount} Attempt{attemptsCount > 1 ? 's' : ''}
               </span>
-              <RotateCcw size={11} className="text-white/30 group-hover:text-primary-300 transition-colors" />
+              <RotateCcw size={12} className="text-white/30 group-hover:text-primary-300 transition-colors" />
             </div>
           </div>
         </div>
@@ -347,17 +400,51 @@ function EmptyState() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3, duration: 0.5 }}
-      className="rounded-3xl border border-white/[0.07] bg-white/[0.02] p-6 text-center"
+      className="rounded-3xl border border-white/[0.07] bg-[#10121A] p-6 text-center"
     >
       <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-primary-500/15 border border-primary-500/25 mb-3">
         <GraduationCap size={22} className="text-primary-400" />
       </div>
       <h3 className="text-base font-bold text-white mb-1">Start your journey</h3>
-      <p className="text-xs text-white/50 mb-4 max-w-xs mx-auto leading-relaxed">
+      <p className="text-xs text-white/40 mb-4 max-w-xs mx-auto leading-relaxed">
         Your recent lessons and quizzes will show up here. Pick a course to get going.
       </p>
-      <Link to="/free-courses" className="btn-primary inline-flex items-center gap-1.5 text-sm">
+      <Link to="/free-courses" className="inline-flex items-center gap-1.5 text-sm font-bold text-white bg-primary-500 hover:bg-primary-400 transition-colors px-4 py-2 rounded-full">
         <Zap size={15} /> Explore free courses
+      </Link>
+    </motion.div>
+  )
+}
+
+/* ── Doubt Chat CTA Banner ───────────────────────────────────────────── */
+function DoubtCTA() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.36, duration: 0.5 }}
+    >
+      <Link to="/doubt-chat" className="block group">
+        <div className="relative flex items-center gap-3 rounded-3xl p-4 bg-gradient-to-r from-[#0D2B2B] to-[#051515] border border-mint-500/20 overflow-hidden">
+          {/* Background Waves */}
+          <div className="absolute inset-0 opacity-10 pointer-events-none">
+            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path d="M0 50 Q 20 40, 40 50 T 80 50 T 100 50" fill="none" stroke="#2DD4BF" strokeWidth="1" />
+              <path d="M0 60 Q 25 70, 50 60 T 100 60" fill="none" stroke="#2DD4BF" strokeWidth="1" />
+            </svg>
+          </div>
+
+          <div className="w-10 h-10 rounded-full bg-mint-500/20 border border-mint-500/40 flex items-center justify-center flex-shrink-0 relative z-10">
+            <MessageSquare size={18} className="text-mint-400" />
+          </div>
+          <div className="min-w-0 flex-1 relative z-10">
+            <p className="text-sm font-bold text-white">Have a doubt?</p>
+            <p className="text-[10px] text-white/50 truncate">Ask our mentors and get quick answers</p>
+          </div>
+          <div className="relative z-10 bg-mint-500 hover:bg-mint-400 text-[#0A1A1A] text-[11px] font-extrabold px-3 py-1.5 rounded-full flex items-center gap-1 transition-colors">
+            Ask Now <ArrowRight size={14} />
+          </div>
+        </div>
       </Link>
     </motion.div>
   )
@@ -373,17 +460,14 @@ export default function Home() {
     try {
       setRecentlyWatched(JSON.parse(localStorage.getItem('ar_recently_watched') || '[]'))
     } catch (e) {
-      console.error('[v0] Error loading recently watched:', e)
+      console.error('[Home] Error loading recently watched:', e)
     }
     try {
       setRecentQuizzes(getRecentQuizzes(20))
     } catch (e) {
-      console.error('[v0] Error loading quiz history:', e)
+      console.error('[Home] Error loading quiz history:', e)
     }
   }, [])
-
-  const classItems = recentlyWatched.filter(item => item.type !== 'pdf')
-  const notesItems = recentlyWatched.filter(item => item.type === 'pdf')
 
   const { data: pointsData, isLoading: pointsLoading } = useQuery({
     queryKey: ['my-points'],
@@ -437,16 +521,18 @@ export default function Home() {
   const todayPoints = points.daily || 0
 
   const staticCards = [
-    { to: '/free-courses', icon: BookOpen, label: 'Free Courses', description: 'Start learning free', accent: '#2DD4BF', delay: 0.12, thumbnailUrl: DEFAULT_THUMBNAILS.freeCourses },
-    { to: '/books', icon: Book, label: 'Books', description: 'Read PDFs', accent: '#8B7CFF', delay: 0.18, thumbnailUrl: DEFAULT_THUMBNAILS.books },
-    { to: '/store', icon: ShoppingBag, label: 'Store', description: 'Premium courses', accent: '#FFB020', delay: 0.24, thumbnailUrl: DEFAULT_THUMBNAILS.store },
-    { to: '/progress', icon: TrendingUp, label: 'Progress', description: `${progressPercent}% complete`, accent: '#6D5EF5', delay: 0.30, thumbnailUrl: DEFAULT_THUMBNAILS.progress },
+    { to: '/free-courses', icon: BookOpen, label: 'Free Courses', description: 'Start learning free', accent: '#2DD4BF', delay: 0.10 },
+    { to: '/books', icon: Book, label: 'Books', description: 'Read PDFs', accent: '#8B7CFF', delay: 0.16 },
+    { to: '/store', icon: ShoppingBag, label: 'Store', description: 'Premium courses', accent: '#FFB020', delay: 0.22 },
+    { to: '/progress', icon: TrendingUp, label: 'Progress', description: 'Track your journey', accent: '#6D5EF5', delay: 0.28 },
   ]
 
-  const hasRecent = classItems.length > 0 || notesItems.length > 0 || recentQuizzes.length > 0
+  // Combine video and pdf items into one scrollable list for "Continue where you left off"
+  const watchHistoryItems = recentlyWatched
+  const hasRecent = watchHistoryItems.length > 0 || recentQuizzes.length > 0
 
   return (
-    <div className="space-y-7 max-w-2xl mx-auto pb-10">
+    <div className="space-y-7 max-w-2xl mx-auto pb-8">
       <WelcomeHero
         user={user}
         isLoading={isLoading}
@@ -464,10 +550,10 @@ export default function Home() {
       )}
 
       {/* Quick actions */}
-      <div>
-        <h3 className="text-xs font-bold uppercase tracking-wider text-white/45 mb-3 flex items-center gap-1.5">
-          <Sparkles size={13} className="text-primary-400" />
-          Explore
+      <div className="space-y-3">
+        <h3 className="text-xs font-black uppercase tracking-wider text-white/40 flex items-center gap-1.5">
+          <Sparkles size={14} className="text-primary-400" />
+          QUICK ACCESS
         </h3>
         <div className="grid grid-cols-2 gap-3">
           {staticCards.map((card, i) => (
@@ -477,44 +563,20 @@ export default function Home() {
       </div>
 
       {/* Doubt chat CTA */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.36, duration: 0.5 }}
-      >
-        <Link to="/doubt-chat" className="block group">
-          <div className="flex items-center gap-3 rounded-2xl p-3.5 border border-mint-500/25 bg-mint-500/[0.07] transition-colors group-hover:bg-mint-500/[0.12]">
-            <div className="w-10 h-10 rounded-xl bg-mint-500/20 border border-mint-500/30 flex items-center justify-center flex-shrink-0">
-              <MessageSquare size={18} className="text-mint-400" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-white">Have a doubt?</p>
-              <p className="text-[11px] text-white/50 truncate">Ask our mentors and get quick answers</p>
-            </div>
-            <ArrowRight size={16} className="text-mint-400 group-hover:translate-x-0.5 transition-transform" />
-          </div>
-        </Link>
-      </motion.div>
+      <DoubtCTA />
 
-      {/* Recent activity */}
-      {classItems.length > 0 && (
-        <ScrollRow icon={History} title="Class" count={classItems.length} seeAllTo="/watch-history">
-          {classItems.map((item, idx) => (
+      {/* Continue Where You Left Off */}
+      {watchHistoryItems.length > 0 && (
+        <ScrollRow icon={History} title="Continue where you left off" count={watchHistoryItems.length} seeAllTo="/watch-history">
+          {watchHistoryItems.map((item, idx) => (
             <WatchHistoryCard key={item.contentId || idx} item={item} index={idx} />
           ))}
         </ScrollRow>
       )}
 
-      {notesItems.length > 0 && (
-        <ScrollRow icon={FileText} title="Notes" count={notesItems.length} seeAllTo="/watch-history">
-          {notesItems.map((item, idx) => (
-            <WatchHistoryCard key={item.contentId || idx} item={item} index={idx} />
-          ))}
-        </ScrollRow>
-      )}
-
+      {/* Quiz Performance */}
       {recentQuizzes.length > 0 && (
-        <ScrollRow icon={Brain} title="Quiz" count={recentQuizzes.length}>
+        <ScrollRow icon={Brain} title="Quiz Performance" count={recentQuizzes.length} seeAllTo="/quiz/history">
           {recentQuizzes.map((entry, idx) => (
             <QuizHistoryCard key={`${entry.subject}::${entry.quizName}`} entry={entry} index={idx} />
           ))}
