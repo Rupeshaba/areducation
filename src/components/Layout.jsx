@@ -13,6 +13,7 @@ import { getDeviceId } from '../utils/deviceId'
 import { io } from 'socket.io-client'
 import toast from 'react-hot-toast'
 import { APP_LOGO_URL } from '../constants/branding'
+import { subscribeToPush, isPushSupported, getPushPermissionState } from '../utils/pushNotifications'
 
 const NAV = [
   { to: '/', icon: Home, label: 'Home', exact: true },
@@ -168,6 +169,26 @@ export default function Layout() {
   })
 
   const logoUrl = appConfig?.logoUrl || APP_LOGO_URL
+
+  // ── Push notifications: ek baar silently subscribe try karo ─────────────
+  // Sirf tab poochhta hai jab pehle kabhi decide nahi kiya (permission === 'default').
+  // 'denied' ho to dobara nahi poochhta (browser khud bhi ignore karega) —
+  // us case me Profile page se manually settings me jaake enable karna hoga.
+  useEffect(() => {
+    if (!user?.uid || !isPushSupported()) return
+    const askedKey = `ar-edu-push-asked-${user.uid}`
+    if (getPushPermissionState() !== 'default') return
+    if (localStorage.getItem(askedKey)) return
+
+    const timer = setTimeout(() => {
+      localStorage.setItem(askedKey, '1')
+      subscribeToPush(api, getDeviceId()).then((res) => {
+        if (res.ok) toast.success('Push notifications enabled')
+      })
+    }, 2500)
+
+    return () => clearTimeout(timer)
+  }, [user?.uid])
 
   useEffect(() => {
     if (!user?.uid) return
