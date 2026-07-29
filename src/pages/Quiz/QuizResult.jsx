@@ -4,9 +4,9 @@ import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   CheckCircle, XCircle, MinusCircle, Trophy, RotateCcw,
-  BarChart3, ChevronLeft, ChevronRight, X, BookOpen, Target,
-  ChevronDown, Clock, TrendingUp, Check, Share2, Medal, Crown,
-  Zap, Timer, Target as TargetIcon, ChevronUp
+  BarChart3, ChevronLeft, ChevronRight, X, Target,
+  ChevronDown, Clock, TrendingUp, Check, Share2, Crown,
+  Timer, Target as TargetIcon
 } from 'lucide-react'
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid
@@ -120,7 +120,7 @@ function AttemptDropdown({ attempts, selectedIndex, onSelect }) {
 function ProgressGraph({ attempts, selectedAttemptId }) {
   const chartData = useMemo(() => (
     attempts.slice().reverse().map((a, i) => ({
-      label: `Attempt ${i + 1}`,
+      label: i === 0 ? 'Latest' : `Attempt ${i + 1}`,
       score: Math.round(a.score),
       attemptId: a.attemptId,
     }))
@@ -202,18 +202,59 @@ function nameColor(name) {
 
 function Avatar({ name, avatarUrl, size = "w-10 h-10", textSize = "text-sm", borderColor = "border-white/10", isMe = false }) {
   if (avatarUrl) {
-    return <img src={avatarUrl} alt={name} className={`${size} rounded-full object-cover border-2 ${isMe ? 'border-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.4)]' : borderColor}`} />
+    return <img src={avatarUrl} alt={name} className={`${size} rounded-full object-cover border-2 ${isMe ? 'border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.4)]' : borderColor}`} />
   }
   const letter = (name || '?').trim().charAt(0).toUpperCase() || '?'
   return (
-    <div className={`${size} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 ${textSize} border-2 ${isMe ? 'border-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.4)]' : borderColor}`} style={{ background: nameColor(name) }}>
+    <div className={`${size} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 ${textSize} border-2 ${isMe ? 'border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.4)]' : borderColor}`} style={{ background: nameColor(name) }}>
       {letter}
     </div>
   )
 }
 
+/* ═══ PODIUM CARD (3D GLASS CYLINDER) ═══ */
+function PodiumCard({ rank, name, avatarUrl, score, time, colorTheme, isMe, children }) {
+  const themes = {
+    gold: { border: 'border-amber-400', glow: 'shadow-[0_0_30px_rgba(251,191,36,0.2)]', bg: 'bg-gradient-to-b from-amber-400/20 to-amber-400/5', text: 'text-amber-400', rankText: 'text-amber-400/40' },
+    silver: { border: 'border-gray-300', glow: 'shadow-[0_0_30px_rgba(209,213,219,0.15)]', bg: 'bg-gradient-to-b from-gray-300/20 to-gray-300/5', text: 'text-white', rankText: 'text-gray-400/40' },
+    bronze: { border: 'border-orange-400', glow: 'shadow-[0_0_30px_rgba(251,146,60,0.15)]', bg: 'bg-gradient-to-b from-orange-400/20 to-orange-400/5', text: 'text-orange-400', rankText: 'text-orange-400/40' },
+  }
+  const theme = themes[colorTheme]
+
+  return (
+    <div className={`flex-1 flex flex-col items-center relative max-w-[110px] h-full justify-end`}>
+      {/* 3D Cylinder Card */}
+      <div className={`w-full bg-[#1A1C31] rounded-t-[28px] rounded-b-[12px] border-t-2 ${theme.border} ${theme.glow} pb-5 pt-8 flex flex-col items-center h-[160px] justify-end relative overflow-hidden`}>
+        
+        {/* Background Diffused Glow */}
+        <div className={`absolute top-0 inset-x-0 h-20 blur-2xl opacity-30 ${theme.border.replace('border', 'bg')}`}></div>
+
+        {/* Rank Number */}
+        <span className={`absolute top-3 text-2xl font-extrabold ${theme.rankText}`}>{rank}</span>
+
+        {/* Avatar Circle (Only for 1st place with gold ring) */}
+        <div className={`absolute -top-5 left-1/2 -translate-x-1/2 w-11 h-11 rounded-full border-[3px] bg-[#1A1C31] overflow-hidden z-20 flex items-center justify-center ${theme.border} ${theme.glow}`}>
+           <Avatar name={name} avatarUrl={avatarUrl} size="w-full h-full" textSize="text-base" borderColor="border-transparent" isMe={isMe} />
+        </div>
+        
+        {/* Connecting Line for 1st place */}
+        {colorTheme === 'gold' && <div className="absolute top-[40px] left-1/2 -translate-x-1/2 w-[2px] h-3 bg-amber-400/60 z-10"></div>}
+
+        {/* Content */}
+        <div className="flex flex-col items-center gap-1 mt-2 w-full px-1">
+           <span className="text-[11px] font-medium text-gray-200 truncate w-full text-center">{name || '-'}</span>
+           <span className={`text-xl font-extrabold ${theme.text}`}>{score}%</span>
+           <div className="flex items-center gap-1 text-[9px] text-gray-500">
+             <Clock size={10} /> {formatMMSS(time)}
+           </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ═══ PER-QUIZ LEADERBOARD (Main) ═══ */
-function QuizLeaderboard({ quizId, currentUserId }) {
+function QuizLeaderboard({ quizId }) {
   const [showFullModal, setShowFullModal] = useState(false)
   
   const { data, isLoading, isError } = useQuery({
@@ -229,6 +270,7 @@ function QuizLeaderboard({ quizId, currentUserId }) {
   const top3 = rows.filter(r => r.rank <= 3)
   const others = rows.filter(r => r.rank > 3)
   
+  // Sort properly for podium: 2nd, 1st, 3rd
   const podiumDisplay = top3.reduce((acc, cur) => {
     if (cur.rank === 1) acc[1] = cur
     else if (cur.rank === 2) acc[0] = cur
@@ -236,15 +278,13 @@ function QuizLeaderboard({ quizId, currentUserId }) {
     return acc
   }, [null, null, null])
 
-  // Find the current user's row
   const meRow = rows.find(r => r.isMe)
-  const isMeInTop3 = meRow && meRow.rank <= 3
   const isMeBelowTop10 = meRow && meRow.rank > 10
 
   return (
     <>
-    <div className="rounded-2xl border border-white/[0.05] bg-[#181B2D] p-4 relative">
-      <div className="flex items-center justify-between mb-5">
+    <div className="rounded-2xl border border-white/[0.05] bg-[#181B2D] p-4 relative pb-[20px]">
+      <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <Trophy size={16} className="text-amber-400" />
           <h4 className="text-sm font-bold text-white">Quiz Leaderboard</h4>
@@ -267,64 +307,72 @@ function QuizLeaderboard({ quizId, currentUserId }) {
         <p className="text-center text-xs text-gray-500 py-6">Be the first to take this quiz! 🎉</p>
       ) : (
         <>
-          {/* PODIUM */}
-          <div className="flex items-end justify-center gap-2 mb-6 pb-2 h-[170px]">
-            {/* 2nd Place */}
-            <div className="flex-1 flex flex-col items-center relative max-w-[100px] h-full justify-end">
-              <div className={`w-full bg-[#1A1C31] rounded-t-[20px] border pb-4 pt-6 flex flex-col items-center h-[135px] justify-end relative transition-all duration-300 ${podiumDisplay[0]?.isMe ? 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.3)]' : 'border-gray-500/30'}`}>
-                <span className="absolute top-2 text-2xl font-bold text-gray-500/40">2</span>
-                <div className="flex flex-col items-center gap-1.5 w-full px-1">
-                   <Avatar name={podiumDisplay[0]?.name} avatarUrl={podiumDisplay[0]?.avatarUrl} size="w-10 h-10" textSize="text-sm" borderColor="border-white/10" isMe={podiumDisplay[0]?.isMe} />
-                   <span className="text-[11px] font-medium text-gray-200 truncate w-full text-center">{podiumDisplay[0]?.name || '-'}</span>
-                   <span className="text-base font-bold text-white">{podiumDisplay[0] ? Math.round((podiumDisplay[0].correct / podiumDisplay[0].total) * 100) : 0}%</span>
-                   <div className="flex items-center gap-1 text-[9px] text-gray-500">
-                     <Clock size={10} /> {formatMMSS(podiumDisplay[0]?.timeTaken)}
+          {/* ═══ 3D PODIUM ═══ */}
+          <div className="flex items-end justify-center gap-2 mb-7 h-[180px] relative">
+            
+            {/* Gold Crown for 1st */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)] z-30">
+               <Crown size={26} fill="#FBBF24" />
+            </div>
+
+            {/* 2nd Place (Silver) */}
+            <PodiumCard 
+              rank={2} 
+              name={podiumDisplay[0]?.name} 
+              avatarUrl={podiumDisplay[0]?.avatarUrl} 
+              score={podiumDisplay[0] ? Math.round((podiumDisplay[0].correct / podiumDisplay[0].total) * 100) : 0}
+              time={podiumDisplay[0]?.timeTaken}
+              colorTheme="silver"
+              isMe={podiumDisplay[0]?.isMe}
+            />
+
+            {/* 1st Place (Gold) */}
+            <div className="flex-1 flex flex-col items-center relative max-w-[120px] h-full justify-end z-10 mt-[-5px]">
+              <div className="w-full bg-[#1A1C31] rounded-t-[32px] rounded-b-[14px] border-t-[3px] border-amber-400 shadow-[0_0_40px_rgba(251,191,36,0.15)] pb-6 pt-9 flex flex-col items-center h-[175px] justify-end relative overflow-hidden">
+                
+                {/* Background Glow */}
+                <div className="absolute top-0 inset-x-0 h-24 bg-amber-400 blur-3xl opacity-20"></div>
+                
+                {/* Laurels (Left & Right) - Simple CSS implementation */}
+                <div className="absolute top-10 left-2 w-4 h-8 border-l-[2px] border-amber-400/70 rounded-tl-full rotate-12 transform -skew-y-6"></div>
+                <div className="absolute top-10 left-1 w-3 h-6 border-l-[2px] border-amber-400/70 rounded-tl-full rotate-12 transform -skew-y-6"></div>
+                <div className="absolute top-10 right-2 w-4 h-8 border-r-[2px] border-amber-400/70 rounded-tr-full -rotate-12 transform skew-y-6"></div>
+                <div className="absolute top-10 right-1 w-3 h-6 border-r-[2px] border-amber-400/70 rounded-tr-full -rotate-12 transform skew-y-6"></div>
+
+                <span className="absolute top-3 text-2xl font-extrabold text-amber-400/40">1</span>
+                
+                {/* Avatar with Golden Ring and Drop Shadow */}
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full border-[3px] border-amber-400 shadow-[0_0_25px_rgba(251,191,36,0.5)] bg-[#1A1C31] overflow-hidden z-20 flex items-center justify-center">
+                   <Avatar name={podiumDisplay[1]?.name} avatarUrl={podiumDisplay[1]?.avatarUrl} size="w-full h-full" textSize="text-base" borderColor="border-transparent" isMe={podiumDisplay[1]?.isMe} />
+                </div>
+                
+                {/* Connecting Line */}
+                <div className="absolute top-[46px] left-1/2 -translate-x-1/2 w-[2px] h-4 bg-amber-400/60 z-10"></div>
+
+                <div className="flex flex-col items-center gap-1 mt-3 w-full px-1">
+                   <span className="text-[12px] font-bold text-gray-200 truncate w-full text-center">{podiumDisplay[1]?.name || '-'}</span>
+                   <span className="text-2xl font-extrabold text-amber-400">{podiumDisplay[1] ? Math.round((podiumDisplay[1].correct / podiumDisplay[1].total) * 100) : 0}%</span>
+                   <div className="flex items-center gap-1 text-[9px] text-gray-400">
+                     <Clock size={10} /> {formatMMSS(podiumDisplay[1]?.timeTaken)}
                    </div>
                 </div>
               </div>
             </div>
 
-            {/* 1st Place */}
-            <div className="flex-1 flex flex-col items-center relative max-w-[110px] h-full justify-end z-10">
-               <div className="absolute -top-4 text-amber-400 drop-shadow-lg"><Crown size={22} fill="#FBBF24" /></div>
-               <div className={`w-full bg-[#1A1C31] rounded-t-[20px] border pb-5 pt-8 flex flex-col items-center h-[160px] justify-end relative transition-all duration-300 ${podiumDisplay[1]?.isMe ? 'border-purple-400 shadow-[0_0_25px_rgba(168,85,247,0.4)]' : 'border-amber-400/50'}`}>
-                 <span className="absolute top-3 text-2xl font-bold text-amber-400/30">1</span>
-                 
-                 {/* Avatar with circle border and connecting line */}
-                 <div className={`absolute -top-5 left-1/2 -translate-x-1/2 w-11 h-11 rounded-full border-[3px] flex items-center justify-center bg-[#1A1C31] overflow-hidden z-20 ${podiumDisplay[1]?.isMe ? 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.5)]' : 'border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.3)]'}`}>
-                    <Avatar name={podiumDisplay[1]?.name} avatarUrl={podiumDisplay[1]?.avatarUrl} size="w-full h-full" textSize="text-base" borderColor="border-transparent" isMe={podiumDisplay[1]?.isMe} />
-                 </div>
-                 {/* Connecting Line */}
-                 <div className="absolute top-[40px] left-1/2 -translate-x-1/2 w-[2px] h-3 bg-amber-400/40 z-10"></div>
-
-                 <div className="flex flex-col items-center gap-1 mt-3 w-full px-1">
-                    <span className="text-[11px] font-medium text-gray-200 truncate w-full text-center">{podiumDisplay[1]?.name || '-'}</span>
-                    <span className="text-xl font-extrabold text-amber-400">{podiumDisplay[1] ? Math.round((podiumDisplay[1].correct / podiumDisplay[1].total) * 100) : 0}%</span>
-                    <div className="flex items-center gap-1 text-[9px] text-gray-400">
-                      <Clock size={10} /> {formatMMSS(podiumDisplay[1]?.timeTaken)}
-                    </div>
-                 </div>
-               </div>
-            </div>
-
-            {/* 3rd Place */}
-            <div className="flex-1 flex flex-col items-center relative max-w-[100px] h-full justify-end">
-              <div className={`w-full bg-[#1A1C31] rounded-t-[20px] border pb-4 pt-6 flex flex-col items-center h-[115px] justify-end relative transition-all duration-300 ${podiumDisplay[2]?.isMe ? 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.3)]' : 'border-orange-500/30'}`}>
-                <span className="absolute top-2 text-xl font-bold text-orange-500/40">3</span>
-                <div className="flex flex-col items-center gap-1.5 w-full px-1">
-                   <Avatar name={podiumDisplay[2]?.name} avatarUrl={podiumDisplay[2]?.avatarUrl} size="w-10 h-10" textSize="text-sm" borderColor="border-white/10" isMe={podiumDisplay[2]?.isMe} />
-                   <span className="text-[11px] font-medium text-gray-200 truncate w-full text-center">{podiumDisplay[2]?.name || '-'}</span>
-                   <span className="text-base font-bold text-orange-300">{podiumDisplay[2] ? Math.round((podiumDisplay[2].correct / podiumDisplay[2].total) * 100) : 0}%</span>
-                   <div className="flex items-center gap-1 text-[9px] text-gray-500">
-                     <Clock size={10} /> {formatMMSS(podiumDisplay[2]?.timeTaken)}
-                   </div>
-                </div>
-              </div>
-            </div>
+            {/* 3rd Place (Bronze) */}
+            <PodiumCard 
+              rank={3} 
+              name={podiumDisplay[2]?.name} 
+              avatarUrl={podiumDisplay[2]?.avatarUrl} 
+              score={podiumDisplay[2] ? Math.round((podiumDisplay[2].correct / podiumDisplay[2].total) * 100) : 0}
+              time={podiumDisplay[2]?.timeTaken}
+              colorTheme="bronze"
+              isMe={podiumDisplay[2]?.isMe}
+            />
           </div>
 
-          {/* LIST (Rank 4+) - With Highlighting */}
-          <div className="space-y-2.5 pb-14">
+          {/* ═══ LIST (Rank 4+) ═══ */}
+          <div className="space-y-2.5 pb-6">
             {others.map((r) => {
               const pct = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0
               const isMe = r.isMe
@@ -333,12 +381,12 @@ function QuizLeaderboard({ quizId, currentUserId }) {
                   key={r.participantId}
                   className={`flex items-center justify-between rounded-xl px-4 py-3.5 transition-all duration-200 ${
                     isMe 
-                      ? 'bg-purple-500/15 border border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.1)] relative overflow-hidden' 
+                      ? 'bg-[#1E1A35] border border-purple-500/40 shadow-[0_0_20px_rgba(168,85,247,0.1)]' 
                       : 'bg-white/[0.03]'
                   }`}
                 >
                   {/* Left Glow Accent for Me */}
-                  {isMe && <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-purple-400 rounded-l-xl shadow-[0_0_10px_rgba(168,85,247,0.6)]" />}
+                  {isMe && <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-purple-400 rounded-l-xl shadow-[0_0_15px_rgba(168,85,247,0.8)]" />}
 
                   <div className="flex items-center gap-3 flex-1 min-w-0 pl-2">
                     <span className="text-sm font-medium text-gray-500 w-5 text-center">{r.rank}</span>
@@ -346,17 +394,18 @@ function QuizLeaderboard({ quizId, currentUserId }) {
                     <div className="flex flex-col min-w-0">
                       <span className="text-sm font-medium text-gray-200 truncate flex items-center gap-2">
                         {r.name}
-                        {isMe && <span className="text-[9px] font-bold text-white bg-purple-500 px-2 py-0.5 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.4)]">You</span>}
+                        {isMe && <span className="text-[10px] font-bold text-purple-200 bg-purple-500/30 px-2 py-0.5 rounded-full">You</span>}
                       </span>
                       <div className="flex items-center gap-1 text-[10px] text-gray-500">
                         <Clock size={10} /> {formatMMSS(r.timeTaken)}
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end">
-                    <span className={`text-sm font-bold ${pct >= 75 ? 'text-emerald-400' : pct >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                  <div className="flex flex-col items-end gap-0.5">
+                    <span className={`text-sm font-bold ${isMe ? 'text-white' : (pct >= 75 ? 'text-emerald-400' : pct >= 50 ? 'text-amber-400' : 'text-red-400')}`}>
                       {pct}%
                     </span>
+                    {isMe && <span className="text-[9px] font-bold text-purple-300 tracking-wide uppercase">Your Rank</span>}
                   </div>
                 </div>
               )
@@ -371,27 +420,27 @@ function QuizLeaderboard({ quizId, currentUserId }) {
               transition={{ delay: 0.5, duration: 0.4 }}
               className="absolute bottom-4 left-4 right-4 z-20"
             >
-              <div className="flex items-center justify-between rounded-xl px-4 py-3.5 bg-[#1A1C31]/90 backdrop-blur-md border border-purple-500/40 shadow-[0_0_25px_rgba(0,0,0,0.8),0_0_15px_rgba(168,85,247,0.2)]">
+              <div className="flex items-center justify-between rounded-xl px-4 py-3.5 bg-[#1E1A35]/95 backdrop-blur-md border border-purple-500/50 shadow-[0_0_30px_rgba(0,0,0,0.9),0_0_20px_rgba(168,85,247,0.2)]">
                 <div className="flex items-center gap-3 flex-1 min-w-0 pl-2 relative">
-                  {/* Small decorative accent */}
-                  <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-purple-400 rounded-l-xl" />
+                  <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-purple-400 rounded-l-xl shadow-[0_0_10px_rgba(168,85,247,0.6)]" />
                   
                   <span className="text-sm font-medium text-purple-300 w-5 text-center">{meRow.rank}</span>
                   <Avatar name={meRow.name} avatarUrl={meRow.avatarUrl} size="w-8 h-8" textSize="text-xs" isMe={true} />
                   <div className="flex flex-col min-w-0">
                     <span className="text-sm font-medium text-white truncate flex items-center gap-2">
                       {meRow.name}
-                      <span className="text-[9px] font-bold text-white bg-purple-500 px-2 py-0.5 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.4)]">You</span>
+                      <span className="text-[10px] font-bold text-purple-200 bg-purple-500/30 px-2 py-0.5 rounded-full">You</span>
                     </span>
                     <div className="flex items-center gap-1 text-[10px] text-gray-400">
                       <Clock size={10} /> {formatMMSS(meRow.timeTaken)}
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-col items-end">
-                  <span className={`text-sm font-bold ${meRow.score >= 75 ? 'text-emerald-400' : meRow.score >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                <div className="flex flex-col items-end gap-0.5">
+                  <span className="text-sm font-bold text-white">
                     {Math.round(meRow.score)}%
                   </span>
+                  <span className="text-[9px] font-bold text-purple-300 tracking-wide uppercase">Your Rank</span>
                 </div>
               </div>
             </motion.div>
@@ -438,29 +487,30 @@ function QuizLeaderboard({ quizId, currentUserId }) {
                     key={r.participantId}
                     className={`flex items-center justify-between rounded-xl px-4 py-3.5 transition-all duration-200 ${
                       isMe 
-                        ? 'bg-purple-500/15 border border-purple-500/40' 
+                        ? 'bg-[#1E1A35] border border-purple-500/40' 
                         : 'bg-white/[0.03]'
                     }`}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <span className={`text-sm font-medium w-6 text-center ${r.rank <= 3 ? 'text-amber-400 font-bold' : 'text-gray-500'}`}>
-                        {r.rank <= 3 ? <Medal size={14} className="inline-block" /> : r.rank}
+                        {r.rank <= 3 ? <span className="text-[10px]">{r.rank}</span> : r.rank}
                       </span>
                       <Avatar name={r.name} avatarUrl={r.avatarUrl} size="w-8 h-8" textSize="text-xs" isMe={isMe} />
                       <div className="flex flex-col min-w-0">
                         <span className="text-sm font-medium text-gray-200 truncate flex items-center gap-2">
                           {r.name}
-                          {isMe && <span className="text-[9px] font-bold text-white bg-purple-500 px-2 py-0.5 rounded-full">You</span>}
+                          {isMe && <span className="text-[10px] font-bold text-purple-200 bg-purple-500/30 px-2 py-0.5 rounded-full">You</span>}
                         </span>
                         <div className="flex items-center gap-1 text-[10px] text-gray-500">
                           <Clock size={10} /> {formatMMSS(r.timeTaken)}
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end">
-                      <span className={`text-sm font-bold ${pct >= 75 ? 'text-emerald-400' : pct >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className={`text-sm font-bold ${isMe ? 'text-white' : (pct >= 75 ? 'text-emerald-400' : pct >= 50 ? 'text-amber-400' : 'text-red-400')}`}>
                         {pct}%
                       </span>
+                      {isMe && <span className="text-[9px] font-bold text-purple-300 tracking-wide uppercase">Your Rank</span>}
                     </div>
                   </div>
                 )
