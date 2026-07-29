@@ -35,16 +35,12 @@ const BOTTOM_NAV = [
 ]
 
 // ── FIX: Query config for polling queries (notif-count, chat-unread-count)
-// Don't retry on 403 (blocked) or 503 (maintenance) — these are terminal states
-// For other errors, retry max 2 times with exponential backoff
 const POLL_QUERY_CONFIG = {
   retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   retry: (failureCount, error) => {
-    // Terminal states: 403 = blocked, 503 = maintenance
     if (error?.response?.status === 403 || error?.response?.status === 503) {
-      return false  // Don't retry — let axios interceptor handle redirect
+      return false
     }
-    // Other errors (network, 500): retry with backoff (max 2 times)
     return failureCount < 2
   }
 }
@@ -60,7 +56,6 @@ function Badge({ count, position = 'sidebar' }) {
       </span>
     )
   }
-  // position === 'icon' — absolute bubble on icon
   return (
     <span className="absolute -top-1 -right-1 bg-danger-500 text-white text-[9px] font-bold min-w-[16px] h-4 px-0.5 rounded-full flex items-center justify-center leading-none ring-2 ring-dark-900">
       {label}
@@ -122,9 +117,11 @@ export default function Layout() {
   const qc = useQueryClient()
   const socketRef = useRef(null)
 
+  // ⭐ UPDATED LOGIC TO HIDE NAV FOR RESULT PAGE AS WELL ⭐
   const isQuizPage = location.pathname.includes('/quiz/') && !location.pathname.includes('/result')
   const isQuizPlayPage = location.pathname.includes('/quiz/') && location.pathname.includes('/play')
-  const hideSidebar = isQuizPlayPage
+  const isQuizResultPage = location.pathname.includes('/result')
+  const hideSidebar = isQuizPlayPage || isQuizResultPage
 
   // Check maintenance on every page load
   useEffect(() => {
@@ -143,23 +140,21 @@ export default function Layout() {
   }, [])
 
   // ── Notification unread count ─────────────────────────────────────────────
-  // FIX: Added POLL_QUERY_CONFIG to stop retrying on 403/503 errors
   const { data: countData } = useQuery({
     queryKey: ['notif-count'],
     queryFn: () => api.get('/notifications/count').then(r => r.data),
     refetchInterval: 15000,
     enabled: !isQuizPage,
-    ...POLL_QUERY_CONFIG,  // Apply the fix
+    ...POLL_QUERY_CONFIG,
   })
 
   // ── Doubt Chat unread count ───────────────────────────────────────────────
-  // FIX: Added POLL_QUERY_CONFIG to stop retrying on 403/503 errors
   const { data: chatCountData } = useQuery({
     queryKey: ['chat-unread-count'],
     queryFn: () => api.get('/chat/unread-count').then(r => r.data),
     refetchInterval: 15000,
     enabled: !isQuizPage,
-    ...POLL_QUERY_CONFIG,  // Apply the fix
+    ...POLL_QUERY_CONFIG,
   })
 
   const { data: appConfig } = useQuery({
@@ -170,18 +165,13 @@ export default function Layout() {
 
   const logoUrl = appConfig?.logoUrl || APP_LOGO_URL
 
-  // ── Push notifications: jab tak user decide na kare, har refresh pe poochho ──
-  // permission === 'default' → abhi tak koi decision nahi liya → phir se poochho
-  // permission === 'granted' → chup-chaap (re)subscribe confirm kar do, popup nahi aayega
-  // permission === 'denied'  → browser khud block karega, hum dobara nahi poochh sakte
-  //                            (user ko browser/site settings se manually allow karna hoga)
+  // ── Push notifications ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!user?.uid) return
 
     if (!isPushSupported()) {
-      // Sabse common wajah: HTTP par khula hai (push sirf HTTPS ya localhost par kaam karta hai)
       console.warn(
-        '[Push] Not supported in this context. Reasons could be: not HTTPS, browser too old, or in an iframe/in-app webview.',
+        '[Push] Not supported in this context.',
         { protocol: window.location.protocol, hasSW: 'serviceWorker' in navigator, hasPush: 'PushManager' in window }
       )
       return
@@ -190,7 +180,7 @@ export default function Layout() {
     const currentPermission = getPushPermissionState()
 
     if (currentPermission === 'denied') {
-      console.warn('[Push] Permission denied by user/browser — cannot re-prompt. Enable manually from browser site settings.')
+      console.warn('[Push] Permission denied by user/browser')
       return
     }
 
@@ -207,6 +197,7 @@ export default function Layout() {
     return () => clearTimeout(timer)
   }, [user?.uid])
 
+  // ── WebSocket ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user?.uid) return
     const SOCKET_URL = import.meta.env.VITE_API_URL
@@ -233,7 +224,6 @@ export default function Layout() {
       qc.invalidateQueries(['notifications'])
     })
 
-    // Refresh chat badge when new message arrives via socket
     socket.on('doubt_chat_message', () => {
       qc.invalidateQueries(['chat-unread-count'])
     })
@@ -557,12 +547,17 @@ export default function Layout() {
           </div>
         )}
 
-        <div className={`p-4 lg:p-8 pb-28 lg:pb-8 max-w-5xl mx-auto ${hideSidebar ? 'p-0 lg:p-0 max-w-full' : ''}`}>
+        {/* 
+           ⭐ Updated container logic: 
+           If hideSidebar is true (Result page), we remove all horizontal padding 
+           and width constraints so the UI takes up the full screen perfectly.
+        */}
+        <div className={`p-4 lg:p-8 pb-28 lg:pb-8 max-w-5xl mx-auto ${hideSidebar ? '!p-0 !max-w-full' : ''}`}>
           <Outlet />
         </div>
       </main>
 
-      {/* ── MOBILE BOTTOM TAB BAR (enhanced with glow) ──────────── */}
+      {/* ── MOBILE BOTTOM TAB BAR (enhanced with glow) ──────────────────────── */}
       {!hideSidebar && (
         <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 flex items-stretch justify-around
           rounded-t-[28px] bg-dark-800/95 backdrop-blur-2xl border-t border-x border-white/[0.08] shadow-2xl shadow-black/40 pt-2 px-2"
