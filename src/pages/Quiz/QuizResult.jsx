@@ -54,24 +54,19 @@ function AttemptDropdown({ attempts, selectedIndex, onSelect }) {
   if (!selected) return null
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.06] transition-all"
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.06] transition-all"
       >
-        <span className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-xl bg-primary-500/15 border border-primary-500/30 flex items-center justify-center text-primary-400 flex-shrink-0">
-            <Trophy size={15} />
-          </div>
-          <div className="text-left min-w-0">
-            <div className="text-xs font-bold text-white">
-              {selectedIndex === 0 ? 'Latest Attempt' : `Attempt ${total - selectedIndex}`}
-            </div>
-            <div className="text-[11px] text-gray-400 truncate">{formatAttemptDate(selected.completedAt)}</div>
-          </div>
+        <span className="flex items-center gap-2 min-w-0">
+          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary-500/15 text-primary-400 border border-primary-500/25 flex-shrink-0">
+            {selectedIndex === 0 ? 'Latest' : `Attempt ${total - selectedIndex}`}
+          </span>
+          <span className="text-xs text-gray-400 truncate">{formatAttemptDate(selected.completedAt)}</span>
         </span>
         <span className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-sm font-black text-primary-400">{Math.round(selected.score)}%</span>
+          <span className="text-sm font-bold text-white">{Math.round(selected.score)}%</span>
           <ChevronDown size={16} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
         </span>
       </button>
@@ -85,7 +80,7 @@ function AttemptDropdown({ attempts, selectedIndex, onSelect }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.15 }}
-              className="absolute left-0 right-0 top-full mt-2 z-40 rounded-2xl bg-[#0B0E1A] border border-white/[0.1] shadow-2xl overflow-hidden max-h-64 overflow-y-auto"
+              className="absolute left-0 right-0 top-full mt-2 z-40 rounded-xl bg-[#0B0E1A] border border-white/[0.1] shadow-2xl overflow-hidden max-h-64 overflow-y-auto"
             >
               {attempts.map((a, i) => {
                 const attemptNo = total - i
@@ -124,8 +119,8 @@ function AttemptDropdown({ attempts, selectedIndex, onSelect }) {
 /* ═══ PROGRESS GRAPH ═══ */
 function ProgressGraph({ attempts, selectedAttemptId }) {
   const chartData = useMemo(() => (
-    attempts.slice().reverse().map((a, i) => ({
-      label: i === attempts.length - 1 ? 'Latest' : `Attempt ${i + 1}`,
+    attempts.slice().reverse().map((a, i, arr) => ({
+      label: i === arr.length - 1 ? 'Latest' : `Attempt ${i + 1}`,
       score: Math.round(a.score),
       attemptId: a.attemptId,
       date: formatAttemptDate(a.completedAt),
@@ -134,7 +129,7 @@ function ProgressGraph({ attempts, selectedAttemptId }) {
 
   if (attempts.length < 2) {
     return (
-      <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-br from-white/[0.03] to-transparent p-5 text-center">
+      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 text-center">
         <TrendingUp size={22} className="text-primary-400/50 mx-auto mb-2" />
         <p className="text-xs text-gray-500">Take this quiz again to start tracking your progress over time.</p>
       </div>
@@ -142,22 +137,19 @@ function ProgressGraph({ attempts, selectedAttemptId }) {
   }
 
   return (
-    <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-br from-white/[0.03] to-transparent p-5">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <TrendingUp size={16} className="text-primary-400" />
-          <h4 className="text-sm font-bold text-white">Progress Over Attempts</h4>
-        </div>
-        <span className="text-[11px] text-gray-400 font-medium">{attempts.length} attempts</span>
+    <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.03] to-transparent p-4 sm:p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <TrendingUp size={16} className="text-primary-400" />
+        <h4 className="text-sm font-bold text-white">Progress Over Attempts</h4>
       </div>
-      <div style={{ width: '100%', height: 160 }}>
+      <div style={{ width: '100%', height: 180 }}>
         <ResponsiveContainer>
-          <LineChart data={chartData} margin={{ top: 8, right: 8, left: -25, bottom: 0 }}>
-            <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} tickLine={false} />
-            <YAxis domain={[0, 100]} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
+          <LineChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+            <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} tickLine={false} />
+            <YAxis domain={[0, 100]} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
             <Tooltip
-              contentStyle={{ background: '#0B0E1A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12 }}
+              contentStyle={{ background: '#0B0E1A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 12 }}
               labelStyle={{ color: 'rgba(255,255,255,0.5)' }}
               itemStyle={{ color: '#FF9270' }}
               formatter={(v) => [`${v}%`, 'Score']}
@@ -175,7 +167,7 @@ function ProgressGraph({ attempts, selectedAttemptId }) {
                     key={props.payload.label}
                     cx={props.cx}
                     cy={props.cy}
-                    r={isSel ? 5 : 3.5}
+                    r={isSel ? 5.5 : 3.5}
                     fill={isSel ? '#FF9270' : '#FF6B4A'}
                     stroke={isSel ? '#fff' : 'none'}
                     strokeWidth={isSel ? 2 : 0}
@@ -192,6 +184,13 @@ function ProgressGraph({ attempts, selectedAttemptId }) {
 }
 
 /* ═══ PER-QUIZ LEADERBOARD ═══ */
+function rankAccent(rank) {
+  if (rank === 1) return { ring: 'border-amber-400/60', bg: 'bg-amber-400/10', text: 'text-amber-300' }
+  if (rank === 2) return { ring: 'border-gray-300/50', bg: 'bg-gray-300/10', text: 'text-gray-200' }
+  if (rank === 3) return { ring: 'border-orange-500/50', bg: 'bg-orange-500/10', text: 'text-orange-300' }
+  return { ring: 'border-white/10', bg: 'bg-white/[0.03]', text: 'text-gray-400' }
+}
+
 function nameColor(name) {
   const colors = [
     'from-violet-500 to-purple-600', 'from-sky-500 to-blue-600',
@@ -203,13 +202,13 @@ function nameColor(name) {
   return colors[h % colors.length]
 }
 
-function Avatar({ name, avatarUrl, size = "w-11 h-11" }) {
+function Avatar({ name, avatarUrl }) {
   if (avatarUrl) {
-    return <img src={avatarUrl} alt={name} className={`${size} rounded-full object-cover border-2 border-white/20 shadow-md`} />
+    return <img src={avatarUrl} alt={name} className="w-9 h-9 rounded-full object-cover border border-white/10" />
   }
   const letter = (name || '?').trim().charAt(0).toUpperCase() || '?'
   return (
-    <div className={`${size} rounded-full bg-gradient-to-br ${nameColor(name)} flex items-center justify-center text-white text-base font-black flex-shrink-0 shadow-md border-2 border-white/20`}>
+    <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${nameColor(name)} flex items-center justify-center text-white text-sm font-black flex-shrink-0`}>
       {letter}
     </div>
   )
@@ -227,22 +226,16 @@ function QuizLeaderboard({ quizId }) {
 
   const rows = data?.leaderboard || []
 
-  // Top 3 for Podium layout, rest for list
-  const topThree = [rows[1], rows[0], rows[2]].filter(Boolean) // 2nd, 1st, 3rd layout order
-  const remainingRows = rows.slice(3)
-
   return (
-    <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-br from-white/[0.03] to-transparent p-5">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-2">
-          <Trophy size={17} className="text-amber-400" />
-          <h4 className="text-sm font-bold text-white">Quiz Leaderboard</h4>
-        </div>
-        <span className="text-[11px] text-gray-400 font-medium">First attempt · by score & time</span>
+    <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.03] to-transparent p-4 sm:p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <Trophy size={16} className="text-amber-400" />
+        <h4 className="text-sm font-bold text-white">Quiz Leaderboard</h4>
+        <span className="text-[11px] text-gray-500 ml-auto">First attempt · by score & time</span>
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-10">
+        <div className="flex justify-center py-8">
           <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : isError ? (
@@ -250,96 +243,54 @@ function QuizLeaderboard({ quizId }) {
       ) : rows.length === 0 ? (
         <p className="text-center text-xs text-gray-500 py-6">Abhi tak koi entry nahi. Sabse pehle tum ho! 🎉</p>
       ) : (
-        <div className="space-y-5">
-          {/* PODIUM TOP 3 */}
-          {rows.length >= 1 && (
-            <div className="grid grid-cols-3 gap-2 items-end pt-4 pb-2">
-              {[rows[1], rows[0], rows[2]].map((r, podiumIdx) => {
-                if (!r) return <div key={podiumIdx} />
-                const isFirst = r.rank === 1
-                const isSecond = r.rank === 2
-                
-                return (
-                  <div
-                    key={r.participantId}
-                    className={`relative flex flex-col items-center rounded-2xl p-3 text-center transition-all ${
-                      isFirst
-                        ? 'bg-gradient-to-b from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/40 shadow-lg shadow-amber-500/10 -translate-y-3 pb-4'
-                        : isSecond
-                        ? 'bg-gradient-to-b from-slate-400/15 via-white/[0.03] to-transparent border border-slate-400/30'
-                        : 'bg-gradient-to-b from-orange-500/15 via-white/[0.03] to-transparent border border-orange-500/30'
-                    }`}
-                  >
-                    {/* Crown or Rank Badge */}
-                    <div className={`absolute -top-3.5 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shadow-md border ${
-                      isFirst
-                        ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-black border-amber-200'
-                        : isSecond
-                        ? 'bg-gradient-to-r from-slate-300 to-slate-400 text-black border-slate-200'
-                        : 'bg-gradient-to-r from-orange-400 to-orange-500 text-black border-orange-200'
-                    }`}>
-                      {isFirst ? <Crown size={14} className="fill-black" /> : r.rank}
-                    </div>
+        <div className="space-y-2">
+          {rows.map((r) => {
+            const acc = rankAccent(r.rank)
+            const pct = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0
+            return (
+              <div
+                key={r.participantId}
+                className={`flex items-center gap-3 rounded-xl border p-2.5 transition-colors ${
+                  r.isMe
+                    ? 'border-primary-500/50 bg-primary-500/10 ring-1 ring-primary-500/30'
+                    : `${acc.ring} ${acc.bg}`
+                }`}
+              >
+                {/* Rank */}
+                <div className="w-7 flex-shrink-0 flex items-center justify-center">
+                  {r.rank <= 3 ? (
+                    <Medal size={18} className={acc.text} />
+                  ) : (
+                    <span className="text-sm font-black text-gray-500">{r.rank}</span>
+                  )}
+                </div>
 
-                    <div className="mt-1 mb-2">
-                      <Avatar name={r.name} avatarUrl={r.avatarUrl} size={isFirst ? "w-12 h-12" : "w-10 h-10"} />
-                    </div>
+                <Avatar name={r.name} avatarUrl={r.avatarUrl} />
 
-                    <div className="text-xs font-bold text-white truncate w-full mb-0.5">{r.name}</div>
-                    <div className={`text-base font-black ${isFirst ? 'text-amber-300' : isSecond ? 'text-slate-200' : 'text-orange-300'}`}>
-                      {r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0}%
-                    </div>
-                    <div className="flex items-center justify-center gap-1 text-[10px] text-gray-400 mt-1">
-                      <Clock size={9} /> {formatMMSS(r.timeTaken)}
-                    </div>
+                {/* Name */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-bold text-white truncate">{r.name}</span>
+                    {r.isMe && (
+                      <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-primary-500/20 text-primary-300 flex-shrink-0">You</span>
+                    )}
                   </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* REMAINING ROWS LIST */}
-          {remainingRows.length > 0 && (
-            <div className="space-y-2">
-              {remainingRows.map((r) => {
-                const pct = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0
-                return (
-                  <div
-                    key={r.participantId}
-                    className={`flex items-center gap-3 rounded-2xl border p-3 transition-colors ${
-                      r.isMe
-                        ? 'border-primary-500/50 bg-primary-500/15 ring-1 ring-primary-500/30'
-                        : 'border-white/[0.06] bg-white/[0.02]'
-                    }`}
-                  >
-                    <div className="w-6 flex-shrink-0 text-center text-xs font-black text-gray-400">
-                      {r.rank}
-                    </div>
-
-                    <Avatar name={r.name} avatarUrl={r.avatarUrl} size="w-9 h-9" />
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-white truncate">{r.name}</span>
-                        {r.isMe && (
-                          <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-primary-500/20 text-primary-300 flex-shrink-0">You</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-[10px] text-gray-400 mt-0.5">
-                        <span className="flex items-center gap-0.5"><Clock size={9} /> {formatMMSS(r.timeTaken)}</span>
-                      </div>
-                    </div>
-
-                    <div className="text-right flex-shrink-0">
-                      <div className={`text-sm font-black ${pct >= 75 ? 'text-mint-400' : pct >= 50 ? 'text-amber-400' : 'text-danger-400'}`}>
-                        {pct}%
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                    <span className="flex items-center gap-0.5"><Clock size={10} /> {formatMMSS(r.timeTaken)}</span>
+                    <span>·</span>
+                    <span>{r.correct}/{r.total}</span>
                   </div>
-                )
-              })}
-            </div>
-          )}
+                </div>
+
+                {/* Percentage */}
+                <div className="text-right flex-shrink-0">
+                  <div className={`text-base font-black ${pct >= 75 ? 'text-mint-400' : pct >= 50 ? 'text-amber-400' : 'text-danger-400'}`}>
+                    {pct}%
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
@@ -378,7 +329,6 @@ export default function QuizResult() {
     if (historyEntry?.attempts?.length) return historyEntry.attempts
     if (fallbackSingle) return [{ ...fallbackSingle, attemptId, completedAt: fallbackSingle.completedAt || Date.now() }]
     return []
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyEntry, fallbackSingle, attemptId])
 
   useEffect(() => {
@@ -391,7 +341,7 @@ export default function QuizResult() {
   const result = selectedAttempt ? { ...selectedAttempt, subject, quizName } : null
 
   if (!result) return (
-    <div className="flex justify-center items-center min-h-[60vh]">
+    <div className="flex justify-center py-20">
       <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
     </div>
   )
@@ -412,148 +362,151 @@ export default function QuizResult() {
   const swipeNav = useSwipeQuestion(goNext, goPrev)
 
   return (
-    <div className="max-w-md mx-auto px-4 space-y-5 pb-16 relative">
+    <div className="max-w-3xl mx-auto px-4 sm:px-5 space-y-6 pb-12 relative">
 
-      {/* TOP HEADER */}
-      <div className="flex items-center justify-between pt-3 pb-1">
-        <button
-          onClick={() => navigate(-1)}
-          className="w-9 h-9 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white hover:bg-white/[0.08] transition-all"
-        >
-          <ChevronLeft size={20} />
-        </button>
-        <h1 className="text-base font-black text-white flex items-center gap-1.5">
-          Quiz Completed <Trophy size={16} className="text-amber-400 fill-amber-400" />
-        </h1>
-        <button
-          onClick={() => setShareOpen(true)}
-          className="w-9 h-9 rounded-full bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-white hover:bg-white/[0.08] transition-all"
-        >
-          <Share2 size={16} />
-        </button>
-      </div>
+      {/* Heading */}
+      <h1 className="text-2xl sm:text-3xl font-black text-white text-center pt-4">Quiz Completed 🎉</h1>
 
-      {/* ═══ HERO SCORE CARD (Side-by-side design matching reference image) ═══ */}
+      {/* ═══ HERO SCORE CARD ═══ */}
       <motion.div
         key={result.attemptId}
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1c1445] via-[#11152a] to-[#0a0d18] border border-white/[0.08] p-5 shadow-2xl"
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#1a1040] via-[#12162A] to-[#0B0E1A] border border-white/[0.08] p-5 sm:p-8 text-center"
       >
-        <div className={`absolute top-0 right-0 w-48 h-48 rounded-full blur-[80px] opacity-25 pointer-events-none ${
+        <div className={`absolute top-[-30%] left-1/2 -translate-x-1/2 w-64 h-64 rounded-full blur-[100px] opacity-30 ${
           result.score >= 75 ? 'bg-mint-500' : result.score >= 50 ? 'bg-amber-500' : 'bg-danger-500'
         }`} />
 
-        <div className="flex items-center gap-4">
-          {/* Score Ring */}
-          <div className="relative w-28 h-28 flex-shrink-0">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 140 140">
-              <circle cx="70" cy="70" r="58" stroke="rgba(255,255,255,0.06)" strokeWidth="11" fill="none" />
-              <motion.circle
-                cx="70" cy="70" r="58"
-                stroke={ringColor}
-                strokeWidth="11"
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray={2 * Math.PI * 58}
-                initial={{ strokeDashoffset: 2 * Math.PI * 58 }}
-                animate={{ strokeDashoffset: 2 * Math.PI * 58 * (1 - result.score / 100) }}
-                transition={{ duration: 1, ease: 'easeOut' }}
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-              <span className={`text-2xl font-black ${scoreColor}`}>
-                {Math.round(result.score)}%
-              </span>
-              <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400 mt-0.5">Score</span>
-            </div>
-          </div>
-
-          {/* Right side stats & text */}
-          <div className="flex-1 min-w-0">
-            <h2 className="text-base font-black text-white truncate mb-0.5">{scoreLabel}</h2>
-            <p className="text-xs text-gray-400 mb-3 truncate">
-              {result.score >= 75 ? 'Outstanding performance!' : result.score >= 50 ? 'You are improving!' : 'Practice makes perfect!'}
-            </p>
-
-            {/* Correct/Wrong/Skipped tiny pills */}
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex items-center gap-1 text-xs font-bold text-mint-400 bg-mint-500/10 border border-mint-500/20 px-2 py-1 rounded-xl">
-                <CheckCircle size={13} /> {result.correct}
-              </div>
-              <div className="flex items-center gap-1 text-xs font-bold text-danger-400 bg-danger-500/10 border border-danger-500/20 px-2 py-1 rounded-xl">
-                <XCircle size={13} /> {result.wrong}
-              </div>
-              <div className="flex items-center gap-1 text-xs font-bold text-gray-300 bg-white/[0.05] border border-white/[0.1] px-2 py-1 rounded-xl">
-                <MinusCircle size={13} /> {result.skipped}
-              </div>
-            </div>
+        {/* Score Ring */}
+        <div className="relative z-10 w-32 h-32 sm:w-40 sm:h-40 mx-auto mb-4">
+          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 140 140">
+            <circle cx="70" cy="70" r="60" stroke="rgba(255,255,255,0.05)" strokeWidth="10" fill="none" />
+            <motion.circle
+              cx="70" cy="70" r="60"
+              stroke={ringColor}
+              strokeWidth="10"
+              fill="none"
+              strokeLinecap="round"
+              strokeDasharray={2 * Math.PI * 60}
+              initial={{ strokeDashoffset: 2 * Math.PI * 60 }}
+              animate={{ strokeDashoffset: 2 * Math.PI * 60 * (1 - result.score / 100) }}
+              transition={{ duration: 1, ease: 'easeOut' }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <motion.span
+              initial={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3, duration: 0.4 }}
+              className={`text-4xl sm:text-5xl font-black ${scoreColor}`}
+            >
+              {Math.round(result.score)}%
+            </motion.span>
           </div>
         </div>
 
-        {/* Bottom metrics row inside card */}
-        <div className="grid grid-cols-2 gap-2.5 mt-4 pt-3.5 border-t border-white/[0.06]">
-          <div className="flex items-center gap-2.5 bg-white/[0.03] border border-white/[0.06] rounded-2xl px-3 py-2.5">
-            <div className="w-7 h-7 rounded-xl bg-primary-500/15 border border-primary-500/30 flex items-center justify-center text-primary-400 flex-shrink-0">
-              <Target size={14} />
-            </div>
-            <div className="min-w-0">
-              <div className="text-xs font-black text-white">{result.correct}/{result.total}</div>
-              <div className="text-[10px] text-gray-400 font-medium">Correct</div>
-            </div>
-          </div>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+          <h2 className="text-xl sm:text-2xl font-black text-white mb-1">{scoreLabel}</h2>
+          <p className="text-gray-400 text-sm mb-5">
+            {result.score >= 75 ? 'Outstanding performance!' : result.score >= 50 ? 'You are improving!' : 'Practice makes perfect!'}
+          </p>
+        </motion.div>
 
-          <div className="flex items-center gap-2.5 bg-white/[0.03] border border-white/[0.06] rounded-2xl px-3 py-2.5">
-            <div className="w-7 h-7 rounded-xl bg-white/[0.06] border border-white/[0.1] flex items-center justify-center text-gray-300 flex-shrink-0">
-              <Clock size={14} />
+        {/* Stats: Correct, Wrong, Skipped */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="relative z-10 grid grid-cols-3 gap-3 max-w-sm mx-auto mb-4"
+        >
+          {[
+            { label: 'Correct', value: result.correct, icon: CheckCircle, color: 'text-mint-400', bg: 'bg-mint-500/10', border: 'border-mint-500/20' },
+            { label: 'Wrong', value: result.wrong, icon: XCircle, color: 'text-danger-400', bg: 'bg-danger-500/10', border: 'border-danger-500/20' },
+            { label: 'Skipped', value: result.skipped, icon: MinusCircle, color: 'text-gray-400', bg: 'bg-white/[0.03]', border: 'border-white/[0.08]' },
+          ].map((s) => (
+            <div key={s.label} className={`rounded-2xl border ${s.border} ${s.bg} p-3`}>
+              <s.icon size={18} className={`${s.color} mx-auto mb-1.5`} />
+              <div className="text-xl font-black text-white">{s.value}</div>
+              <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">{s.label}</div>
             </div>
-            <div className="min-w-0">
-              <div className="text-xs font-black text-white">{formatMMSS(result.timeTaken)}</div>
-              <div className="text-[10px] text-gray-400 font-medium">Time Taken</div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
+          ))}
+        </motion.div>
 
-      {/* Attempt dropdown */}
-      {attempts.length > 0 && (
+        {/* Summary: correct/total & time */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.6 }}
+          className="relative z-10 flex flex-wrap items-center justify-center gap-3 mb-5"
         >
-          <AttemptDropdown attempts={attempts} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-mint-500/10 border border-mint-500/20">
+            <Target size={15} className="text-mint-400" />
+            <span className="font-bold text-mint-400 text-sm">{result.correct}/{result.total} Correct</span>
+          </div>
+          {result.timeTaken > 0 && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.08]">
+              <Clock size={15} className="text-gray-400" />
+              <span className="font-bold text-gray-300 text-sm">{formatMMSS(result.timeTaken)} Time Taken</span>
+            </div>
+          )}
         </motion.div>
-      )}
+
+        {/* Attempt dropdown */}
+        {attempts.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className="relative z-20 max-w-sm mx-auto"
+          >
+            <AttemptDropdown attempts={attempts} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
+          </motion.div>
+        )}
+
+        {/* Share Quiz button (floating below dropdown) */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.8 }}
+          className="relative z-10 mt-5 flex justify-center"
+        >
+          <button
+            onClick={() => setShareOpen(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-violet-500/10 border border-violet-500/25 hover:bg-violet-500/20 hover:border-violet-500/40 text-violet-300 active:scale-95 transition-all text-sm font-bold"
+          >
+            <Share2 size={16} />
+            Share Quiz
+          </button>
+        </motion.div>
+      </motion.div>
 
       {/* ═══ ACTION BUTTONS ═══ */}
       <motion.div
-        initial={{ opacity: 0, y: 15 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.9 }}
         className="flex gap-3"
       >
-        <Link
-          to={subject && quizName ? `${routeBase}/${encodeURIComponent(subject)}/${encodeURIComponent(quizName)}${routeBase === '/quiz' ? '/play' : ''}` : subject ? `/quiz/${subject}` : '/quiz'}
-          className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white text-xs font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-500/25"
-        >
-          <RotateCcw size={15} /> Try Again
+        <Link to={subject && quizName ? `${routeBase}/${encodeURIComponent(subject)}/${encodeURIComponent(quizName)}${routeBase === '/quiz' ? '/play' : ''}` : subject ? `/quiz/${subject}` : '/quiz'}
+          className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white text-sm font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-500/25">
+          <RotateCcw size={16} /> Try Again
         </Link>
         <button
           onClick={() => navigate(`${routeBase}/analysis/${result.attemptId}`, { state: { result } })}
           disabled={questions.length === 0}
-          className="flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] hover:border-primary-500/30 text-gray-200 text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] hover:border-primary-500/30 text-gray-200 text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <BarChart3 size={15} className="text-primary-400" /> Analysis
+          <BarChart3 size={16} className="text-primary-400" /> Analysis
         </button>
       </motion.div>
 
       {/* ═══ PROGRESS GRAPH ═══ */}
       <motion.div
-        initial={{ opacity: 0, y: 15 }}
+        initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
+        transition={{ delay: 1.0 }}
       >
         <ProgressGraph attempts={attempts} selectedAttemptId={result.attemptId} />
       </motion.div>
@@ -561,39 +514,17 @@ export default function QuizResult() {
       {/* ═══ PER-QUIZ LEADERBOARD ═══ */}
       {result.quizId && (
         <motion.div
-          initial={{ opacity: 0, y: 15 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
+          transition={{ delay: 1.1 }}
         >
           <QuizLeaderboard quizId={result.quizId} />
         </motion.div>
       )}
 
-      {/* ═══ SHARE BANNER CARD ═══ */}
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
-        onClick={() => setShareOpen(true)}
-        className="flex items-center justify-between p-4 rounded-3xl bg-gradient-to-r from-violet-500/15 via-primary-500/10 to-transparent border border-violet-500/30 cursor-pointer hover:border-violet-500/50 transition-all shadow-lg shadow-violet-500/5"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center text-violet-300">
-            <Share2 size={18} />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-white">Share Quiz</div>
-            <div className="text-[11px] text-gray-400">Challenge your friends</div>
-          </div>
-        </div>
-        <ChevronRight size={18} className="text-gray-400" />
-      </motion.div>
-
-      {/* Footer Motivation Quote */}
-      <div className="text-center py-2">
-        <p className="text-xs font-semibold text-amber-300/90 flex items-center justify-center gap-1.5">
-          <span>🎉</span> {scoreLabel} <span>💪</span>
-        </p>
+      {/* ═══ FOOTER MESSAGE ═══ */}
+      <div className="text-center text-gray-500 text-sm font-medium pt-2">
+        Great Job! Keep practicing!
       </div>
 
       {/* ═══ SHARE MODAL ═══ */}
