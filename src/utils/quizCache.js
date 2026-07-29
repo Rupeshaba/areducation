@@ -51,7 +51,7 @@ function writeStore(store) {
 
 /**
  * Save a freshly-submitted attempt. `attempt` should contain at least:
- * { attemptId, score, correct, wrong, skipped, total, points, timeTaken,
+ * { attemptId, quizId, score, correct, wrong, skipped, total, timeTaken,
  *   questionTimes, results, completedAt }
  */
 export function saveAttempt(subject, quizName, attempt) {
@@ -115,7 +115,6 @@ export function getAllRecentAttempts(limit = 20) {
         score: Math.round(a.score),
         correct: a.correct,
         total: a.total,
-        points: a.points || 0,
         completedAt: a.completedAt,
       })
     })
@@ -144,12 +143,12 @@ export function mergeAttempts(remoteAttempts = []) {
     if (!already) {
       store[key].attempts.push({
         attemptId,
+        quizId: r.quizId,
         score: r.score,
         correct: r.correct,
         wrong: r.wrong,
         skipped: r.skipped,
         total: r.total,
-        points: r.points,
         timeTaken: r.timeTaken,
         completedAt: r.completedAt,
       })
