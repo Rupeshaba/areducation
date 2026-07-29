@@ -1,15 +1,26 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Clock, ChevronLeft, ChevronRight, CheckCircle, AlertCircle, 
-  Loader, X, Bookmark, Send, AlertTriangle, Grid3X3
+import {
+  Clock, ChevronLeft, ChevronRight, CheckCircle, AlertCircle,
+  Loader, X, Bookmark, Send, AlertTriangle, Grid3X3, User, ArrowRight
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import formatText from '../../utils/formatText'
 import { saveAttempt } from '../../utils/quizCache'
+import { getGuestName, setGuestName, hasGuestName } from '../../utils/guest'
+
+// Kya user logged-in hai? (auth store / localStorage me accessToken)
+function isLoggedIn() {
+  try {
+    if (window.__authStore && window.__authStore.getState().accessToken) return true
+    const stored = localStorage.getItem('ar-edu-auth')
+    if (stored) return !!JSON.parse(stored)?.state?.accessToken
+  } catch { /* ignore */ }
+  return false
+}
 
 /* ═══ SWIPE HOOK (mobile: swipe left = next, swipe right = prev) ═══ */
 function useSwipeQuestion(onNext, onPrev, disabled) {
@@ -36,6 +47,30 @@ function useSwipeQuestion(onNext, onPrev, disabled) {
 export default function QuizPlay() {
   const { subject, name } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // ── Guest vs logged-in ──────────────────────────────────────────────
+  // A shared link lands on /play/:subject/:name. Anyone (logged-in or not)
+  // can open it, but a guest is the case we care about: no auth token.
+  // We prefix result/analysis routes accordingly so a guest never gets
+  // bounced to a protected /quiz/... path.
+  const isSharedPath = location.pathname.startsWith('/play/')
+  const loggedIn = isLoggedIn()
+  const isGuest = !loggedIn
+  const routeBase = (isSharedPath || isGuest) ? '/play' : '/quiz'
+
+  // Guest name gate: if a guest hasn't given a name yet, ask ONCE before the
+  // quiz starts. Once saved (localStorage) it's never asked again — for this
+  // or any other quiz, forever, on this device.
+  const [needName, setNeedName] = useState(isGuest && !hasGuestName())
+  const [nameInput, setNameInput] = useState(getGuestName())
+
+  const submitName = () => {
+    const clean = setGuestName(nameInput)
+    if (!clean) { toast.error('Apna naam likho'); return }
+    setNeedName(false)
+  }
+
   const [answers, setAnswers] = useState({})
   const [current, setCurrent] = useState(0)
   const [elapsed, setElapsed] = useState(0)
@@ -69,6 +104,9 @@ export default function QuizPlay() {
   const { data, isLoading } = useQuery({
     queryKey: ['quiz-questions', subject, name],
     queryFn: () => api.get(`/quiz/${subject}/${encodeURIComponent(name)}/questions`).then(r => r.data),
+    // Don't fetch until a guest has provided their name — the quiz shouldn't
+    // start (and the timer shouldn't run) behind the name gate.
+    enabled: !needName,
   })
 
   const submitMutation = useMutation({
@@ -109,12 +147,12 @@ export default function QuizPlay() {
       try {
         saveAttempt(subject, decodedName, {
           attemptId: data.attemptId,
+          quizId: data.quizId,
           score: data.score,
           correct: data.correct,
           wrong: data.wrong,
           skipped: data.skipped,
           total: data.total,
-          points: data.points,
           timeTaken: finalTime || elapsed,
           questionTimes,
           results,
@@ -126,7 +164,9 @@ export default function QuizPlay() {
       // in the browser history. Without it, pressing the phone's back button
       // from the result page would land back on QuizPlay instead of going
       // to wherever the user came from (the quiz list).
-      navigate(`/quiz/result/${data.attemptId}`, {
+      // routeBase = '/play' for guests/shared links (public, no login) and
+      // '/quiz' for logged-in users (protected).
+      navigate(`${routeBase}/result/${data.attemptId}`, {
         state: { result: enriched },
         replace: true,
       })
@@ -138,16 +178,19 @@ export default function QuizPlay() {
     },
   })
 
-  // Timer - stops when timerStopped is true
+  // Timer - stops when timerStopped is true (and doesn't run behind the
+  // guest name gate, so elapsed starts from 0 when the quiz actually begins)
   useEffect(() => {
-    if (!timerStopped) {
+    if (!timerStopped && !needName) {
       timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
     }
     return () => clearInterval(timerRef.current)
-  }, [timerStopped])
+  }, [timerStopped, needName])
 
   // Auto Fullscreen + Lock
   useEffect(() => {
+    // Don't grab fullscreen while the guest name gate is showing.
+    if (needName) return
     fullscreenLocked.current = true
     
     const enterFS = () => {
@@ -194,7 +237,7 @@ export default function QuizPlay() {
         document.exitFullscreen().catch(() => {})
       }
     }
-  }, [submitting])
+  }, [submitting, needName])
 
   const questions = data?.questions || []
   const q = questions[current]
@@ -283,6 +326,54 @@ export default function QuizPlay() {
   const cancelSubmit = () => {
     setShowSubmitModal(false)
     setTimerStopped(false) // Resume timer if user cancels
+  }
+
+  // ── GUEST NAME GATE ──────────────────────────────────────────────────
+  // Shown once, before the quiz loads, only if a guest has no saved name.
+  if (needName) {
+    return (
+      <div className="fixed inset-0 bg-[#001123] flex items-center justify-center p-5 select-none">
+        <motion.div
+          initial={{ opacity: 0, y: 24, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: 'spring', damping: 24, stiffness: 280 }}
+          className="w-full max-w-sm bg-[#0d1b30] border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#1299FD] to-violet-500 flex items-center justify-center mx-auto mb-5 shadow-lg shadow-[#1299FD]/30">
+            <User size={30} className="text-white" />
+          </div>
+
+          <h2 className="text-white text-xl font-extrabold text-center mb-1">
+            Quiz shuru karne se pehle…
+          </h2>
+          <p className="text-white/50 text-sm text-center mb-6">
+            Apna naam batao — leaderboard me isi naam se dikhoge 🏆
+          </p>
+
+          <input
+            type="text"
+            autoFocus
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') submitName() }}
+            placeholder="Tumhara naam"
+            maxLength={40}
+            className="w-full bg-white/[0.06] border border-white/15 focus:border-[#1299FD] rounded-xl px-4 py-3.5 text-white placeholder-white/30 text-sm font-medium outline-none transition-colors mb-4"
+          />
+
+          <button
+            onClick={submitName}
+            className="w-full bg-gradient-to-r from-[#1299FD] to-violet-500 text-white rounded-xl py-3.5 font-extrabold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-[#1299FD]/25"
+          >
+            Start Quiz <ArrowRight size={16} />
+          </button>
+
+          <p className="text-white/30 text-[11px] text-center mt-4">
+            Ye naam sirf ek baar poochha jayega — device pe save ho jayega.
+          </p>
+        </motion.div>
+      </div>
+    )
   }
 
   if (isLoading) return (
