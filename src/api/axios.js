@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { getDeviceId } from '../utils/deviceId'
+import { getGuestId, getGuestName, encodeGuestName } from '../utils/guest'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
@@ -45,11 +46,21 @@ function getRefreshToken() {
   return null
 }
 
-// Request interceptor - attach token + device id
+// Request interceptor - attach token + device id (or guest identity)
 api.interceptors.request.use((config) => {
   const accessToken = getAuthToken()
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`
+  } else {
+    // No token → this may be an anonymous guest playing a shared quiz.
+    // Attach guest identity so guest-friendly endpoints (quiz questions,
+    // submit, per-quiz leaderboard) can recognise them.
+    const guestId = getGuestId()
+    if (guestId) {
+      config.headers['X-Guest-Id'] = guestId
+      const gName = getGuestName()
+      if (gName) config.headers['X-Guest-Name'] = encodeGuestName(gName)
+    }
   }
   config.headers['X-Device-Id'] = getDeviceId()
   return config
