@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   CheckCircle, XCircle, MinusCircle, Trophy, RotateCcw,
   BarChart3, ChevronLeft, ChevronRight, X, BookOpen, Target,
-  ChevronDown, Clock, TrendingUp, Check, Share2, Medal, Crown
+  ChevronDown, Clock, TrendingUp, Check, Share2, Medal, Crown,
+  Zap, Timer
 } from 'lucide-react'
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid
@@ -15,7 +16,7 @@ import formatText from '../../utils/formatText'
 import { findAttemptById, getQuizEntry } from '../../utils/quizCache'
 import ShareQuizModal from '../../components/ShareQuizModal'
 
-/* ═══ SWIPE HOOK (mobile: swipe left = next question, swipe right = prev) ═══ */
+/* ═══ SWIPE HOOK (kept for functional integrity) ═══ */
 function useSwipeQuestion(onNext, onPrev) {
   const startX = useRef(null)
   const startY = useRef(null)
@@ -43,8 +44,9 @@ const formatMMSS = (s) => {
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
 }
 
+// Updated to match the exact format in image: 24 May 2024, 09:35 AM
 const formatAttemptDate = (ts) =>
-  ts ? new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''
+  ts ? new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
 
 /* ═══ ATTEMPT DROPDOWN ═══ */
 function AttemptDropdown({ attempts, selectedIndex, onSelect }) {
@@ -57,17 +59,15 @@ function AttemptDropdown({ attempts, selectedIndex, onSelect }) {
     <div className="relative w-full">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.06] transition-all"
+        className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-[#171B2D] border border-white/[0.06] hover:bg-[#1F2340] transition-all"
       >
-        <span className="flex items-center gap-2 min-w-0">
-          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary-500/15 text-primary-400 border border-primary-500/25 flex-shrink-0">
-            {selectedIndex === 0 ? 'Latest' : `Attempt ${total - selectedIndex}`}
-          </span>
-          <span className="text-xs text-gray-400 truncate">{formatAttemptDate(selected.completedAt)}</span>
-        </span>
-        <span className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-sm font-bold text-white">{Math.round(selected.score)}%</span>
-          <ChevronDown size={16} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <div className="flex flex-col items-start min-w-0">
+          <span className="text-[13px] font-bold text-white">Latest Attempt</span>
+          <span className="text-[11px] text-gray-500 truncate">{formatAttemptDate(selected.completedAt)}</span>
+        </div>
+        <span className="flex items-center gap-3 flex-shrink-0">
+          <span className="text-sm font-bold text-emerald-400">{Math.round(selected.score)}%</span>
+          <ChevronDown size={18} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
         </span>
       </button>
 
@@ -100,10 +100,10 @@ function AttemptDropdown({ attempts, selectedIndex, onSelect }) {
                       <span className="text-[11px] text-gray-500 truncate">{formatAttemptDate(a.completedAt)}</span>
                     </span>
                     <span className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`text-xs font-bold ${a.score >= 75 ? 'text-mint-400' : a.score >= 50 ? 'text-amber-400' : 'text-danger-400'}`}>
+                      <span className={`text-xs font-bold ${a.score >= 75 ? 'text-emerald-400' : a.score >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
                         {Math.round(a.score)}%
                       </span>
-                      {isSelected && <Check size={13} className="text-primary-400" />}
+                      {isSelected && <Check size={14} className="text-primary-400" />}
                     </span>
                   </button>
                 )
@@ -119,8 +119,8 @@ function AttemptDropdown({ attempts, selectedIndex, onSelect }) {
 /* ═══ PROGRESS GRAPH ═══ */
 function ProgressGraph({ attempts, selectedAttemptId }) {
   const chartData = useMemo(() => (
-    attempts.slice().reverse().map((a, i, arr) => ({
-      label: i === arr.length - 1 ? 'Latest' : `Attempt ${i + 1}`,
+    attempts.slice().reverse().map((a, i) => ({
+      label: `Attempt ${i + 1}`,
       score: Math.round(a.score),
       attemptId: a.attemptId,
       date: formatAttemptDate(a.completedAt),
@@ -129,36 +129,44 @@ function ProgressGraph({ attempts, selectedAttemptId }) {
 
   if (attempts.length < 2) {
     return (
-      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6 text-center">
+      <div className="rounded-2xl border border-white/[0.05] bg-[#13162A] p-6 text-center">
         <TrendingUp size={22} className="text-primary-400/50 mx-auto mb-2" />
-        <p className="text-xs text-gray-500">Take this quiz again to start tracking your progress over time.</p>
+        <p className="text-xs text-gray-500">Take this quiz again to track your progress.</p>
       </div>
     )
   }
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.03] to-transparent p-4 sm:p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <TrendingUp size={16} className="text-primary-400" />
-        <h4 className="text-sm font-bold text-white">Progress Over Attempts</h4>
+    <div className="rounded-2xl border border-white/[0.05] bg-[#13162A] p-4 relative overflow-hidden">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <TrendingUp size={16} className="text-primary-400" />
+          <h4 className="text-sm font-bold text-white">Progress Over Attempts</h4>
+        </div>
+        <button className="text-[11px] text-primary-400 bg-primary-500/10 px-3 py-1 rounded-full hover:bg-primary-500/20 transition-all">View All</button>
       </div>
-      <div style={{ width: '100%', height: 180 }}>
+      <div style={{ width: '100%', height: 160 }}>
         <ResponsiveContainer>
           <LineChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-            <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} tickLine={false} />
-            <YAxis domain={[0, 100]} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} axisLine={false} tickLine={false} width={32} />
+            <defs>
+              <linearGradient id="colorScore" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="5%" stopColor="#A855F7" stopOpacity="0.2"/>
+                <stop offset="95%" stopColor="#F43F5E" stopOpacity="1"/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} strokeDasharray="4 4" />
+            <XAxis dataKey="label" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
+            <YAxis domain={[0, 100]} tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
             <Tooltip
               contentStyle={{ background: '#0B0E1A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, fontSize: 12 }}
               labelStyle={{ color: 'rgba(255,255,255,0.5)' }}
-              itemStyle={{ color: '#FF9270' }}
+              itemStyle={{ color: '#A855F7' }}
               formatter={(v) => [`${v}%`, 'Score']}
-              labelFormatter={(label, payload) => payload?.[0]?.payload?.date || label}
             />
             <Line
               type="monotone"
               dataKey="score"
-              stroke="#FF6B4A"
+              stroke="url(#colorScore)"
               strokeWidth={2.5}
               dot={(props) => {
                 const isSel = props.payload.attemptId === selectedAttemptId
@@ -167,30 +175,25 @@ function ProgressGraph({ attempts, selectedAttemptId }) {
                     key={props.payload.label}
                     cx={props.cx}
                     cy={props.cy}
-                    r={isSel ? 5.5 : 3.5}
-                    fill={isSel ? '#FF9270' : '#FF6B4A'}
+                    r={isSel ? 5 : 3}
+                    fill={isSel ? '#F43F5E' : '#A855F7'}
                     stroke={isSel ? '#fff' : 'none'}
                     strokeWidth={isSel ? 2 : 0}
                   />
                 )
               }}
-              activeDot={{ r: 6 }}
+              activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
+      {/* Gradient Overlay at the start and end for sleek effect */}
+      <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#13162A] to-transparent pointer-events-none" />
     </div>
   )
 }
 
-/* ═══ PER-QUIZ LEADERBOARD ═══ */
-function rankAccent(rank) {
-  if (rank === 1) return { ring: 'border-amber-400/60', bg: 'bg-amber-400/10', text: 'text-amber-300' }
-  if (rank === 2) return { ring: 'border-gray-300/50', bg: 'bg-gray-300/10', text: 'text-gray-200' }
-  if (rank === 3) return { ring: 'border-orange-500/50', bg: 'bg-orange-500/10', text: 'text-orange-300' }
-  return { ring: 'border-white/10', bg: 'bg-white/[0.03]', text: 'text-gray-400' }
-}
-
+/* ═══ LEADERBOARD HELPER ═══ */
 function nameColor(name) {
   const colors = [
     'from-violet-500 to-purple-600', 'from-sky-500 to-blue-600',
@@ -202,18 +205,19 @@ function nameColor(name) {
   return colors[h % colors.length]
 }
 
-function Avatar({ name, avatarUrl }) {
+function Avatar({ name, avatarUrl, size = "w-10 h-10" }) {
   if (avatarUrl) {
-    return <img src={avatarUrl} alt={name} className="w-9 h-9 rounded-full object-cover border border-white/10" />
+    return <img src={avatarUrl} alt={name} className={`${size} rounded-full object-cover border-2 border-white/10`} />
   }
   const letter = (name || '?').trim().charAt(0).toUpperCase() || '?'
   return (
-    <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${nameColor(name)} flex items-center justify-center text-white text-sm font-black flex-shrink-0`}>
+    <div className={`${size} rounded-full bg-gradient-to-br ${nameColor(name)} flex items-center justify-center text-white font-bold flex-shrink-0`}>
       {letter}
     </div>
   )
 }
 
+/* ═══ PER-QUIZ LEADERBOARD ═══ */
 function QuizLeaderboard({ quizId }) {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['quiz-leaderboard', quizId],
@@ -225,13 +229,26 @@ function QuizLeaderboard({ quizId }) {
   if (!quizId) return null
 
   const rows = data?.leaderboard || []
+  // Structure rows to separate podium (top 3) and others
+  const top3 = rows.filter(r => r.rank <= 3)
+  const others = rows.filter(r => r.rank > 3)
+  
+  // Reorder for display: [2nd, 1st, 3rd]
+  const podiumDisplay = top3.reduce((acc, cur) => {
+    if (cur.rank === 1) acc[1] = cur
+    else if (cur.rank === 2) acc[0] = cur
+    else if (cur.rank === 3) acc[2] = cur
+    return acc
+  }, [null, null, null])
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.03] to-transparent p-4 sm:p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <Trophy size={16} className="text-amber-400" />
-        <h4 className="text-sm font-bold text-white">Quiz Leaderboard</h4>
-        <span className="text-[11px] text-gray-500 ml-auto">First attempt · by score & time</span>
+    <div className="rounded-2xl border border-white/[0.05] bg-[#13162A] p-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Trophy size={16} className="text-amber-400" />
+          <h4 className="text-sm font-bold text-white">Quiz Leaderboard</h4>
+        </div>
+        <button className="text-[11px] text-primary-400 bg-primary-500/10 px-3 py-1 rounded-full hover:bg-primary-500/20 transition-all">View Full</button>
       </div>
 
       {isLoading ? (
@@ -239,59 +256,97 @@ function QuizLeaderboard({ quizId }) {
           <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : isError ? (
-        <p className="text-center text-xs text-gray-500 py-6">Leaderboard load nahi ho paaya.</p>
+        <p className="text-center text-xs text-gray-500 py-6">Unable to load leaderboard</p>
       ) : rows.length === 0 ? (
-        <p className="text-center text-xs text-gray-500 py-6">Abhi tak koi entry nahi. Sabse pehle tum ho! 🎉</p>
+        <p className="text-center text-xs text-gray-500 py-6">Be the first to take this quiz! 🎉</p>
       ) : (
-        <div className="space-y-2">
-          {rows.map((r) => {
-            const acc = rankAccent(r.rank)
-            const pct = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0
-            return (
-              <div
-                key={r.participantId}
-                className={`flex items-center gap-3 rounded-xl border p-2.5 transition-colors ${
-                  r.isMe
-                    ? 'border-primary-500/50 bg-primary-500/10 ring-1 ring-primary-500/30'
-                    : `${acc.ring} ${acc.bg}`
-                }`}
-              >
-                {/* Rank */}
-                <div className="w-7 flex-shrink-0 flex items-center justify-center">
-                  {r.rank <= 3 ? (
-                    <Medal size={18} className={acc.text} />
-                  ) : (
-                    <span className="text-sm font-black text-gray-500">{r.rank}</span>
-                  )}
-                </div>
-
-                <Avatar name={r.name} avatarUrl={r.avatarUrl} />
-
-                {/* Name */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-bold text-white truncate">{r.name}</span>
-                    {r.isMe && (
-                      <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-primary-500/20 text-primary-300 flex-shrink-0">You</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-[11px] text-gray-500">
-                    <span className="flex items-center gap-0.5"><Clock size={10} /> {formatMMSS(r.timeTaken)}</span>
-                    <span>·</span>
-                    <span>{r.correct}/{r.total}</span>
-                  </div>
-                </div>
-
-                {/* Percentage */}
-                <div className="text-right flex-shrink-0">
-                  <div className={`text-base font-black ${pct >= 75 ? 'text-mint-400' : pct >= 50 ? 'text-amber-400' : 'text-danger-400'}`}>
-                    {pct}%
-                  </div>
+        <>
+          {/* ═══ PODIUM ═══ */}
+          <div className="flex items-end justify-center gap-2 sm:gap-4 mb-6 pb-2">
+            {/* 2nd Place */}
+            <div className="flex-1 flex flex-col items-center relative max-w-[100px]">
+              <div className="w-full bg-[#1C1D2F] rounded-t-2xl border border-gray-300/20 pb-3 pt-6 flex flex-col items-center h-[130px] justify-end relative overflow-hidden">
+                <div className="absolute top-0 inset-x-0 h-12 bg-gray-300/10 blur-xl"></div>
+                <span className="absolute top-2 text-2xl font-bold text-gray-400/40">2</span>
+                <Avatar name={podiumDisplay[0]?.name} avatarUrl={podiumDisplay[0]?.avatarUrl} size="w-8 h-8" />
+                <span className="text-[10px] font-semibold text-gray-300 mt-1.5 truncate w-full text-center px-1">{podiumDisplay[0]?.name || '-'}</span>
+                <span className="text-xs font-bold text-gray-200">{podiumDisplay[0] ? Math.round((podiumDisplay[0].correct / podiumDisplay[0].total) * 100) : 0}%</span>
+                <div className="flex items-center gap-1 mt-0.5 text-[9px] text-gray-500">
+                  <Clock size={10} /> {formatMMSS(podiumDisplay[0]?.timeTaken)}
                 </div>
               </div>
-            )
-          })}
-        </div>
+            </div>
+
+            {/* 1st Place */}
+            <div className="flex-1 flex flex-col items-center relative max-w-[120px] z-10">
+              <div className="absolute -top-4 text-amber-400 drop-shadow-lg"><Crown size={28} fill="#FBBF24" /></div>
+              <div className="w-full bg-[#1E1F33] rounded-t-2xl border border-amber-400/30 shadow-[0_0_20px_rgba(251,191,36,0.15)] pb-4 pt-8 flex flex-col items-center h-[160px] justify-end relative overflow-hidden">
+                <div className="absolute top-0 inset-x-0 h-16 bg-amber-400/20 blur-2xl"></div>
+                <span className="absolute top-3 text-3xl font-bold text-amber-400/30">1</span>
+                <div className="absolute top-5 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full border-2 border-amber-400 flex items-center justify-center bg-[#1E1F33]">
+                   <Avatar name={podiumDisplay[1]?.name} avatarUrl={podiumDisplay[1]?.avatarUrl} size="w-8 h-8" />
+                </div>
+                <span className="text-[11px] font-semibold text-white mt-1 truncate w-full text-center px-1">{podiumDisplay[1]?.name || '-'}</span>
+                <span className="text-base font-extrabold text-amber-400">{podiumDisplay[1] ? Math.round((podiumDisplay[1].correct / podiumDisplay[1].total) * 100) : 0}%</span>
+                <div className="flex items-center gap-1 mt-0.5 text-[9px] text-gray-400">
+                  <Clock size={10} /> {formatMMSS(podiumDisplay[1]?.timeTaken)}
+                </div>
+              </div>
+            </div>
+
+            {/* 3rd Place */}
+            <div className="flex-1 flex flex-col items-center relative max-w-[100px]">
+              <div className="w-full bg-[#1C1D2F] rounded-t-2xl border border-orange-500/20 pb-3 pt-6 flex flex-col items-center h-[120px] justify-end relative overflow-hidden">
+                <div className="absolute top-0 inset-x-0 h-10 bg-orange-500/10 blur-xl"></div>
+                <span className="absolute top-2 text-xl font-bold text-orange-400/40">3</span>
+                <Avatar name={podiumDisplay[2]?.name} avatarUrl={podiumDisplay[2]?.avatarUrl} size="w-8 h-8" />
+                <span className="text-[10px] font-semibold text-gray-300 mt-1.5 truncate w-full text-center px-1">{podiumDisplay[2]?.name || '-'}</span>
+                <span className="text-xs font-bold text-orange-300">{podiumDisplay[2] ? Math.round((podiumDisplay[2].correct / podiumDisplay[2].total) * 100) : 0}%</span>
+                <div className="flex items-center gap-1 mt-0.5 text-[9px] text-gray-500">
+                  <Clock size={10} /> {formatMMSS(podiumDisplay[2]?.timeTaken)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ═══ LIST (Rank 4+) ═══ */}
+          <div className="space-y-2">
+            {others.map((r) => {
+              const pct = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0
+              const isMe = r.isMe
+              return (
+                <div
+                  key={r.participantId}
+                  className={`flex items-center justify-between rounded-xl p-3 transition-colors border ${
+                    isMe
+                      ? 'border-purple-500/30 bg-gradient-to-r from-purple-500/10 to-transparent'
+                      : 'border-white/[0.04] bg-white/[0.02]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <span className="text-sm font-medium text-gray-500 w-5 text-center">{r.rank}</span>
+                    <Avatar name={r.name} avatarUrl={r.avatarUrl} size="w-8 h-8" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-sm font-medium text-gray-200 truncate flex items-center gap-2">
+                        {r.name}
+                        {isMe && <span className="text-[9px] font-bold text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full">You</span>}
+                      </span>
+                      <div className="flex items-center gap-1 text-[10px] text-gray-500">
+                        <Clock size={10} /> {formatMMSS(r.timeTaken)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className={`text-sm font-bold ${pct >= 75 ? 'text-emerald-400' : pct >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                      {pct}%
+                    </span>
+                    {isMe && <span className="text-[9px] text-purple-400/70">Your Rank</span>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
       )}
     </div>
   )
@@ -329,6 +384,7 @@ export default function QuizResult() {
     if (historyEntry?.attempts?.length) return historyEntry.attempts
     if (fallbackSingle) return [{ ...fallbackSingle, attemptId, completedAt: fallbackSingle.completedAt || Date.now() }]
     return []
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyEntry, fallbackSingle, attemptId])
 
   useEffect(() => {
@@ -346,13 +402,17 @@ export default function QuizResult() {
     </div>
   )
 
-  const scoreColor = result.score >= 75 ? 'text-mint-400' : result.score >= 50 ? 'text-amber-400' : 'text-danger-400'
   const scoreLabel = result.score >= 75 ? 'Excellent! 🎉' : result.score >= 50 ? 'Good Job! 👍' : 'Keep Practicing! 💪'
-  const ringColor = result.score >= 75 ? '#2DD4BF' : result.score >= 50 ? '#FFB020' : '#FF5C5C'
+  const scoreMessage = result.score >= 75 ? 'Outstanding performance!' : result.score >= 50 ? 'You are improving!' : 'Practice makes perfect!'
 
+  const ringColor = result.score >= 75 ? '#10B981' : result.score >= 50 ? '#F59E0B' : '#EF4444'
+  const circumference = 2 * Math.PI * 54 // r=54
+  const strokeDashoffset = circumference - (result.score / 100) * circumference
+
+  // Safely handle results array
   const questions = result.results || []
-  const currentQ = questions[currentQIndex]
-
+  
+  // Original swipe
   const goNext = () => {
     if (currentQIndex < questions.length - 1) setCurrentQIndex(p => p + 1)
   }
@@ -362,169 +422,194 @@ export default function QuizResult() {
   const swipeNav = useSwipeQuestion(goNext, goPrev)
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-5 space-y-6 pb-12 relative">
-
-      {/* Heading */}
-      <h1 className="text-2xl sm:text-3xl font-black text-white text-center pt-4">Quiz Completed 🎉</h1>
-
-      {/* ═══ HERO SCORE CARD ═══ */}
-      <motion.div
-        key={result.attemptId}
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-[#1a1040] via-[#12162A] to-[#0B0E1A] border border-white/[0.08] p-5 sm:p-8 text-center"
-      >
-        <div className={`absolute top-[-30%] left-1/2 -translate-x-1/2 w-64 h-64 rounded-full blur-[100px] opacity-30 ${
-          result.score >= 75 ? 'bg-mint-500' : result.score >= 50 ? 'bg-amber-500' : 'bg-danger-500'
-        }`} />
-
-        {/* Score Ring */}
-        <div className="relative z-10 w-32 h-32 sm:w-40 sm:h-40 mx-auto mb-4">
-          <svg className="w-full h-full transform -rotate-90" viewBox="0 0 140 140">
-            <circle cx="70" cy="70" r="60" stroke="rgba(255,255,255,0.05)" strokeWidth="10" fill="none" />
-            <motion.circle
-              cx="70" cy="70" r="60"
-              stroke={ringColor}
-              strokeWidth="10"
-              fill="none"
-              strokeLinecap="round"
-              strokeDasharray={2 * Math.PI * 60}
-              initial={{ strokeDashoffset: 2 * Math.PI * 60 }}
-              animate={{ strokeDashoffset: 2 * Math.PI * 60 * (1 - result.score / 100) }}
-              transition={{ duration: 1, ease: 'easeOut' }}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <motion.span
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, duration: 0.4 }}
-              className={`text-4xl sm:text-5xl font-black ${scoreColor}`}
-            >
-              {Math.round(result.score)}%
-            </motion.span>
-          </div>
+    <div className="min-h-screen bg-[#0B0E1A] text-white pb-6 max-w-xl mx-auto relative flex flex-col" {...swipeNav}>
+      
+      {/* ═══ TOP NAVIGATION ═══ */}
+      <header className="flex items-center justify-between px-4 py-3 sticky top-0 z-20 bg-[#0B0E1A] backdrop-blur-xl">
+        <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-white/5 transition-colors">
+          <ChevronLeft size={24} className="text-gray-300" />
+        </button>
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-base">Quiz Completed</span>
+          <Trophy size={18} className="text-amber-400" />
         </div>
+        <button onClick={() => setShareOpen(true)} className="p-2 rounded-full hover:bg-white/5 transition-colors">
+          <Share2 size={20} className="text-gray-300" />
+        </button>
+      </header>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-          <h2 className="text-xl sm:text-2xl font-black text-white mb-1">{scoreLabel}</h2>
-          <p className="text-gray-400 text-sm mb-5">
-            {result.score >= 75 ? 'Outstanding performance!' : result.score >= 50 ? 'You are improving!' : 'Practice makes perfect!'}
-          </p>
-        </motion.div>
-
-        {/* Stats: Correct, Wrong, Skipped */}
+      <div className="px-4 space-y-4 pb-24">
+        
+        {/* ═══ HERO SCORE CARD ═══ */}
         <motion.div
+          key={result.attemptId}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="relative z-10 grid grid-cols-3 gap-3 max-w-sm mx-auto mb-4"
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="relative overflow-hidden rounded-2xl bg-[#13162A] border border-white/[0.05] p-5 text-center"
         >
-          {[
-            { label: 'Correct', value: result.correct, icon: CheckCircle, color: 'text-mint-400', bg: 'bg-mint-500/10', border: 'border-mint-500/20' },
-            { label: 'Wrong', value: result.wrong, icon: XCircle, color: 'text-danger-400', bg: 'bg-danger-500/10', border: 'border-danger-500/20' },
-            { label: 'Skipped', value: result.skipped, icon: MinusCircle, color: 'text-gray-400', bg: 'bg-white/[0.03]', border: 'border-white/[0.08]' },
-          ].map((s) => (
-            <div key={s.label} className={`rounded-2xl border ${s.border} ${s.bg} p-3`}>
-              <s.icon size={18} className={`${s.color} mx-auto mb-1.5`} />
-              <div className="text-xl font-black text-white">{s.value}</div>
-              <div className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">{s.label}</div>
-            </div>
-          ))}
-        </motion.div>
+          {/* Glowing ambient light behind the ring */}
+          <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-40 h-40 rounded-full blur-[60px] opacity-20 ${
+            result.score >= 75 ? 'bg-emerald-500' : result.score >= 50 ? 'bg-amber-500' : 'bg-red-500'
+          }`} />
 
-        {/* Summary: correct/total & time */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="relative z-10 flex flex-wrap items-center justify-center gap-3 mb-5"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-mint-500/10 border border-mint-500/20">
-            <Target size={15} className="text-mint-400" />
-            <span className="font-bold text-mint-400 text-sm">{result.correct}/{result.total} Correct</span>
+          {/* Score Ring */}
+          <div className="relative z-10 w-36 h-36 mx-auto mb-4">
+            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+              <defs>
+                <linearGradient id="ringGradient" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#A855F7" />
+                  <stop offset="100%" stopColor={ringColor} />
+                </linearGradient>
+              </defs>
+              {/* Background track */}
+              <circle cx="60" cy="60" r="54" stroke="rgba(255,255,255,0.05)" strokeWidth="10" fill="none" />
+              {/* Progress ring */}
+              <motion.circle
+                cx="60" cy="60" r="54"
+                stroke="url(#ringGradient)"
+                strokeWidth="10"
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                initial={{ strokeDashoffset: circumference }}
+                animate={{ strokeDashoffset }}
+                transition={{ duration: 1.2, ease: 'easeOut' }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pt-1">
+              <motion.span
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
+                className="text-4xl font-black text-white"
+              >
+                {Math.round(result.score)}%
+              </motion.span>
+              <span className="text-[11px] text-gray-400 -mt-1">Score</span>
+            </div>
           </div>
-          {result.timeTaken > 0 && (
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.08]">
-              <Clock size={15} className="text-gray-400" />
-              <span className="font-bold text-gray-300 text-sm">{formatMMSS(result.timeTaken)} Time Taken</span>
+
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <h2 className="text-xl font-extrabold text-white mb-1">{scoreLabel}</h2>
+            <p className="text-gray-400 text-sm">{scoreMessage}</p>
+          </motion.div>
+
+          {/* Stats Boxes */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="relative z-10 grid grid-cols-3 gap-3 mt-5"
+          >
+            {[
+              { label: 'Correct', value: result.correct, icon: CheckCircle, color: 'text-emerald-400' },
+              { label: 'Wrong', value: result.wrong, icon: XCircle, color: 'text-red-400' },
+              { label: 'Skipped', value: result.skipped, icon: MinusCircle, color: 'text-gray-400' },
+            ].map((s) => (
+              <div key={s.label} className="bg-white/[0.04] rounded-xl px-2 py-3 flex flex-col items-center justify-center border border-white/[0.05]">
+                <s.icon size={18} className={`${s.color} mb-1`} />
+                <div className="text-lg font-bold text-white">{s.value}</div>
+                <div className="text-[9px] text-gray-500 font-medium uppercase tracking-wider">{s.label}</div>
+              </div>
+            ))}
+          </motion.div>
+
+          {/* Secondary Stats Badges */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="relative z-10 flex items-center justify-center gap-3 mt-4"
+          >
+            <div className="bg-white/[0.04] border border-white/[0.08] rounded-full px-4 py-1.5 flex items-center gap-2">
+              <Target size={14} className="text-purple-400" />
+              <span className="font-semibold text-gray-300 text-xs">{result.correct}/{result.total} Correct</span>
             </div>
-          )}
+            {result.timeTaken > 0 && (
+              <div className="bg-white/[0.04] border border-white/[0.08] rounded-full px-4 py-1.5 flex items-center gap-2">
+                <Clock size={14} className="text-gray-400" />
+                <span className="font-semibold text-gray-300 text-xs">{formatMMSS(result.timeTaken)}</span>
+              </div>
+            )}
+          </motion.div>
         </motion.div>
 
-        {/* Attempt dropdown */}
+        {/* ═══ ATTEMPT DROPDOWN ═══ */}
         {attempts.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
-            className="relative z-20 max-w-sm mx-auto"
+            transition={{ delay: 0.45 }}
           >
             <AttemptDropdown attempts={attempts} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
           </motion.div>
         )}
 
-        {/* Share Quiz button (floating below dropdown) */}
+        {/* ═══ ACTION BUTTONS ═══ */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.8 }}
-          className="relative z-10 mt-5 flex justify-center"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="flex gap-3"
         >
+          <Link to={subject && quizName ? `${routeBase}/${encodeURIComponent(subject)}/${encodeURIComponent(quizName)}${routeBase === '/quiz' ? '/play' : ''}` : subject ? `/quiz/${subject}` : '/quiz'}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white text-sm font-bold transition-all active:scale-[0.98] shadow-lg shadow-orange-500/25">
+            <RotateCcw size={16} /> Try Again
+          </Link>
           <button
-            onClick={() => setShareOpen(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-violet-500/10 border border-violet-500/25 hover:bg-violet-500/20 hover:border-violet-500/40 text-violet-300 active:scale-95 transition-all text-sm font-bold"
+            onClick={() => navigate(`${routeBase}/analysis/${result.attemptId}`, { state: { result } })}
+            disabled={questions.length === 0}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#1A1D2F] border border-white/[0.06] text-gray-300 text-sm font-bold transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <Share2 size={16} />
-            Share Quiz
+            <BarChart3 size={16} className="text-purple-400" /> Analysis
           </button>
         </motion.div>
-      </motion.div>
 
-      {/* ═══ ACTION BUTTONS ═══ */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.9 }}
-        className="flex gap-3"
-      >
-        <Link to={subject && quizName ? `${routeBase}/${encodeURIComponent(subject)}/${encodeURIComponent(quizName)}${routeBase === '/quiz' ? '/play' : ''}` : subject ? `/quiz/${subject}` : '/quiz'}
-          className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white text-sm font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-500/25">
-          <RotateCcw size={16} /> Try Again
-        </Link>
-        <button
-          onClick={() => navigate(`${routeBase}/analysis/${result.attemptId}`, { state: { result } })}
-          disabled={questions.length === 0}
-          className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] hover:border-primary-500/30 text-gray-200 text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <BarChart3 size={16} className="text-primary-400" /> Analysis
-        </button>
-      </motion.div>
-
-      {/* ═══ PROGRESS GRAPH ═══ */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.0 }}
-      >
-        <ProgressGraph attempts={attempts} selectedAttemptId={result.attemptId} />
-      </motion.div>
-
-      {/* ═══ PER-QUIZ LEADERBOARD ═══ */}
-      {result.quizId && (
+        {/* ═══ PROGRESS GRAPH ═══ */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.1 }}
+          transition={{ delay: 0.55 }}
         >
-          <QuizLeaderboard quizId={result.quizId} />
+          <ProgressGraph attempts={attempts} selectedAttemptId={result.attemptId} />
         </motion.div>
-      )}
 
-      {/* ═══ FOOTER MESSAGE ═══ */}
-      <div className="text-center text-gray-500 text-sm font-medium pt-2">
-        Great Job! Keep practicing!
+        {/* ═══ PER-QUIZ LEADERBOARD ═══ */}
+        {result.quizId && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.65 }}
+          >
+            <QuizLeaderboard quizId={result.quizId} />
+          </motion.div>
+        )}
+
+        {/* ═══ SHARE BOTTOM CARD ═══ */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.75 }}
+          className="fixed bottom-4 left-4 right-4 max-w-xl mx-auto z-10"
+        >
+          <button 
+            onClick={() => setShareOpen(true)}
+            className="w-full flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-purple-500/20 to-purple-500/5 border border-purple-500/20 backdrop-blur-lg shadow-xl"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-purple-500/20 text-purple-300">
+                <Share2 size={20} />
+              </div>
+              <div className="flex flex-col items-start">
+                <span className="font-bold text-sm text-white">Share Quiz</span>
+                <span className="text-[10px] text-gray-400">Challenge your friends</span>
+              </div>
+            </div>
+            <ChevronRight size={20} className="text-gray-400" />
+          </button>
+        </motion.div>
+
       </div>
 
       {/* ═══ SHARE MODAL ═══ */}
@@ -543,6 +628,7 @@ export default function QuizResult() {
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Add subtle dot glow for the leaderboard target elements if needed */
       `}</style>
     </div>
   )
