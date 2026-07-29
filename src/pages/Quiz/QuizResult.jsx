@@ -576,4 +576,171 @@ export default function QuizResult() {
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
               <defs>
                 <linearGradient id="ringGradient" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset
+                  <stop offset="0%" stopColor="#A855F7" />
+                  <stop offset="100%" stopColor={result.score >= 75 ? '#10B981' : result.score >= 50 ? '#F59E0B' : '#EF4444'} />
+                </linearGradient>
+              </defs>
+              <circle cx="60" cy="60" r="50" stroke="rgba(255,255,255,0.08)" strokeWidth="12" fill="none" />
+              <motion.circle
+                cx="60" cy="60" r="50"
+                stroke="url(#ringGradient)"
+                strokeWidth="12"
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                initial={{ strokeDashoffset: circumference }}
+                animate={{ strokeDashoffset }}
+                transition={{ duration: 1.2, ease: 'easeOut' }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pt-1">
+              <motion.span
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
+                className="text-[40px] font-black text-white"
+              >
+                {Math.round(result.score)}%
+              </motion.span>
+              <span className="text-[12px] text-gray-400 -mt-1">Score</span>
+            </div>
+          </div>
+
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <h2 className="text-[20px] font-extrabold text-white mb-1">{scoreLabel}</h2>
+            <p className="text-gray-400 text-[14px]">{scoreMessage}</p>
+          </motion.div>
+
+          {/* Stats Boxes - Glassmorphism */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="relative z-10 grid grid-cols-3 gap-3 mt-5"
+          >
+            {[
+              { label: 'CORRECT', value: result.correct, icon: CheckCircle, color: 'text-emerald-400' },
+              { label: 'WRONG', value: result.wrong, icon: XCircle, color: 'text-red-400' },
+              { label: 'SKIPPED', value: result.skipped, icon: MinusCircle, color: 'text-gray-500' },
+            ].map((s) => (
+              <div key={s.label} className="bg-white/[0.05] rounded-2xl px-2 py-3 flex flex-col items-center justify-center border border-white/[0.05]">
+                <s.icon size={18} className={`${s.color} mb-1.5`} />
+                <div className="text-xl font-bold text-white">{s.value}</div>
+                <div className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">{s.label}</div>
+              </div>
+            ))}
+          </motion.div>
+
+          {/* Secondary Stats Badges */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="relative z-10 flex items-center justify-center gap-3 mt-4"
+          >
+            <div className="bg-white/[0.05] border border-white/[0.08] rounded-full px-4 py-2 flex items-center gap-2">
+              <TargetIcon size={14} className="text-purple-400" />
+              <span className="font-semibold text-gray-300 text-xs">{result.correct}/{result.total} Correct</span>
+            </div>
+            {result.timeTaken > 0 && (
+              <div className="bg-white/[0.05] border border-white/[0.08] rounded-full px-4 py-2 flex items-center gap-2">
+                <Clock size={14} className="text-gray-400" />
+                <span className="font-semibold text-gray-300 text-xs">{formatMMSS(result.timeTaken)}</span>
+              </div>
+            )}
+          </motion.div>
+        </motion.div>
+
+        {/* ATTEMPT DROPDOWN */}
+        {attempts.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+          >
+            <AttemptDropdown attempts={attempts} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
+          </motion.div>
+        )}
+
+        {/* ACTION BUTTONS */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="flex gap-3"
+        >
+          <Link to={subject && quizName ? `${routeBase}/${encodeURIComponent(subject)}/${encodeURIComponent(quizName)}${routeBase === '/quiz' ? '/play' : ''}` : subject ? `/quiz/${subject}` : '/quiz'}
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-[#FF6B4A] to-[#E8532F] text-white text-[15px] font-bold transition-all active:scale-[0.97] shadow-lg shadow-orange-500/30">
+            <RotateCcw size={17} /> Try Again
+          </Link>
+          <button
+            onClick={() => navigate(`${routeBase}/analysis/${result.attemptId}`, { state: { result } })}
+            disabled={questions.length === 0}
+            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#20233B] border border-white/[0.06] text-gray-200 text-[15px] font-bold transition-all active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <BarChart3 size={17} className="text-purple-400" /> Analysis
+          </button>
+        </motion.div>
+
+        {/* PROGRESS GRAPH */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55 }}
+        >
+          <ProgressGraph attempts={attempts} selectedAttemptId={result.attemptId} />
+        </motion.div>
+
+        {/* LEADERBOARD */}
+        {result.quizId && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.65 }}
+          >
+            <QuizLeaderboard quizId={result.quizId} />
+          </motion.div>
+        )}
+
+        {/* SHARE BOTTOM CARD */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.75 }}
+          className="fixed bottom-4 left-4 right-4 max-w-lg mx-auto z-10"
+        >
+          <button 
+            onClick={() => setShareOpen(true)}
+            className="w-full flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-purple-500/20 to-purple-500/5 border border-purple-500/20 backdrop-blur-lg shadow-xl"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-full bg-purple-500/20 text-purple-300">
+                <Share2 size={20} />
+              </div>
+              <div className="flex flex-col items-start">
+                <span className="font-bold text-[15px] text-white">Share Quiz</span>
+                <span className="text-[11px] text-gray-400">Challenge your friends</span>
+              </div>
+            </div>
+            <ChevronRight size={20} className="text-gray-400" />
+          </button>
+        </motion.div>
+
+      </div>
+
+      {/* SHARE MODAL */}
+      <ShareQuizModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        quizName={quizName}
+        subject={subject}
+        shareUrl={
+          subject && quizName
+            ? `${window.location.origin}/play/${encodeURIComponent(subject)}/${encodeURIComponent(quizName)}`
+            : null
+        }
+      />
+
+    </div>
+  )
+}
