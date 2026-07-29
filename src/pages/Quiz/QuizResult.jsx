@@ -6,7 +6,7 @@ import {
   CheckCircle, XCircle, MinusCircle, Trophy, RotateCcw,
   BarChart3, ChevronLeft, ChevronRight, X, BookOpen, Target,
   ChevronDown, Clock, TrendingUp, Check, Share2, Medal, Crown,
-  Zap, Timer, Target as TargetIcon
+  Zap, Timer, Target as TargetIcon, ChevronUp
 } from 'lucide-react'
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid
@@ -128,7 +128,7 @@ function ProgressGraph({ attempts, selectedAttemptId }) {
 
   if (attempts.length < 2) {
     return (
-      <div className="rounded-2xl border border-white/[0.05] bg-[#13162A] p-6 text-center">
+      <div className="rounded-2xl border border-white/[0.05] bg-[#181B2D] p-6 text-center">
         <TrendingUp size={22} className="text-primary-400/40 mx-auto mb-2" />
         <p className="text-xs text-gray-500">Take this quiz again to track your progress over time.</p>
       </div>
@@ -200,20 +200,22 @@ function nameColor(name) {
   return colors[h % colors.length]
 }
 
-function Avatar({ name, avatarUrl, size = "w-10 h-10", textSize = "text-sm", borderColor = "border-white/10" }) {
+function Avatar({ name, avatarUrl, size = "w-10 h-10", textSize = "text-sm", borderColor = "border-white/10", isMe = false }) {
   if (avatarUrl) {
-    return <img src={avatarUrl} alt={name} className={`${size} rounded-full object-cover border-2 ${borderColor}`} />
+    return <img src={avatarUrl} alt={name} className={`${size} rounded-full object-cover border-2 ${isMe ? 'border-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.4)]' : borderColor}`} />
   }
   const letter = (name || '?').trim().charAt(0).toUpperCase() || '?'
   return (
-    <div className={`${size} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 ${textSize} border-2 ${borderColor}`} style={{ background: nameColor(name) }}>
+    <div className={`${size} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 ${textSize} border-2 ${isMe ? 'border-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.4)]' : borderColor}`} style={{ background: nameColor(name) }}>
       {letter}
     </div>
   )
 }
 
-/* ═══ PER-QUIZ LEADERBOARD ═══ */
-function QuizLeaderboard({ quizId }) {
+/* ═══ PER-QUIZ LEADERBOARD (Main) ═══ */
+function QuizLeaderboard({ quizId, currentUserId }) {
+  const [showFullModal, setShowFullModal] = useState(false)
+  
   const { data, isLoading, isError } = useQuery({
     queryKey: ['quiz-leaderboard', quizId],
     queryFn: () => api.get(`/leaderboard/${quizId}`).then(r => r.data),
@@ -234,14 +236,25 @@ function QuizLeaderboard({ quizId }) {
     return acc
   }, [null, null, null])
 
+  // Find the current user's row
+  const meRow = rows.find(r => r.isMe)
+  const isMeInTop3 = meRow && meRow.rank <= 3
+  const isMeBelowTop10 = meRow && meRow.rank > 10
+
   return (
-    <div className="rounded-2xl border border-white/[0.05] bg-[#181B2D] p-4">
+    <>
+    <div className="rounded-2xl border border-white/[0.05] bg-[#181B2D] p-4 relative">
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <Trophy size={16} className="text-amber-400" />
           <h4 className="text-sm font-bold text-white">Quiz Leaderboard</h4>
         </div>
-        <button className="text-[11px] text-primary-400 bg-primary-500/10 px-3 py-1 rounded-full">View Full</button>
+        <button 
+          onClick={() => setShowFullModal(true)}
+          className="text-[11px] text-primary-400 bg-primary-500/10 px-3 py-1 rounded-full hover:bg-primary-500/20 transition-all"
+        >
+          View Full
+        </button>
       </div>
 
       {isLoading ? (
@@ -255,13 +268,13 @@ function QuizLeaderboard({ quizId }) {
       ) : (
         <>
           {/* PODIUM */}
-          <div className="flex items-end justify-center gap-3 mb-6 pb-2 h-[170px]">
+          <div className="flex items-end justify-center gap-2 mb-6 pb-2 h-[170px]">
             {/* 2nd Place */}
             <div className="flex-1 flex flex-col items-center relative max-w-[100px] h-full justify-end">
-              <div className="w-full bg-[#1A1C31] rounded-t-[20px] border border-gray-500/30 pb-4 pt-6 flex flex-col items-center h-[135px] justify-end relative">
+              <div className={`w-full bg-[#1A1C31] rounded-t-[20px] border pb-4 pt-6 flex flex-col items-center h-[135px] justify-end relative transition-all duration-300 ${podiumDisplay[0]?.isMe ? 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.3)]' : 'border-gray-500/30'}`}>
                 <span className="absolute top-2 text-2xl font-bold text-gray-500/40">2</span>
                 <div className="flex flex-col items-center gap-1.5 w-full px-1">
-                   <Avatar name={podiumDisplay[0]?.name} avatarUrl={podiumDisplay[0]?.avatarUrl} size="w-10 h-10" textSize="text-sm" borderColor="border-white/10" />
+                   <Avatar name={podiumDisplay[0]?.name} avatarUrl={podiumDisplay[0]?.avatarUrl} size="w-10 h-10" textSize="text-sm" borderColor="border-white/10" isMe={podiumDisplay[0]?.isMe} />
                    <span className="text-[11px] font-medium text-gray-200 truncate w-full text-center">{podiumDisplay[0]?.name || '-'}</span>
                    <span className="text-base font-bold text-white">{podiumDisplay[0] ? Math.round((podiumDisplay[0].correct / podiumDisplay[0].total) * 100) : 0}%</span>
                    <div className="flex items-center gap-1 text-[9px] text-gray-500">
@@ -271,18 +284,18 @@ function QuizLeaderboard({ quizId }) {
               </div>
             </div>
 
-            {/* 1st Place - Exact Screenshot Style */}
+            {/* 1st Place */}
             <div className="flex-1 flex flex-col items-center relative max-w-[110px] h-full justify-end z-10">
-               <div className="absolute -top-2 text-amber-400 drop-shadow-lg"><Crown size={22} fill="#FBBF24" /></div>
-               <div className="w-full bg-[#1A1C31] rounded-t-[20px] border border-amber-400/40 pb-5 pt-8 flex flex-col items-center h-[160px] justify-end relative">
+               <div className="absolute -top-4 text-amber-400 drop-shadow-lg"><Crown size={22} fill="#FBBF24" /></div>
+               <div className={`w-full bg-[#1A1C31] rounded-t-[20px] border pb-5 pt-8 flex flex-col items-center h-[160px] justify-end relative transition-all duration-300 ${podiumDisplay[1]?.isMe ? 'border-purple-400 shadow-[0_0_25px_rgba(168,85,247,0.4)]' : 'border-amber-400/50'}`}>
                  <span className="absolute top-3 text-2xl font-bold text-amber-400/30">1</span>
                  
-                 {/* Avatar with thick gold circle border and connecting line */}
-                 <div className="absolute -top-5 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full border-[3px] border-amber-400 flex items-center justify-center bg-[#1A1C31] overflow-hidden z-20 shadow-[0_0_15px_rgba(251,191,36,0.3)]">
-                    <Avatar name={podiumDisplay[1]?.name} avatarUrl={podiumDisplay[1]?.avatarUrl} size="w-full h-full" textSize="text-base" borderColor="border-transparent" />
+                 {/* Avatar with circle border and connecting line */}
+                 <div className={`absolute -top-5 left-1/2 -translate-x-1/2 w-11 h-11 rounded-full border-[3px] flex items-center justify-center bg-[#1A1C31] overflow-hidden z-20 ${podiumDisplay[1]?.isMe ? 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.5)]' : 'border-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.3)]'}`}>
+                    <Avatar name={podiumDisplay[1]?.name} avatarUrl={podiumDisplay[1]?.avatarUrl} size="w-full h-full" textSize="text-base" borderColor="border-transparent" isMe={podiumDisplay[1]?.isMe} />
                  </div>
                  {/* Connecting Line */}
-                 <div className="absolute top-[42px] left-1/2 -translate-x-1/2 w-[2px] h-3 bg-amber-400/40 z-10"></div>
+                 <div className="absolute top-[40px] left-1/2 -translate-x-1/2 w-[2px] h-3 bg-amber-400/40 z-10"></div>
 
                  <div className="flex flex-col items-center gap-1 mt-3 w-full px-1">
                     <span className="text-[11px] font-medium text-gray-200 truncate w-full text-center">{podiumDisplay[1]?.name || '-'}</span>
@@ -296,10 +309,10 @@ function QuizLeaderboard({ quizId }) {
 
             {/* 3rd Place */}
             <div className="flex-1 flex flex-col items-center relative max-w-[100px] h-full justify-end">
-              <div className="w-full bg-[#1A1C31] rounded-t-[20px] border border-orange-500/30 pb-4 pt-6 flex flex-col items-center h-[115px] justify-end relative">
+              <div className={`w-full bg-[#1A1C31] rounded-t-[20px] border pb-4 pt-6 flex flex-col items-center h-[115px] justify-end relative transition-all duration-300 ${podiumDisplay[2]?.isMe ? 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.3)]' : 'border-orange-500/30'}`}>
                 <span className="absolute top-2 text-xl font-bold text-orange-500/40">3</span>
                 <div className="flex flex-col items-center gap-1.5 w-full px-1">
-                   <Avatar name={podiumDisplay[2]?.name} avatarUrl={podiumDisplay[2]?.avatarUrl} size="w-10 h-10" textSize="text-sm" borderColor="border-white/10" />
+                   <Avatar name={podiumDisplay[2]?.name} avatarUrl={podiumDisplay[2]?.avatarUrl} size="w-10 h-10" textSize="text-sm" borderColor="border-white/10" isMe={podiumDisplay[2]?.isMe} />
                    <span className="text-[11px] font-medium text-gray-200 truncate w-full text-center">{podiumDisplay[2]?.name || '-'}</span>
                    <span className="text-base font-bold text-orange-300">{podiumDisplay[2] ? Math.round((podiumDisplay[2].correct / podiumDisplay[2].total) * 100) : 0}%</span>
                    <div className="flex items-center gap-1 text-[9px] text-gray-500">
@@ -310,25 +323,30 @@ function QuizLeaderboard({ quizId }) {
             </div>
           </div>
 
-          {/* LIST (Rank 4+) */}
-          <div className="space-y-2.5">
+          {/* LIST (Rank 4+) - With Highlighting */}
+          <div className="space-y-2.5 pb-14">
             {others.map((r) => {
               const pct = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0
               const isMe = r.isMe
               return (
                 <div
                   key={r.participantId}
-                  className={`flex items-center justify-between rounded-xl px-4 py-3 transition-colors ${
-                    isMe ? 'bg-purple-500/10 border border-purple-500/20' : 'bg-white/[0.03]'
+                  className={`flex items-center justify-between rounded-xl px-4 py-3.5 transition-all duration-200 ${
+                    isMe 
+                      ? 'bg-purple-500/15 border border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.1)] relative overflow-hidden' 
+                      : 'bg-white/[0.03]'
                   }`}
                 >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                  {/* Left Glow Accent for Me */}
+                  {isMe && <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-purple-400 rounded-l-xl shadow-[0_0_10px_rgba(168,85,247,0.6)]" />}
+
+                  <div className="flex items-center gap-3 flex-1 min-w-0 pl-2">
                     <span className="text-sm font-medium text-gray-500 w-5 text-center">{r.rank}</span>
-                    <Avatar name={r.name} avatarUrl={r.avatarUrl} size="w-8 h-8" textSize="text-xs" borderColor="border-white/10" />
+                    <Avatar name={r.name} avatarUrl={r.avatarUrl} size="w-8 h-8" textSize="text-xs" borderColor="border-white/10" isMe={isMe} />
                     <div className="flex flex-col min-w-0">
                       <span className="text-sm font-medium text-gray-200 truncate flex items-center gap-2">
                         {r.name}
-                        {isMe && <span className="text-[9px] font-bold text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full">You</span>}
+                        {isMe && <span className="text-[9px] font-bold text-white bg-purple-500 px-2 py-0.5 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.4)]">You</span>}
                       </span>
                       <div className="flex items-center gap-1 text-[10px] text-gray-500">
                         <Clock size={10} /> {formatMMSS(r.timeTaken)}
@@ -344,9 +362,115 @@ function QuizLeaderboard({ quizId }) {
               )
             })}
           </div>
+
+          {/* ═══ FLOATING "YOU" ROW (Agar rank 10 se neeche hai) ═══ */}
+          {isMeBelowTop10 && meRow && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.4 }}
+              className="absolute bottom-4 left-4 right-4 z-20"
+            >
+              <div className="flex items-center justify-between rounded-xl px-4 py-3.5 bg-[#1A1C31]/90 backdrop-blur-md border border-purple-500/40 shadow-[0_0_25px_rgba(0,0,0,0.8),0_0_15px_rgba(168,85,247,0.2)]">
+                <div className="flex items-center gap-3 flex-1 min-w-0 pl-2 relative">
+                  {/* Small decorative accent */}
+                  <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-purple-400 rounded-l-xl" />
+                  
+                  <span className="text-sm font-medium text-purple-300 w-5 text-center">{meRow.rank}</span>
+                  <Avatar name={meRow.name} avatarUrl={meRow.avatarUrl} size="w-8 h-8" textSize="text-xs" isMe={true} />
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-sm font-medium text-white truncate flex items-center gap-2">
+                      {meRow.name}
+                      <span className="text-[9px] font-bold text-white bg-purple-500 px-2 py-0.5 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.4)]">You</span>
+                    </span>
+                    <div className="flex items-center gap-1 text-[10px] text-gray-400">
+                      <Clock size={10} /> {formatMMSS(meRow.timeTaken)}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className={`text-sm font-bold ${meRow.score >= 75 ? 'text-emerald-400' : meRow.score >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                    {Math.round(meRow.score)}%
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
         </>
       )}
     </div>
+
+    {/* ═══ VIEW FULL MODAL / BOTTOM SHEET ═══ */}
+    <AnimatePresence>
+      {showFullModal && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowFullModal(false)}
+          />
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed bottom-0 inset-x-0 z-50 max-h-[85vh] bg-[#121428] rounded-t-3xl border-t border-white/[0.08] overflow-hidden flex flex-col"
+          >
+            <div className="sticky top-0 bg-[#121428] z-10 px-5 py-4 border-b border-white/[0.05] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                 <Trophy size={16} className="text-amber-400" />
+                 <h4 className="font-bold text-white text-sm">Full Leaderboard</h4>
+              </div>
+              <button onClick={() => setShowFullModal(false)} className="p-1.5 rounded-full hover:bg-white/5 text-gray-400">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto px-4 pb-8 pt-2 space-y-2">
+              {rows.map((r) => {
+                const pct = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0
+                const isMe = r.isMe
+                return (
+                  <div
+                    key={r.participantId}
+                    className={`flex items-center justify-between rounded-xl px-4 py-3.5 transition-all duration-200 ${
+                      isMe 
+                        ? 'bg-purple-500/15 border border-purple-500/40' 
+                        : 'bg-white/[0.03]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className={`text-sm font-medium w-6 text-center ${r.rank <= 3 ? 'text-amber-400 font-bold' : 'text-gray-500'}`}>
+                        {r.rank <= 3 ? <Medal size={14} className="inline-block" /> : r.rank}
+                      </span>
+                      <Avatar name={r.name} avatarUrl={r.avatarUrl} size="w-8 h-8" textSize="text-xs" isMe={isMe} />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-sm font-medium text-gray-200 truncate flex items-center gap-2">
+                          {r.name}
+                          {isMe && <span className="text-[9px] font-bold text-white bg-purple-500 px-2 py-0.5 rounded-full">You</span>}
+                        </span>
+                        <div className="flex items-center gap-1 text-[10px] text-gray-500">
+                          <Clock size={10} /> {formatMMSS(r.timeTaken)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className={`text-sm font-bold ${pct >= 75 ? 'text-emerald-400' : pct >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                        {pct}%
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+    </>
   )
 }
 
@@ -452,171 +576,4 @@ export default function QuizResult() {
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
               <defs>
                 <linearGradient id="ringGradient" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#A855F7" />
-                  <stop offset="100%" stopColor={result.score >= 75 ? '#10B981' : result.score >= 50 ? '#F59E0B' : '#EF4444'} />
-                </linearGradient>
-              </defs>
-              <circle cx="60" cy="60" r="50" stroke="rgba(255,255,255,0.08)" strokeWidth="12" fill="none" />
-              <motion.circle
-                cx="60" cy="60" r="50"
-                stroke="url(#ringGradient)"
-                strokeWidth="12"
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray={circumference}
-                initial={{ strokeDashoffset: circumference }}
-                animate={{ strokeDashoffset }}
-                transition={{ duration: 1.2, ease: 'easeOut' }}
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pt-1">
-              <motion.span
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2, duration: 0.4 }}
-                className="text-[40px] font-black text-white"
-              >
-                {Math.round(result.score)}%
-              </motion.span>
-              <span className="text-[12px] text-gray-400 -mt-1">Score</span>
-            </div>
-          </div>
-
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <h2 className="text-[20px] font-extrabold text-white mb-1">{scoreLabel}</h2>
-            <p className="text-gray-400 text-[14px]">{scoreMessage}</p>
-          </motion.div>
-
-          {/* Stats Boxes - Glassmorphism */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="relative z-10 grid grid-cols-3 gap-3 mt-5"
-          >
-            {[
-              { label: 'CORRECT', value: result.correct, icon: CheckCircle, color: 'text-emerald-400' },
-              { label: 'WRONG', value: result.wrong, icon: XCircle, color: 'text-red-400' },
-              { label: 'SKIPPED', value: result.skipped, icon: MinusCircle, color: 'text-gray-500' },
-            ].map((s) => (
-              <div key={s.label} className="bg-white/[0.05] rounded-2xl px-2 py-3 flex flex-col items-center justify-center border border-white/[0.05]">
-                <s.icon size={18} className={`${s.color} mb-1.5`} />
-                <div className="text-xl font-bold text-white">{s.value}</div>
-                <div className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">{s.label}</div>
-              </div>
-            ))}
-          </motion.div>
-
-          {/* Secondary Stats Badges */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="relative z-10 flex items-center justify-center gap-3 mt-4"
-          >
-            <div className="bg-white/[0.05] border border-white/[0.08] rounded-full px-4 py-2 flex items-center gap-2">
-              <TargetIcon size={14} className="text-purple-400" />
-              <span className="font-semibold text-gray-300 text-xs">{result.correct}/{result.total} Correct</span>
-            </div>
-            {result.timeTaken > 0 && (
-              <div className="bg-white/[0.05] border border-white/[0.08] rounded-full px-4 py-2 flex items-center gap-2">
-                <Clock size={14} className="text-gray-400" />
-                <span className="font-semibold text-gray-300 text-xs">{formatMMSS(result.timeTaken)}</span>
-              </div>
-            )}
-          </motion.div>
-        </motion.div>
-
-        {/* ATTEMPT DROPDOWN */}
-        {attempts.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45 }}
-          >
-            <AttemptDropdown attempts={attempts} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
-          </motion.div>
-        )}
-
-        {/* ACTION BUTTONS */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="flex gap-3"
-        >
-          <Link to={subject && quizName ? `${routeBase}/${encodeURIComponent(subject)}/${encodeURIComponent(quizName)}${routeBase === '/quiz' ? '/play' : ''}` : subject ? `/quiz/${subject}` : '/quiz'}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-gradient-to-r from-[#FF6B4A] to-[#E8532F] text-white text-[15px] font-bold transition-all active:scale-[0.97] shadow-lg shadow-orange-500/30">
-            <RotateCcw size={17} /> Try Again
-          </Link>
-          <button
-            onClick={() => navigate(`${routeBase}/analysis/${result.attemptId}`, { state: { result } })}
-            disabled={questions.length === 0}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#20233B] border border-white/[0.06] text-gray-200 text-[15px] font-bold transition-all active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <BarChart3 size={17} className="text-purple-400" /> Analysis
-          </button>
-        </motion.div>
-
-        {/* PROGRESS GRAPH */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.55 }}
-        >
-          <ProgressGraph attempts={attempts} selectedAttemptId={result.attemptId} />
-        </motion.div>
-
-        {/* LEADERBOARD */}
-        {result.quizId && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65 }}
-          >
-            <QuizLeaderboard quizId={result.quizId} />
-          </motion.div>
-        )}
-
-        {/* SHARE BOTTOM CARD */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.75 }}
-          className="fixed bottom-4 left-4 right-4 max-w-lg mx-auto z-10"
-        >
-          <button 
-            onClick={() => setShareOpen(true)}
-            className="w-full flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-purple-500/20 to-purple-500/5 border border-purple-500/20 backdrop-blur-lg shadow-xl"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-full bg-purple-500/20 text-purple-300">
-                <Share2 size={20} />
-              </div>
-              <div className="flex flex-col items-start">
-                <span className="font-bold text-[15px] text-white">Share Quiz</span>
-                <span className="text-[11px] text-gray-400">Challenge your friends</span>
-              </div>
-            </div>
-            <ChevronRight size={20} className="text-gray-400" />
-          </button>
-        </motion.div>
-
-      </div>
-
-      {/* SHARE MODAL */}
-      <ShareQuizModal
-        open={shareOpen}
-        onClose={() => setShareOpen(false)}
-        quizName={quizName}
-        subject={subject}
-        shareUrl={
-          subject && quizName
-            ? `${window.location.origin}/play/${encodeURIComponent(subject)}/${encodeURIComponent(quizName)}`
-            : null
-        }
-      />
-
-    </div>
-  )
-}
+                  <stop offset
