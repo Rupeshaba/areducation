@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   CheckCircle, XCircle, MinusCircle, Trophy, RotateCcw,
   BarChart3, ChevronLeft, ChevronRight, X, BookOpen, Target,
-  ChevronDown, Clock, TrendingUp, Check
+  ChevronDown, Clock, TrendingUp, Check, Share2, Medal, Crown
 } from 'lucide-react'
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid
@@ -13,6 +13,7 @@ import {
 import api from '../../api/axios'
 import formatText from '../../utils/formatText'
 import { findAttemptById, getQuizEntry } from '../../utils/quizCache'
+import ShareQuizModal from '../../components/ShareQuizModal'
 
 /* ═══ SWIPE HOOK (mobile: swipe left = next question, swipe right = prev) ═══ */
 function useSwipeQuestion(onNext, onPrev) {
@@ -182,14 +183,139 @@ function ProgressGraph({ attempts, selectedAttemptId }) {
   )
 }
 
+/* ═══ PER-QUIZ LEADERBOARD ═══
+   Ranks every participant's FIRST attempt at this quiz by correct-count then
+   time. Logged-in users show their avatar; everyone else shows the first
+   letter of their name in a coloured circle. The current viewer's row is
+   highlighted. Data comes from GET /leaderboard/:quizId (guest-friendly). */
+function rankAccent(rank) {
+  if (rank === 1) return { ring: 'border-amber-400/60', bg: 'bg-amber-400/10', text: 'text-amber-300' }
+  if (rank === 2) return { ring: 'border-gray-300/50', bg: 'bg-gray-300/10', text: 'text-gray-200' }
+  if (rank === 3) return { ring: 'border-orange-500/50', bg: 'bg-orange-500/10', text: 'text-orange-300' }
+  return { ring: 'border-white/10', bg: 'bg-white/[0.03]', text: 'text-gray-400' }
+}
+
+// Deterministic colour for a name's initial-circle.
+function nameColor(name) {
+  const colors = [
+    'from-violet-500 to-purple-600', 'from-sky-500 to-blue-600',
+    'from-emerald-500 to-teal-600', 'from-pink-500 to-rose-600',
+    'from-amber-500 to-orange-600', 'from-indigo-500 to-violet-600',
+  ]
+  let h = 0
+  for (let i = 0; i < (name || '').length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff
+  return colors[h % colors.length]
+}
+
+function Avatar({ name, avatarUrl }) {
+  if (avatarUrl) {
+    return <img src={avatarUrl} alt={name} className="w-9 h-9 rounded-full object-cover border border-white/10" />
+  }
+  const letter = (name || '?').trim().charAt(0).toUpperCase() || '?'
+  return (
+    <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${nameColor(name)} flex items-center justify-center text-white text-sm font-black flex-shrink-0`}>
+      {letter}
+    </div>
+  )
+}
+
+function QuizLeaderboard({ quizId }) {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['quiz-leaderboard', quizId],
+    queryFn: () => api.get(`/leaderboard/${quizId}`).then(r => r.data),
+    enabled: !!quizId,
+    staleTime: 30_000,
+  })
+
+  if (!quizId) return null
+
+  const rows = data?.leaderboard || []
+
+  return (
+    <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.03] to-transparent p-4 sm:p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <Trophy size={16} className="text-amber-400" />
+        <h4 className="text-sm font-bold text-white">Quiz Leaderboard</h4>
+        <span className="text-[11px] text-gray-500 ml-auto">First attempt · by score & time</span>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-8">
+          <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : isError ? (
+        <p className="text-center text-xs text-gray-500 py-6">Leaderboard load nahi ho paaya.</p>
+      ) : rows.length === 0 ? (
+        <p className="text-center text-xs text-gray-500 py-6">Abhi tak koi entry nahi. Sabse pehle tum ho! 🎉</p>
+      ) : (
+        <div className="space-y-2">
+          {rows.map((r) => {
+            const acc = rankAccent(r.rank)
+            const pct = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0
+            return (
+              <div
+                key={r.participantId}
+                className={`flex items-center gap-3 rounded-xl border p-2.5 transition-colors ${
+                  r.isMe
+                    ? 'border-primary-500/50 bg-primary-500/10 ring-1 ring-primary-500/30'
+                    : `${acc.ring} ${acc.bg}`
+                }`}
+              >
+                {/* Rank */}
+                <div className="w-7 flex-shrink-0 flex items-center justify-center">
+                  {r.rank <= 3 ? (
+                    <Medal size={18} className={acc.text} />
+                  ) : (
+                    <span className="text-sm font-black text-gray-500">{r.rank}</span>
+                  )}
+                </div>
+
+                <Avatar name={r.name} avatarUrl={r.avatarUrl} />
+
+                {/* Name */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-bold text-white truncate">{r.name}</span>
+                    {r.isMe && (
+                      <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-primary-500/20 text-primary-300 flex-shrink-0">You</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                    <span className="flex items-center gap-0.5"><Clock size={10} /> {formatMMSS(r.timeTaken)}</span>
+                    <span>·</span>
+                    <span>{r.correct}/{r.total}</span>
+                  </div>
+                </div>
+
+                {/* Percentage */}
+                <div className="text-right flex-shrink-0">
+                  <div className={`text-base font-black ${pct >= 75 ? 'text-mint-400' : pct >= 50 ? 'text-amber-400' : 'text-danger-400'}`}>
+                    {pct}%
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function QuizResult() {
   const { attemptId } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
   const stateResult = location.state?.result
 
+  // Guests land on /play/result/... — keep them inside the public /play flow
+  // so "Try Again" / "Analysis" never bounce them into a protected route.
+  const isPlayFlow = location.pathname.startsWith('/play/')
+  const routeBase = isPlayFlow ? '/play' : '/quiz'
+
   const [currentQIndex, setCurrentQIndex] = useState(0)
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [shareOpen, setShareOpen] = useState(false)
 
   const cached = findAttemptById(attemptId)
 
@@ -336,9 +462,9 @@ export default function QuizResult() {
           transition={{ delay: 0.7 }}
           className="relative z-10 flex flex-wrap items-center justify-center gap-2"
         >
-          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-amber-500/10 border border-amber-500/20">
-            <Trophy size={16} className="text-amber-400" />
-            <span className="font-bold text-amber-400 text-sm">+{result.points} points earned</span>
+          <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-mint-500/10 border border-mint-500/20">
+            <Target size={16} className="text-mint-400" />
+            <span className="font-bold text-mint-400 text-sm">{result.correct}/{result.total} correct</span>
           </div>
           {result.timeTaken > 0 && (
             <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/[0.04] border border-white/[0.08]">
@@ -346,6 +472,13 @@ export default function QuizResult() {
               <span className="font-bold text-gray-300 text-sm">{formatMMSS(result.timeTaken)}</span>
             </div>
           )}
+          <button
+            onClick={() => setShareOpen(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-violet-500/10 border border-violet-500/25 hover:bg-violet-500/20 hover:border-violet-500/40 text-violet-300 active:scale-95 transition-all"
+          >
+            <Share2 size={16} />
+            <span className="font-bold text-sm">Share Quiz</span>
+          </button>
         </motion.div>
       </motion.div>
 
@@ -356,12 +489,12 @@ export default function QuizResult() {
         transition={{ delay: 0.8 }}
         className="flex gap-3"
       >
-        <Link to={subject && quizName ? `/quiz/${subject}/${encodeURIComponent(quizName)}/play` : subject ? `/quiz/${subject}` : '/quiz'}
+        <Link to={subject && quizName ? `${routeBase}/${encodeURIComponent(subject)}/${encodeURIComponent(quizName)}${routeBase === '/quiz' ? '/play' : ''}` : subject ? `/quiz/${subject}` : '/quiz'}
           className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white text-sm font-bold transition-all active:scale-[0.98] shadow-lg shadow-primary-500/25">
           <RotateCcw size={16} /> Try Again
         </Link>
         <button
-          onClick={() => navigate(`/quiz/analysis/${result.attemptId}`, { state: { result } })}
+          onClick={() => navigate(`${routeBase}/analysis/${result.attemptId}`, { state: { result } })}
           disabled={questions.length === 0}
           className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-white/[0.03] border border-white/[0.08] hover:bg-white/[0.06] hover:border-primary-500/30 text-gray-200 text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -377,6 +510,30 @@ export default function QuizResult() {
       >
         <ProgressGraph attempts={attempts} selectedAttemptId={result.attemptId} />
       </motion.div>
+
+      {/* ═══ PER-QUIZ LEADERBOARD ═══ */}
+      {result.quizId && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.0 }}
+        >
+          <QuizLeaderboard quizId={result.quizId} />
+        </motion.div>
+      )}
+
+      {/* ═══ SHARE MODAL ═══ */}
+      <ShareQuizModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        quizName={quizName}
+        subject={subject}
+        shareUrl={
+          subject && quizName
+            ? `${window.location.origin}/play/${encodeURIComponent(subject)}/${encodeURIComponent(quizName)}`
+            : null
+        }
+      />
 
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
