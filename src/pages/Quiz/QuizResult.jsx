@@ -6,7 +6,7 @@ import {
   CheckCircle, XCircle, MinusCircle, Trophy, RotateCcw,
   BarChart3, ChevronLeft, ChevronRight, X, BookOpen, Target,
   ChevronDown, Clock, TrendingUp, Check, Share2, Medal, Crown,
-  Zap, Timer
+  Zap, Timer, Target as TargetIcon
 } from 'lucide-react'
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid
@@ -157,9 +157,10 @@ function ProgressGraph({ attempts, selectedAttemptId }) {
             <XAxis dataKey="label" tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 10 }} axisLine={false} tickLine={false} />
             <YAxis domain={[0, 100]} tick={{ fill: 'rgba(255,255,255,0.2)', fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
             <Tooltip
-              contentStyle={{ background: '#0B0E1A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12 }}
-              labelStyle={{ color: 'rgba(255,255,255,0.5)' }}
-              itemStyle={{ color: '#A855F7' }}
+              cursor={{ stroke: 'rgba(255,255,255,0.05)', strokeWidth: 1 }}
+              contentStyle={{ background: '#1A1C31', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, fontSize: 12, padding: '8px 12px', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}
+              labelStyle={{ color: 'rgba(255,255,255,0.6)', marginBottom: '2px', fontSize: 11 }}
+              itemStyle={{ color: '#A855F7', fontWeight: 'bold' }}
               formatter={(v) => [`${v}%`, 'Score']}
             />
             <Line
@@ -174,14 +175,14 @@ function ProgressGraph({ attempts, selectedAttemptId }) {
                     key={props.payload.label}
                     cx={props.cx}
                     cy={props.cy}
-                    r={isSel ? 4 : 2.5}
-                    fill={isSel ? '#F43F5E' : '#A855F7'}
-                    stroke={isSel ? '#fff' : 'none'}
-                    strokeWidth={isSel ? 1.5 : 0}
+                    r={isSel ? 5 : 3}
+                    fill={isSel ? '#fff' : '#A855F7'}
+                    stroke={isSel ? '#F43F5E' : 'none'}
+                    strokeWidth={isSel ? 2.5 : 0}
                   />
                 )
               }}
-              activeDot={{ r: 5, stroke: '#fff', strokeWidth: 1.5 }}
+              activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }}
             />
           </LineChart>
         </ResponsiveContainer>
@@ -199,13 +200,13 @@ function nameColor(name) {
   return colors[h % colors.length]
 }
 
-function Avatar({ name, avatarUrl, size = "w-10 h-10", textSize = "text-sm" }) {
+function Avatar({ name, avatarUrl, size = "w-10 h-10", textSize = "text-sm", borderColor = "border-white/10" }) {
   if (avatarUrl) {
-    return <img src={avatarUrl} alt={name} className={`${size} rounded-full object-cover border-2 border-white/10`} />
+    return <img src={avatarUrl} alt={name} className={`${size} rounded-full object-cover border-2 ${borderColor}`} />
   }
   const letter = (name || '?').trim().charAt(0).toUpperCase() || '?'
   return (
-    <div className={`${size} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 ${textSize}`} style={{ background: nameColor(name) }}>
+    <div className={`${size} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 ${textSize} border-2 ${borderColor}`} style={{ background: nameColor(name) }}>
       {letter}
     </div>
   )
@@ -257,12 +258,12 @@ function QuizLeaderboard({ quizId }) {
           <div className="flex items-end justify-center gap-3 mb-6 pb-2 h-[170px]">
             {/* 2nd Place */}
             <div className="flex-1 flex flex-col items-center relative max-w-[100px] h-full justify-end">
-              <div className="w-full bg-[#1A1C31] rounded-t-[20px] border border-gray-500/20 pb-4 pt-6 flex flex-col items-center h-[140px] justify-end relative">
-                <span className="absolute top-2 text-xl font-bold text-gray-500/50">2</span>
-                <div className="flex flex-col items-center gap-1 w-full px-1">
-                   <Avatar name={podiumDisplay[0]?.name} avatarUrl={podiumDisplay[0]?.avatarUrl} size="w-9 h-9" textSize="text-sm" />
+              <div className="w-full bg-[#1A1C31] rounded-t-[20px] border border-gray-500/30 pb-4 pt-6 flex flex-col items-center h-[135px] justify-end relative">
+                <span className="absolute top-2 text-2xl font-bold text-gray-500/40">2</span>
+                <div className="flex flex-col items-center gap-1.5 w-full px-1">
+                   <Avatar name={podiumDisplay[0]?.name} avatarUrl={podiumDisplay[0]?.avatarUrl} size="w-10 h-10" textSize="text-sm" borderColor="border-white/10" />
                    <span className="text-[11px] font-medium text-gray-200 truncate w-full text-center">{podiumDisplay[0]?.name || '-'}</span>
-                   <span className="text-sm font-bold text-white">{podiumDisplay[0] ? Math.round((podiumDisplay[0].correct / podiumDisplay[0].total) * 100) : 0}%</span>
+                   <span className="text-base font-bold text-white">{podiumDisplay[0] ? Math.round((podiumDisplay[0].correct / podiumDisplay[0].total) * 100) : 0}%</span>
                    <div className="flex items-center gap-1 text-[9px] text-gray-500">
                      <Clock size={10} /> {formatMMSS(podiumDisplay[0]?.timeTaken)}
                    </div>
@@ -270,17 +271,22 @@ function QuizLeaderboard({ quizId }) {
               </div>
             </div>
 
-            {/* 1st Place */}
+            {/* 1st Place - Exact Screenshot Style */}
             <div className="flex-1 flex flex-col items-center relative max-w-[110px] h-full justify-end z-10">
                <div className="absolute -top-2 text-amber-400 drop-shadow-lg"><Crown size={22} fill="#FBBF24" /></div>
-               <div className="w-full bg-[#20233B] rounded-t-[20px] border-2 border-amber-400/30 shadow-[0_0_25px_rgba(251,191,36,0.1)] pb-5 pt-8 flex flex-col items-center h-[160px] justify-end relative">
+               <div className="w-full bg-[#1A1C31] rounded-t-[20px] border border-amber-400/40 pb-5 pt-8 flex flex-col items-center h-[160px] justify-end relative">
                  <span className="absolute top-3 text-2xl font-bold text-amber-400/30">1</span>
-                 <div className="absolute -top-5 left-1/2 -translate-x-1/2 w-11 h-11 rounded-full border-[2.5px] border-amber-400 flex items-center justify-center bg-[#20233B] overflow-hidden">
-                    <Avatar name={podiumDisplay[1]?.name} avatarUrl={podiumDisplay[1]?.avatarUrl} size="w-full h-full" textSize="text-base" />
+                 
+                 {/* Avatar with thick gold circle border and connecting line */}
+                 <div className="absolute -top-5 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full border-[3px] border-amber-400 flex items-center justify-center bg-[#1A1C31] overflow-hidden z-20 shadow-[0_0_15px_rgba(251,191,36,0.3)]">
+                    <Avatar name={podiumDisplay[1]?.name} avatarUrl={podiumDisplay[1]?.avatarUrl} size="w-full h-full" textSize="text-base" borderColor="border-transparent" />
                  </div>
-                 <div className="flex flex-col items-center gap-1 mt-1 w-full px-1">
-                    <span className="text-[11px] font-medium text-white truncate w-full text-center">{podiumDisplay[1]?.name || '-'}</span>
-                    <span className="text-lg font-extrabold text-amber-400">{podiumDisplay[1] ? Math.round((podiumDisplay[1].correct / podiumDisplay[1].total) * 100) : 0}%</span>
+                 {/* Connecting Line */}
+                 <div className="absolute top-[42px] left-1/2 -translate-x-1/2 w-[2px] h-3 bg-amber-400/40 z-10"></div>
+
+                 <div className="flex flex-col items-center gap-1 mt-3 w-full px-1">
+                    <span className="text-[11px] font-medium text-gray-200 truncate w-full text-center">{podiumDisplay[1]?.name || '-'}</span>
+                    <span className="text-xl font-extrabold text-amber-400">{podiumDisplay[1] ? Math.round((podiumDisplay[1].correct / podiumDisplay[1].total) * 100) : 0}%</span>
                     <div className="flex items-center gap-1 text-[9px] text-gray-400">
                       <Clock size={10} /> {formatMMSS(podiumDisplay[1]?.timeTaken)}
                     </div>
@@ -290,12 +296,12 @@ function QuizLeaderboard({ quizId }) {
 
             {/* 3rd Place */}
             <div className="flex-1 flex flex-col items-center relative max-w-[100px] h-full justify-end">
-              <div className="w-full bg-[#1A1C31] rounded-t-[20px] border border-orange-500/20 pb-4 pt-6 flex flex-col items-center h-[120px] justify-end relative">
-                <span className="absolute top-2 text-lg font-bold text-orange-500/40">3</span>
-                <div className="flex flex-col items-center gap-1 w-full px-1">
-                   <Avatar name={podiumDisplay[2]?.name} avatarUrl={podiumDisplay[2]?.avatarUrl} size="w-9 h-9" textSize="text-sm" />
+              <div className="w-full bg-[#1A1C31] rounded-t-[20px] border border-orange-500/30 pb-4 pt-6 flex flex-col items-center h-[115px] justify-end relative">
+                <span className="absolute top-2 text-xl font-bold text-orange-500/40">3</span>
+                <div className="flex flex-col items-center gap-1.5 w-full px-1">
+                   <Avatar name={podiumDisplay[2]?.name} avatarUrl={podiumDisplay[2]?.avatarUrl} size="w-10 h-10" textSize="text-sm" borderColor="border-white/10" />
                    <span className="text-[11px] font-medium text-gray-200 truncate w-full text-center">{podiumDisplay[2]?.name || '-'}</span>
-                   <span className="text-sm font-bold text-orange-300">{podiumDisplay[2] ? Math.round((podiumDisplay[2].correct / podiumDisplay[2].total) * 100) : 0}%</span>
+                   <span className="text-base font-bold text-orange-300">{podiumDisplay[2] ? Math.round((podiumDisplay[2].correct / podiumDisplay[2].total) * 100) : 0}%</span>
                    <div className="flex items-center gap-1 text-[9px] text-gray-500">
                      <Clock size={10} /> {formatMMSS(podiumDisplay[2]?.timeTaken)}
                    </div>
@@ -318,7 +324,7 @@ function QuizLeaderboard({ quizId }) {
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <span className="text-sm font-medium text-gray-500 w-5 text-center">{r.rank}</span>
-                    <Avatar name={r.name} avatarUrl={r.avatarUrl} size="w-8 h-8" textSize="text-xs" />
+                    <Avatar name={r.name} avatarUrl={r.avatarUrl} size="w-8 h-8" textSize="text-xs" borderColor="border-white/10" />
                     <div className="flex flex-col min-w-0">
                       <span className="text-sm font-medium text-gray-200 truncate flex items-center gap-2">
                         {r.name}
@@ -509,7 +515,7 @@ export default function QuizResult() {
             className="relative z-10 flex items-center justify-center gap-3 mt-4"
           >
             <div className="bg-white/[0.05] border border-white/[0.08] rounded-full px-4 py-2 flex items-center gap-2">
-              <Target size={14} className="text-purple-400" />
+              <TargetIcon size={14} className="text-purple-400" />
               <span className="font-semibold text-gray-300 text-xs">{result.correct}/{result.total} Correct</span>
             </div>
             {result.timeTaken > 0 && (
