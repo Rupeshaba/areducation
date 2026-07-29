@@ -212,39 +212,39 @@ function Avatar({ name, avatarUrl, size = "w-10 h-10", textSize = "text-sm", bor
   )
 }
 
-/* ═══ PODIUM CARD (3D GLASS CYLINDER) ═══ */
-function PodiumCard({ rank, name, avatarUrl, score, time, colorTheme, isMe, children }) {
+/* ═══ 3D PODIUM CARD (REWRITTEN FOR STABLE ALIGNMENT) ═══ */
+function PodiumCard({ rank, name, avatarUrl, score, time, colorTheme, isMe }) {
   const themes = {
-    gold: { border: 'border-amber-400', glow: 'shadow-[0_0_30px_rgba(251,191,36,0.2)]', bg: 'bg-gradient-to-b from-amber-400/20 to-amber-400/5', text: 'text-amber-400', rankText: 'text-amber-400/40' },
-    silver: { border: 'border-gray-300', glow: 'shadow-[0_0_30px_rgba(209,213,219,0.15)]', bg: 'bg-gradient-to-b from-gray-300/20 to-gray-300/5', text: 'text-white', rankText: 'text-gray-400/40' },
-    bronze: { border: 'border-orange-400', glow: 'shadow-[0_0_30px_rgba(251,146,60,0.15)]', bg: 'bg-gradient-to-b from-orange-400/20 to-orange-400/5', text: 'text-orange-400', rankText: 'text-orange-400/40' },
+    gold: { border: 'border-amber-400', glow: 'shadow-[0_0_25px_rgba(251,191,36,0.15)]', bg: 'bg-gradient-to-b from-amber-400/20 via-amber-400/5 to-transparent', text: 'text-amber-400', rankText: 'text-amber-400/40' },
+    silver: { border: 'border-gray-300', glow: 'shadow-[0_0_25px_rgba(209,213,219,0.1)]', bg: 'bg-gradient-to-b from-gray-300/20 via-gray-300/5 to-transparent', text: 'text-white', rankText: 'text-gray-400/40' },
+    bronze: { border: 'border-orange-400', glow: 'shadow-[0_0_25px_rgba(251,146,60,0.1)]', bg: 'bg-gradient-to-b from-orange-400/20 via-orange-400/5 to-transparent', text: 'text-orange-400', rankText: 'text-orange-400/40' },
   }
   const theme = themes[colorTheme]
 
   return (
-    <div className={`flex-1 flex flex-col items-center relative max-w-[110px] h-full justify-end`}>
-      {/* 3D Cylinder Card */}
-      <div className={`w-full bg-[#1A1C31] rounded-t-[28px] rounded-b-[12px] border-t-2 ${theme.border} ${theme.glow} pb-5 pt-8 flex flex-col items-center h-[160px] justify-end relative overflow-hidden`}>
+    <div className="flex-1 flex flex-col items-center relative max-w-[100px] h-[170px] justify-end">
+      {/* Glass Cylinder Container */}
+      <div className={`w-full rounded-t-[32px] rounded-b-[12px] border-t-[3px] ${theme.border} ${theme.glow} bg-[#1A1C31] relative flex flex-col items-center pt-10 pb-4 h-full overflow-hidden`}>
         
-        {/* Background Diffused Glow */}
-        <div className={`absolute top-0 inset-x-0 h-20 blur-2xl opacity-30 ${theme.border.replace('border', 'bg')}`}></div>
+        {/* Inner Glass Gradient */}
+        <div className={`absolute top-0 inset-x-0 h-1/2 blur-2xl opacity-40 pointer-events-none rounded-t-[32px] ${theme.border.replace('border', 'bg')}`}></div>
 
-        {/* Rank Number */}
-        <span className={`absolute top-3 text-2xl font-extrabold ${theme.rankText}`}>{rank}</span>
+        {/* Rank Number - Centered at the top */}
+        <span className={`absolute top-3 left-1/2 -translate-x-1/2 text-2xl font-extrabold ${theme.rankText} z-10`}>{rank}</span>
 
-        {/* Avatar Circle (Only for 1st place with gold ring) */}
-        <div className={`absolute -top-5 left-1/2 -translate-x-1/2 w-11 h-11 rounded-full border-[3px] bg-[#1A1C31] overflow-hidden z-20 flex items-center justify-center ${theme.border} ${theme.glow}`}>
+        {/* Avatar Container - Perfectly Centered protruding outwards */}
+        <div className={`absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full border-[3px] ${theme.border} shadow-[0_0_20px_rgba(251,191,36,0.2)] bg-[#1A1C31] z-20 flex items-center justify-center overflow-hidden`}>
            <Avatar name={name} avatarUrl={avatarUrl} size="w-full h-full" textSize="text-base" borderColor="border-transparent" isMe={isMe} />
         </div>
-        
-        {/* Connecting Line for 1st place */}
-        {colorTheme === 'gold' && <div className="absolute top-[40px] left-1/2 -translate-x-1/2 w-[2px] h-3 bg-amber-400/60 z-10"></div>}
 
-        {/* Content */}
-        <div className="flex flex-col items-center gap-1 mt-2 w-full px-1">
-           <span className="text-[11px] font-medium text-gray-200 truncate w-full text-center">{name || '-'}</span>
-           <span className={`text-xl font-extrabold ${theme.text}`}>{score}%</span>
-           <div className="flex items-center gap-1 text-[9px] text-gray-500">
+        {/* Connecting Line (Only for 1st Place) */}
+        {colorTheme === 'gold' && <div className="absolute top-[40px] left-1/2 -translate-x-1/2 w-[2px] h-4 bg-amber-400/60 z-10"></div>}
+
+        {/* Name, Score, Time Information */}
+        <div className="flex flex-col items-center mt-6 px-1 w-full relative z-10">
+           <span className="text-[12px] font-bold text-gray-200 truncate w-full text-center px-1">{name || '-'}</span>
+           <span className={`text-[20px] font-extrabold mt-1 ${theme.text}`}>{score}%</span>
+           <div className="flex items-center gap-1 mt-2 text-[10px] text-gray-400">
              <Clock size={10} /> {formatMMSS(time)}
            </div>
         </div>
@@ -307,10 +307,10 @@ function QuizLeaderboard({ quizId }) {
         <p className="text-center text-xs text-gray-500 py-6">Be the first to take this quiz! 🎉</p>
       ) : (
         <>
-          {/* ═══ 3D PODIUM ═══ */}
-          <div className="flex items-end justify-center gap-2 mb-7 h-[180px] relative">
+          {/* ═══ 3D PODIUM (Stable Layout) ═══ */}
+          <div className="flex items-end justify-center gap-3 mb-7 h-[180px] relative">
             
-            {/* Gold Crown for 1st */}
+            {/* Golden Crown for 1st Place */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)] z-30">
                <Crown size={26} fill="#FBBF24" />
             </div>
@@ -327,36 +327,16 @@ function QuizLeaderboard({ quizId }) {
             />
 
             {/* 1st Place (Gold) */}
-            <div className="flex-1 flex flex-col items-center relative max-w-[120px] h-full justify-end z-10 mt-[-5px]">
-              <div className="w-full bg-[#1A1C31] rounded-t-[32px] rounded-b-[14px] border-t-[3px] border-amber-400 shadow-[0_0_40px_rgba(251,191,36,0.15)] pb-6 pt-9 flex flex-col items-center h-[175px] justify-end relative overflow-hidden">
-                
-                {/* Background Glow */}
-                <div className="absolute top-0 inset-x-0 h-24 bg-amber-400 blur-3xl opacity-20"></div>
-                
-                {/* Laurels (Left & Right) - Simple CSS implementation */}
-                <div className="absolute top-10 left-2 w-4 h-8 border-l-[2px] border-amber-400/70 rounded-tl-full rotate-12 transform -skew-y-6"></div>
-                <div className="absolute top-10 left-1 w-3 h-6 border-l-[2px] border-amber-400/70 rounded-tl-full rotate-12 transform -skew-y-6"></div>
-                <div className="absolute top-10 right-2 w-4 h-8 border-r-[2px] border-amber-400/70 rounded-tr-full -rotate-12 transform skew-y-6"></div>
-                <div className="absolute top-10 right-1 w-3 h-6 border-r-[2px] border-amber-400/70 rounded-tr-full -rotate-12 transform skew-y-6"></div>
-
-                <span className="absolute top-3 text-2xl font-extrabold text-amber-400/40">1</span>
-                
-                {/* Avatar with Golden Ring and Drop Shadow */}
-                <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full border-[3px] border-amber-400 shadow-[0_0_25px_rgba(251,191,36,0.5)] bg-[#1A1C31] overflow-hidden z-20 flex items-center justify-center">
-                   <Avatar name={podiumDisplay[1]?.name} avatarUrl={podiumDisplay[1]?.avatarUrl} size="w-full h-full" textSize="text-base" borderColor="border-transparent" isMe={podiumDisplay[1]?.isMe} />
-                </div>
-                
-                {/* Connecting Line */}
-                <div className="absolute top-[46px] left-1/2 -translate-x-1/2 w-[2px] h-4 bg-amber-400/60 z-10"></div>
-
-                <div className="flex flex-col items-center gap-1 mt-3 w-full px-1">
-                   <span className="text-[12px] font-bold text-gray-200 truncate w-full text-center">{podiumDisplay[1]?.name || '-'}</span>
-                   <span className="text-2xl font-extrabold text-amber-400">{podiumDisplay[1] ? Math.round((podiumDisplay[1].correct / podiumDisplay[1].total) * 100) : 0}%</span>
-                   <div className="flex items-center gap-1 text-[9px] text-gray-400">
-                     <Clock size={10} /> {formatMMSS(podiumDisplay[1]?.timeTaken)}
-                   </div>
-                </div>
-              </div>
+            <div className="mt-[-5px]">
+              <PodiumCard 
+                rank={1} 
+                name={podiumDisplay[1]?.name} 
+                avatarUrl={podiumDisplay[1]?.avatarUrl} 
+                score={podiumDisplay[1] ? Math.round((podiumDisplay[1].correct / podiumDisplay[1].total) * 100) : 0}
+                time={podiumDisplay[1]?.timeTaken}
+                colorTheme="gold"
+                isMe={podiumDisplay[1]?.isMe}
+              />
             </div>
 
             {/* 3rd Place (Bronze) */}
