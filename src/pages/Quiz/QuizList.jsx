@@ -1,12 +1,19 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
   Trophy, Play, Clock, Users, Target, ChevronRight,
-  Star, Zap, BookOpen, BarChart2, Brain
+  Star, Zap, BookOpen, BarChart2, Brain, Share2
 } from 'lucide-react'
 import api from '../../api/axios'
 import CardThumbnail from '../../components/CardThumbnail'
+import ShareQuizModal from '../../components/ShareQuizModal'
+
+// Direct play link for a shared quiz (public /play route, no login needed).
+function buildShareUrl(subject, quizName) {
+  return `${window.location.origin}/play/${encodeURIComponent(subject)}/${encodeURIComponent(quizName)}`
+}
 
 function DifficultyBadge({ d }) {
   const cfg = {
@@ -39,6 +46,7 @@ function ScoreRing({ score, size = 40 }) {
 export default function QuizList() {
   const { subject } = useParams()
   const navigate = useNavigate()
+  const [shareTarget, setShareTarget] = useState(null) // { name } of quiz to share
 
   const { data, isLoading } = useQuery({
     queryKey: ['quiz-list', subject],
@@ -163,15 +171,24 @@ export default function QuizList() {
                   </div>
                 )}
 
-                {/* Play Button */}
-                <button
-                  onClick={e => { e.stopPropagation(); navigate(`/quiz/${encodeURIComponent(subject)}/${encodeURIComponent(quiz.name)}/play`) }}
-                  className="mt-1 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 active:scale-95 text-white text-sm font-bold transition-all shadow-lg shadow-violet-500/20"
-                >
-                  <Play size={14} className="fill-current" />
-                  {quiz.myBestScore > 0 ? 'Retry Quiz' : 'Start Quiz'}
-                  <ChevronRight size={14} />
-                </button>
+                {/* Play + Share row */}
+                <div className="mt-1 flex items-center gap-2">
+                  <button
+                    onClick={e => { e.stopPropagation(); navigate(`/quiz/${encodeURIComponent(subject)}/${encodeURIComponent(quiz.name)}/play`) }}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 active:scale-95 text-white text-sm font-bold transition-all shadow-lg shadow-violet-500/20"
+                  >
+                    <Play size={14} className="fill-current" />
+                    {quiz.myBestScore > 0 ? 'Retry Quiz' : 'Start Quiz'}
+                    <ChevronRight size={14} />
+                  </button>
+                  <button
+                    onClick={e => { e.stopPropagation(); setShareTarget({ name: quiz.name }) }}
+                    aria-label="Share quiz"
+                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.06] hover:bg-violet-500/20 border border-white/10 hover:border-violet-500/40 text-gray-300 hover:text-violet-300 active:scale-95 transition-all"
+                  >
+                    <Share2 size={16} />
+                  </button>
+                </div>
               </div>
 
               {/* Bottom score bar if attempted */}
@@ -187,6 +204,14 @@ export default function QuizList() {
           ))}
         </div>
       )}
+
+      <ShareQuizModal
+        open={!!shareTarget}
+        onClose={() => setShareTarget(null)}
+        quizName={shareTarget?.name}
+        subject={subjectName}
+        shareUrl={shareTarget ? buildShareUrl(subject, shareTarget.name) : null}
+      />
     </div>
   )
 }
