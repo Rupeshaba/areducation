@@ -212,47 +212,6 @@ function Avatar({ name, avatarUrl, size = "w-10 h-10", textSize = "text-sm", bor
   )
 }
 
-/* ═══ 3D PODIUM CARD (REWRITTEN FOR STABLE ALIGNMENT) ═══ */
-function PodiumCard({ rank, name, avatarUrl, score, time, colorTheme, isMe }) {
-  const themes = {
-    gold: { border: 'border-amber-400', glow: 'shadow-[0_0_25px_rgba(251,191,36,0.15)]', bg: 'bg-gradient-to-b from-amber-400/20 via-amber-400/5 to-transparent', text: 'text-amber-400', rankText: 'text-amber-400/40' },
-    silver: { border: 'border-gray-300', glow: 'shadow-[0_0_25px_rgba(209,213,219,0.1)]', bg: 'bg-gradient-to-b from-gray-300/20 via-gray-300/5 to-transparent', text: 'text-white', rankText: 'text-gray-400/40' },
-    bronze: { border: 'border-orange-400', glow: 'shadow-[0_0_25px_rgba(251,146,60,0.1)]', bg: 'bg-gradient-to-b from-orange-400/20 via-orange-400/5 to-transparent', text: 'text-orange-400', rankText: 'text-orange-400/40' },
-  }
-  const theme = themes[colorTheme]
-
-  return (
-    <div className="flex-1 flex flex-col items-center relative max-w-[100px] h-[170px] justify-end">
-      {/* Glass Cylinder Container */}
-      <div className={`w-full rounded-t-[32px] rounded-b-[12px] border-t-[3px] ${theme.border} ${theme.glow} bg-[#1A1C31] relative flex flex-col items-center pt-10 pb-4 h-full overflow-hidden`}>
-        
-        {/* Inner Glass Gradient */}
-        <div className={`absolute top-0 inset-x-0 h-1/2 blur-2xl opacity-40 pointer-events-none rounded-t-[32px] ${theme.border.replace('border', 'bg')}`}></div>
-
-        {/* Rank Number - Centered at the top */}
-        <span className={`absolute top-3 left-1/2 -translate-x-1/2 text-2xl font-extrabold ${theme.rankText} z-10`}>{rank}</span>
-
-        {/* Avatar Container - Perfectly Centered protruding outwards */}
-        <div className={`absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full border-[3px] ${theme.border} shadow-[0_0_20px_rgba(251,191,36,0.2)] bg-[#1A1C31] z-20 flex items-center justify-center overflow-hidden`}>
-           <Avatar name={name} avatarUrl={avatarUrl} size="w-full h-full" textSize="text-base" borderColor="border-transparent" isMe={isMe} />
-        </div>
-
-        {/* Connecting Line (Only for 1st Place) */}
-        {colorTheme === 'gold' && <div className="absolute top-[40px] left-1/2 -translate-x-1/2 w-[2px] h-4 bg-amber-400/60 z-10"></div>}
-
-        {/* Name, Score, Time Information */}
-        <div className="flex flex-col items-center mt-6 px-1 w-full relative z-10">
-           <span className="text-[12px] font-bold text-gray-200 truncate w-full text-center px-1">{name || '-'}</span>
-           <span className={`text-[20px] font-extrabold mt-1 ${theme.text}`}>{score}%</span>
-           <div className="flex items-center gap-1 mt-2 text-[10px] text-gray-400">
-             <Clock size={10} /> {formatMMSS(time)}
-           </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 /* ═══ PER-QUIZ LEADERBOARD (Main) ═══ */
 function QuizLeaderboard({ quizId }) {
   const [showFullModal, setShowFullModal] = useState(false)
@@ -307,48 +266,64 @@ function QuizLeaderboard({ quizId }) {
         <p className="text-center text-xs text-gray-500 py-6">Be the first to take this quiz! 🎉</p>
       ) : (
         <>
-          {/* ═══ 3D PODIUM (Stable Layout) ═══ */}
-          <div className="flex items-end justify-center gap-3 mb-7 h-[180px] relative">
+          {/* ═══ BRAND NEW CLEAN 3D GLASS PODIUM ═══ */}
+          <div className="flex items-end justify-center gap-2 mb-8 h-[165px] relative">
             
-            {/* Golden Crown for 1st Place */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.5)] z-30">
-               <Crown size={26} fill="#FBBF24" />
+            {/* Gold Crown for 1st Place */}
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.6)] z-20">
+               <Crown size={28} fill="#FBBF24" />
             </div>
 
-            {/* 2nd Place (Silver) */}
-            <PodiumCard 
-              rank={2} 
-              name={podiumDisplay[0]?.name} 
-              avatarUrl={podiumDisplay[0]?.avatarUrl} 
-              score={podiumDisplay[0] ? Math.round((podiumDisplay[0].correct / podiumDisplay[0].total) * 100) : 0}
-              time={podiumDisplay[0]?.timeTaken}
-              colorTheme="silver"
-              isMe={podiumDisplay[0]?.isMe}
-            />
-
-            {/* 1st Place (Gold) */}
-            <div className="mt-[-5px]">
-              <PodiumCard 
-                rank={1} 
-                name={podiumDisplay[1]?.name} 
-                avatarUrl={podiumDisplay[1]?.avatarUrl} 
-                score={podiumDisplay[1] ? Math.round((podiumDisplay[1].correct / podiumDisplay[1].total) * 100) : 0}
-                time={podiumDisplay[1]?.timeTaken}
-                colorTheme="gold"
-                isMe={podiumDisplay[1]?.isMe}
-              />
+            {/* 2nd Place - Silver */}
+            <div className="flex-1 flex flex-col items-center relative max-w-[100px] h-[145px] justify-end">
+              <div className="w-full bg-[#1A1C31] rounded-t-3xl border-t-[3px] border-gray-400/60 shadow-[0_0_20px_rgba(156,163,175,0.05)] flex flex-col items-center pt-8 pb-4 px-1 h-full relative overflow-visible">
+                <span className="absolute top-2 left-1/2 -translate-x-1/2 text-2xl font-extrabold text-gray-500/40 z-10">2</span>
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full border-[3px] border-gray-400/70 shadow-[0_0_15px_rgba(156,163,175,0.2)] bg-[#1A1C31] flex items-center justify-center overflow-hidden z-20">
+                   <Avatar name={podiumDisplay[0]?.name} avatarUrl={podiumDisplay[0]?.avatarUrl} size="w-full h-full" textSize="text-base" borderColor="border-transparent" isMe={podiumDisplay[0]?.isMe} />
+                </div>
+                <div className="flex flex-col items-center gap-0.5 mt-2 w-full relative z-10">
+                   <span className="text-[11px] font-bold text-gray-200 truncate w-full text-center px-0.5">{podiumDisplay[0]?.name || '-'}</span>
+                   <span className="text-[18px] font-extrabold text-white">{podiumDisplay[0] ? Math.round((podiumDisplay[0].correct / podiumDisplay[0].total) * 100) : 0}%</span>
+                   <div className="flex items-center gap-1 mt-1 text-[9px] text-gray-400">
+                     <Clock size={9} /> {formatMMSS(podiumDisplay[0]?.timeTaken)}
+                   </div>
+                </div>
+              </div>
             </div>
 
-            {/* 3rd Place (Bronze) */}
-            <PodiumCard 
-              rank={3} 
-              name={podiumDisplay[2]?.name} 
-              avatarUrl={podiumDisplay[2]?.avatarUrl} 
-              score={podiumDisplay[2] ? Math.round((podiumDisplay[2].correct / podiumDisplay[2].total) * 100) : 0}
-              time={podiumDisplay[2]?.timeTaken}
-              colorTheme="bronze"
-              isMe={podiumDisplay[2]?.isMe}
-            />
+            {/* 1st Place - Gold (Taller, Thicker Border, Stronger Glow) */}
+            <div className="flex-1 flex flex-col items-center relative max-w-[115px] h-[165px] justify-end z-10">
+              <div className="w-full bg-[#1A1C31] rounded-t-3xl border-t-[4px] border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.15)] flex flex-col items-center pt-10 pb-5 px-1 h-full relative overflow-visible">
+                <span className="absolute top-3 left-1/2 -translate-x-1/2 text-2xl font-extrabold text-amber-400/30 z-10">1</span>
+                <div className="absolute -top-7 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full border-[4px] border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.5)] bg-[#1A1C31] flex items-center justify-center overflow-hidden z-20">
+                   <Avatar name={podiumDisplay[1]?.name} avatarUrl={podiumDisplay[1]?.avatarUrl} size="w-full h-full" textSize="text-lg" borderColor="border-transparent" isMe={podiumDisplay[1]?.isMe} />
+                </div>
+                <div className="flex flex-col items-center gap-0.5 mt-2 w-full relative z-10">
+                   <span className="text-[12px] font-bold text-white truncate w-full text-center px-0.5">{podiumDisplay[1]?.name || '-'}</span>
+                   <span className="text-[22px] font-extrabold text-amber-400">{podiumDisplay[1] ? Math.round((podiumDisplay[1].correct / podiumDisplay[1].total) * 100) : 0}%</span>
+                   <div className="flex items-center gap-1 mt-1 text-[9px] text-gray-400">
+                     <Clock size={9} /> {formatMMSS(podiumDisplay[1]?.timeTaken)}
+                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3rd Place - Bronze */}
+            <div className="flex-1 flex flex-col items-center relative max-w-[100px] h-[135px] justify-end">
+              <div className="w-full bg-[#1A1C31] rounded-t-3xl border-t-[3px] border-orange-500/60 shadow-[0_0_20px_rgba(249,115,22,0.05)] flex flex-col items-center pt-8 pb-4 px-1 h-full relative overflow-visible">
+                <span className="absolute top-2 left-1/2 -translate-x-1/2 text-2xl font-extrabold text-orange-500/40 z-10">3</span>
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 rounded-full border-[3px] border-orange-500/70 shadow-[0_0_15px_rgba(249,115,22,0.2)] bg-[#1A1C31] flex items-center justify-center overflow-hidden z-20">
+                   <Avatar name={podiumDisplay[2]?.name} avatarUrl={podiumDisplay[2]?.avatarUrl} size="w-full h-full" textSize="text-base" borderColor="border-transparent" isMe={podiumDisplay[2]?.isMe} />
+                </div>
+                <div className="flex flex-col items-center gap-0.5 mt-2 w-full relative z-10">
+                   <span className="text-[11px] font-bold text-gray-200 truncate w-full text-center px-0.5">{podiumDisplay[2]?.name || '-'}</span>
+                   <span className="text-[18px] font-extrabold text-orange-300">{podiumDisplay[2] ? Math.round((podiumDisplay[2].correct / podiumDisplay[2].total) * 100) : 0}%</span>
+                   <div className="flex items-center gap-1 mt-1 text-[9px] text-gray-400">
+                     <Clock size={9} /> {formatMMSS(podiumDisplay[2]?.timeTaken)}
+                   </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* ═══ LIST (Rank 4+) ═══ */}
