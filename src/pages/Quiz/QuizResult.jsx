@@ -212,7 +212,7 @@ function Avatar({ name, avatarUrl, size = "w-10 h-10", textSize = "text-sm", bor
   )
 }
 
-/* ═══ PER-QUIZ LEADERBOARD (NO BUGS, STABLE LAYOUT) ═══ */
+/* ═══ PER-QUIZ LEADERBOARD (WATERMARK RANK + CORRECT/TOTAL ADDED) ═══ */
 function QuizLeaderboard({ quizId }) {
   const [showFullModal, setShowFullModal] = useState(false)
   
@@ -265,7 +265,7 @@ function QuizLeaderboard({ quizId }) {
         <p className="text-center text-xs text-gray-500 py-6">Be the first to take this quiz! 🎉</p>
       ) : (
         <>
-          {/* ═══ PERFECT PODIUM (Rank at Bottom, No Overlapping Artifacts) ═══ */}
+          {/* ═══ PODIUM WITH BACKGROUND WATERMARK RANK ═══ */}
           <div className="flex items-end justify-center gap-2 mb-8 h-[175px] relative">
             
             {/* Golden Crown for 1st Place */}
@@ -275,7 +275,12 @@ function QuizLeaderboard({ quizId }) {
 
             {/* ================= 2nd Place (Silver) ================= */}
             <div className="flex-1 flex flex-col items-center relative max-w-[100px] h-[150px] justify-end">
-              <div className="w-full h-full bg-[#1A1C31] rounded-t-[24px] border-t-[3px] border-gray-400/60 flex flex-col items-center pt-4 pb-3 overflow-hidden">
+              <div className="w-full h-full bg-[#1A1C31] rounded-t-[24px] border-t-[3px] border-gray-400/60 flex flex-col items-center pt-4 pb-3 overflow-hidden relative">
+                 {/* Rank Watermark */}
+                 <span className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
+                   <span className="text-[90px] font-black text-gray-500/20">2</span>
+                 </span>
+                 
                  {/* Avatar Section */}
                  <div className="flex flex-col items-center gap-1 w-full relative z-10">
                     <div className="w-11 h-11 rounded-full border-[2px] border-gray-400 bg-[#1A1C31] flex items-center justify-center overflow-hidden shadow-[0_0_10px_rgba(156,163,175,0.1)]">
@@ -283,13 +288,10 @@ function QuizLeaderboard({ quizId }) {
                     </div>
                     <span className="text-[11px] font-bold text-gray-200 truncate w-full text-center px-1">{podiumDisplay[0]?.name || '-'}</span>
                     <span className="text-[18px] font-extrabold text-white">{podiumDisplay[0] ? Math.round((podiumDisplay[0].correct / podiumDisplay[0].total) * 100) : 0}%</span>
+                    <div className="text-[10px] text-gray-500 font-medium">{podiumDisplay[0] ? `${podiumDisplay[0].correct}/${podiumDisplay[0].total}` : '0/0'}</div>
                     <div className="flex items-center gap-1 mt-0.5 text-[9px] text-gray-400">
                       <Clock size={9} /> {formatMMSS(podiumDisplay[0]?.timeTaken)}
                     </div>
-                 </div>
-                 {/* Rank at Bottom (Stable Layout) */}
-                 <div className="mt-auto text-xl font-extrabold text-gray-500/40 z-10 pb-0.5">
-                   2
                  </div>
               </div>
             </div>
@@ -297,6 +299,11 @@ function QuizLeaderboard({ quizId }) {
             {/* ================= 1st Place (Gold with Perfect Crown) ================= */}
             <div className="flex-1 flex flex-col items-center relative max-w-[115px] h-[175px] justify-end z-10">
                <div className="w-full h-full bg-[#1A1C31] rounded-t-[28px] border-t-[4px] border-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.15)] flex flex-col items-center pt-6 pb-3 overflow-hidden relative">
+                 {/* Rank Watermark */}
+                 <span className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
+                   <span className="text-[110px] font-black text-amber-500/15">1</span>
+                 </span>
+
                  {/* Avatar Section */}
                  <div className="flex flex-col items-center gap-1 w-full relative z-10">
                     <div className="w-12 h-12 rounded-full border-[3px] border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.3)] bg-[#1A1C31] flex items-center justify-center overflow-hidden">
@@ -304,20 +311,22 @@ function QuizLeaderboard({ quizId }) {
                     </div>
                     <span className="text-[12px] font-bold text-white truncate w-full text-center px-1">{podiumDisplay[1]?.name || '-'}</span>
                     <span className="text-[22px] font-extrabold text-amber-400">{podiumDisplay[1] ? Math.round((podiumDisplay[1].correct / podiumDisplay[1].total) * 100) : 0}%</span>
+                    <div className="text-[11px] text-amber-400/70 font-medium">{podiumDisplay[1] ? `${podiumDisplay[1].correct}/${podiumDisplay[1].total}` : '0/0'}</div>
                     <div className="flex items-center gap-1 mt-0.5 text-[9px] text-gray-400">
                       <Clock size={9} /> {formatMMSS(podiumDisplay[1]?.timeTaken)}
                     </div>
-                 </div>
-                 {/* Rank at Bottom (Stable Layout) */}
-                 <div className="mt-auto text-2xl font-extrabold text-amber-400/30 z-10 pb-0.5">
-                   1
                  </div>
               </div>
             </div>
 
             {/* ================= 3rd Place (Bronze) ================= */}
             <div className="flex-1 flex flex-col items-center relative max-w-[100px] h-[140px] justify-end">
-              <div className="w-full h-full bg-[#1A1C31] rounded-t-[24px] border-t-[3px] border-orange-500/60 flex flex-col items-center pt-4 pb-3 overflow-hidden">
+              <div className="w-full h-full bg-[#1A1C31] rounded-t-[24px] border-t-[3px] border-orange-500/60 flex flex-col items-center pt-4 pb-3 overflow-hidden relative">
+                 {/* Rank Watermark */}
+                 <span className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
+                   <span className="text-[90px] font-black text-orange-500/20">3</span>
+                 </span>
+
                  {/* Avatar Section */}
                  <div className="flex flex-col items-center gap-1 w-full relative z-10">
                     <div className="w-11 h-11 rounded-full border-[2px] border-orange-500 bg-[#1A1C31] flex items-center justify-center overflow-hidden shadow-[0_0_10px_rgba(249,115,22,0.1)]">
@@ -325,19 +334,16 @@ function QuizLeaderboard({ quizId }) {
                     </div>
                     <span className="text-[11px] font-bold text-gray-200 truncate w-full text-center px-1">{podiumDisplay[2]?.name || '-'}</span>
                     <span className="text-[18px] font-extrabold text-orange-300">{podiumDisplay[2] ? Math.round((podiumDisplay[2].correct / podiumDisplay[2].total) * 100) : 0}%</span>
+                    <div className="text-[10px] text-orange-300/60 font-medium">{podiumDisplay[2] ? `${podiumDisplay[2].correct}/${podiumDisplay[2].total}` : '0/0'}</div>
                     <div className="flex items-center gap-1 mt-0.5 text-[9px] text-gray-400">
                       <Clock size={9} /> {formatMMSS(podiumDisplay[2]?.timeTaken)}
                     </div>
-                 </div>
-                 {/* Rank at Bottom (Stable Layout) */}
-                 <div className="mt-auto text-xl font-extrabold text-orange-500/40 z-10 pb-0.5">
-                   3
                  </div>
               </div>
             </div>
           </div>
 
-          {/* ═══ LIST (Rank 4+) ═══ */}
+          {/* ═══ LIST (Rank 4+) with Correct/Total ═══ */}
           <div className="space-y-2.5 pb-6">
             {others.map((r) => {
               const pct = r.total > 0 ? Math.round((r.correct / r.total) * 100) : 0
@@ -371,14 +377,16 @@ function QuizLeaderboard({ quizId }) {
                     <span className={`text-sm font-bold ${isMe ? 'text-white' : (pct >= 75 ? 'text-emerald-400' : pct >= 50 ? 'text-amber-400' : 'text-red-400')}`}>
                       {pct}%
                     </span>
-                    {isMe && <span className="text-[9px] font-bold text-purple-300 tracking-wide uppercase">Your Rank</span>}
+                    {/* Added Correct/Total */}
+                    <span className="text-[10px] text-gray-500 font-medium">{r.correct}/{r.total}</span>
+                    {isMe && <span className="text-[9px] font-bold text-purple-300 tracking-wide uppercase mt-0.5">Your Rank</span>}
                   </div>
                 </div>
               )
             })}
           </div>
 
-          {/* ═══ FLOATING "YOU" ROW ═══ */}
+          {/* ═══ FLOATING "YOU" ROW (Rank > 10) ═══ */}
           {isMeBelowTop10 && meRow && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -406,7 +414,9 @@ function QuizLeaderboard({ quizId }) {
                   <span className="text-sm font-bold text-white">
                     {Math.round(meRow.score)}%
                   </span>
-                  <span className="text-[9px] font-bold text-purple-300 tracking-wide uppercase">Your Rank</span>
+                  {/* Added Correct/Total */}
+                  <span className="text-[10px] text-gray-400 font-medium">{meRow.correct}/{meRow.total}</span>
+                  <span className="text-[9px] font-bold text-purple-300 tracking-wide uppercase mt-0.5">Your Rank</span>
                 </div>
               </div>
             </motion.div>
@@ -476,7 +486,8 @@ function QuizLeaderboard({ quizId }) {
                       <span className={`text-sm font-bold ${isMe ? 'text-white' : (pct >= 75 ? 'text-emerald-400' : pct >= 50 ? 'text-amber-400' : 'text-red-400')}`}>
                         {pct}%
                       </span>
-                      {isMe && <span className="text-[9px] font-bold text-purple-300 tracking-wide uppercase">Your Rank</span>}
+                      <span className="text-[10px] text-gray-500 font-medium">{r.correct}/{r.total}</span>
+                      {isMe && <span className="text-[9px] font-bold text-purple-300 tracking-wide uppercase mt-0.5">Your Rank</span>}
                     </div>
                   </div>
                 )
