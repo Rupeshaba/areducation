@@ -43,6 +43,13 @@ function App() {
         <Route path="/verify-otp" element={<VerifyOTP />} />
         <Route path="/maintenance" element={<Maintenance />} />
 
+        {/* ── PUBLIC quiz-play flow (shared links) — no login required ──
+            A guest can open a shared quiz, play it, and see the result +
+            per-quiz leaderboard without an account. */}
+        <Route path="/play/:subject/:name" element={<QuizPlay />} />
+        <Route path="/play/result/:attemptId" element={<QuizResult />} />
+        <Route path="/play/analysis/:attemptId" element={<QuizAnalysis />} />
+
         {/* All Student Routes - Protected */}
         <Route element={<PrivateRoute role="student" />}>
           {/* Media (video/pdf) routes render OUTSIDE Layout — no navbar/header ever shows */}
