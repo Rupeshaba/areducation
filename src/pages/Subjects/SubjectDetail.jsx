@@ -1,13 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, memo, useRef, useEffect, useMemo } from 'react'
+import { useState, memo, useRef, useEffect, useMemo, forwardRef } from 'react'
 import {
   AlertCircle, BookOpen, Play, FileText, Video,
   Clock, Trophy, Zap, CheckCircle
 } from 'lucide-react'
 import api from '../../api/axios'
-import { getCompletedIdsSet, markContentCompleted, unmarkContentCompleted, isContentCompleted, mergeCompletedIds } from '../../utils/progress'
+import {
+  getCompletedIdsSet, markContentCompleted, unmarkContentCompleted, isContentCompleted, mergeCompletedIds,
+  setLastPlayed, getLastPlayed,
+} from '../../utils/progress'
 import CardThumbnail from '../../components/CardThumbnail'
 
 /* ═══ HELPERS ═══ */
@@ -67,7 +70,10 @@ function ShimmerCard() {
 }
 
 /* ═══ CONTENT CARD ═══ */
-const ContentCard = function ContentCard({ content, courseId, subjectId, chapterId, index, completedContentIds, onMarkCompleted }) {
+const ContentCard = forwardRef(function ContentCard(
+  { content, courseId, subjectId, chapterId, index, completedContentIds, onMarkCompleted, isHighlighted },
+  ref
+) {
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [contextPos, setContextPos] = useState({ x: 0, y: 0 })
   const [forceUpdate, setForceUpdate] = useState(0)
@@ -131,10 +137,12 @@ const ContentCard = function ContentCard({ content, courseId, subjectId, chapter
 
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="relative"
+      className={`relative rounded-2xl transition-shadow duration-500 ${isHighlighted ? 'ring-2 ring-offset-2 ring-offset-transparent' : ''}`}
+      style={isHighlighted ? { boxShadow: '0 0 0 2px rgba(99,102,241,0.9), 0 0 22px rgba(99,102,241,0.45)' } : undefined}
     >
       <div
         className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center transition-all z-10"
@@ -154,7 +162,11 @@ const ContentCard = function ContentCard({ content, courseId, subjectId, chapter
         <CheckCircle size={12} className={isCompleted ? 'text-white' : 'text-white/40'} />
       </div>
 
-      <Link to={linkTo} className="group block focus:outline-none">
+      <Link
+        to={linkTo}
+        className="group block focus:outline-none"
+        onClick={() => setLastPlayed(content.id, { subjectId, courseId })}
+      >
         <div className="relative rounded-2xl overflow-hidden transition-all duration-300 active:scale-[0.97] aspect-[3/4]"
           style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
 
@@ -239,10 +251,10 @@ const ContentCard = function ContentCard({ content, courseId, subjectId, chapter
       )}
     </motion.div>
   )
-}
+})
 
 /* ═══ CONTENT GRID ═══ */
-function ContentGrid({ contents, tab, courseId, subjectId, completedContentIds }) {
+function ContentGrid({ contents, tab, courseId, subjectId, completedContentIds, cardRefs, highlightId }) {
   const filtered = tab === 'video' ? contents.filter(isVideoType) : contents.filter(isPdfType)
 
   if (!filtered.length) return (
@@ -264,12 +276,18 @@ function ContentGrid({ contents, tab, courseId, subjectId, completedContentIds }
       {filtered.map((c, i) => (
         <ContentCard
           key={c.id}
+          ref={(el) => {
+            if (!cardRefs) return
+            if (el) cardRefs.current.set(c.id, el)
+            else cardRefs.current.delete(c.id)
+          }}
           content={c}
           courseId={courseId}
           subjectId={subjectId}
           chapterId={c._chapterId ?? null}
           index={i}
           completedContentIds={completedContentIds}
+          isHighlighted={c.id === highlightId}
         />
       ))}
     </div>
@@ -298,6 +316,13 @@ export default function SubjectDetail() {
   const [tab, setTab] = useState('video')
   const [refreshKey, setRefreshKey] = useState(0)
 
+  // Auto-scroll-to-last-played: a ref per rendered content card (id -> DOM
+  // node), plus a one-shot guard so we only scroll once per subject visit
+  // (not on every tab switch / re-render), plus a temporary highlight id.
+  const cardRefs = useRef(new Map())
+  const hasScrolledRef = useRef(false)
+  const [highlightId, setHighlightId] = useState(null)
+
   // Refresh on completion change
   useEffect(() => {
     const handleCompletionChange = () => {
@@ -317,6 +342,12 @@ export default function SubjectDetail() {
     document.addEventListener('click', closeAllMenus)
     return () => document.removeEventListener('click', closeAllMenus)
   }, [])
+
+  useEffect(() => {
+    hasScrolledRef.current = false
+    setHighlightId(null)
+    cardRefs.current.clear()
+  }, [subjectId])
 
   const swipe = useSwipeTabs(tab, setTab, ['video', 'pdf'])
 
@@ -360,6 +391,56 @@ export default function SubjectDetail() {
     const globalCompleted = getCompletedIdsSet()
     return new Set(allContents.filter(c => globalCompleted.has(c.id)).map(c => c.id))
   }, [allContents, refreshKey])
+
+  // Figure out what was last played in this subject, and which tab it
+  // lives in — a PDF opened last should flip the "PDF" tab open, not
+  // strand the user on "Videos" with nothing to scroll to.
+  const lastPlayedId = useMemo(() => getLastPlayed(subjectId), [subjectId, allContents])
+  const lastPlayedContent = useMemo(
+    () => allContents.find(c => c.id === lastPlayedId) ?? null,
+    [allContents, lastPlayedId]
+  )
+
+  useEffect(() => {
+    if (!lastPlayedContent || hasScrolledRef.current) return
+    const targetTab = isPdfType(lastPlayedContent) ? 'pdf' : 'video'
+    if (tab !== targetTab) setTab(targetTab)
+  }, [lastPlayedContent, tab])
+
+  // Once the matching tab's cards are actually mounted, scroll the
+  // last-played card into view and give it a brief highlight ring. The
+  // target grid can mount a beat late (AnimatePresence waits for the
+  // previous tab's exit animation to finish first), so this retries for
+  // ~1s instead of giving up after a single missed frame.
+  useEffect(() => {
+    if (!lastPlayedContent || hasScrolledRef.current) return
+    const targetTab = isPdfType(lastPlayedContent) ? 'pdf' : 'video'
+    if (tab !== targetTab) return
+
+    let attempts = 0
+    let timeoutId = null
+    let cancelled = false
+
+    const tryScroll = () => {
+      if (cancelled || hasScrolledRef.current) return
+      const el = cardRefs.current.get(lastPlayedContent.id)
+      if (el) {
+        hasScrolledRef.current = true
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        setHighlightId(lastPlayedContent.id)
+        setTimeout(() => setHighlightId(null), 2200)
+        return
+      }
+      attempts += 1
+      if (attempts < 20) timeoutId = setTimeout(tryScroll, 100)
+    }
+
+    timeoutId = setTimeout(tryScroll, 50)
+    return () => {
+      cancelled = true
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [lastPlayedContent, tab, allContents])
 
   const videosCount = allContents.filter(isVideoType).length
   const pdfsCount   = allContents.filter(isPdfType).length
@@ -542,6 +623,8 @@ export default function SubjectDetail() {
               courseId={courseId}
               subjectId={subjectId}
               completedContentIds={completedContentIds}
+              cardRefs={cardRefs}
+              highlightId={highlightId}
             />
           </motion.div>
         </AnimatePresence>
