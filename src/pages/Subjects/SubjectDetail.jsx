@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, memo, useRef, useEffect, useMemo, forwardRef } from 'react'
+import { useState, memo, useRef, useEffect, useMemo } from 'react'
 import {
   AlertCircle, BookOpen, Play, FileText, Video,
   Clock, Trophy, Zap, CheckCircle
@@ -82,6 +82,12 @@ function findScrollParent(node) {
   return document.scrollingElement || document.documentElement
 }
 
+function findCardEl(contentId) {
+  if (!contentId || typeof document === 'undefined') return null
+  const selector = `[data-content-id="${CSS.escape(String(contentId))}"]`
+  return document.querySelector(selector)
+}
+
 function scrollCardIntoView(el) {
   if (!el) return
   const container = findScrollParent(el)
@@ -98,10 +104,7 @@ function scrollCardIntoView(el) {
 }
 
 /* ═══ CONTENT CARD ═══ */
-const ContentCard = forwardRef(function ContentCard(
-  { content, courseId, subjectId, chapterId, index, completedContentIds, onMarkCompleted, isHighlighted },
-  ref
-) {
+function ContentCard({ content, courseId, subjectId, chapterId, index, completedContentIds, onMarkCompleted, isHighlighted }) {
   const [showContextMenu, setShowContextMenu] = useState(false)
   const [contextPos, setContextPos] = useState({ x: 0, y: 0 })
   const [forceUpdate, setForceUpdate] = useState(0)
@@ -165,7 +168,7 @@ const ContentCard = forwardRef(function ContentCard(
 
   return (
     <motion.div
-      ref={ref}
+      data-content-id={content.id}
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.025, 0.25), duration: 0.28, ease: 'easeOut' }}
@@ -279,10 +282,10 @@ const ContentCard = forwardRef(function ContentCard(
       )}
     </motion.div>
   )
-})
+}
 
 /* ═══ CONTENT GRID ═══ */
-function ContentGrid({ contents, tab, courseId, subjectId, completedContentIds, cardRefs, highlightId }) {
+function ContentGrid({ contents, tab, courseId, subjectId, completedContentIds, highlightId }) {
   const filtered = tab === 'video' ? contents.filter(isVideoType) : contents.filter(isPdfType)
 
   if (!filtered.length) return (
@@ -304,11 +307,6 @@ function ContentGrid({ contents, tab, courseId, subjectId, completedContentIds, 
       {filtered.map((c, i) => (
         <ContentCard
           key={c.id}
-          ref={(el) => {
-            if (!cardRefs) return
-            if (el) cardRefs.current.set(c.id, el)
-            else cardRefs.current.delete(c.id)
-          }}
           content={c}
           courseId={courseId}
           subjectId={subjectId}
@@ -328,10 +326,9 @@ export default function SubjectDetail() {
   const [tab, setTab] = useState('video')
   const [refreshKey, setRefreshKey] = useState(0)
 
-  // Auto-scroll-to-last-played: a ref per rendered content card (id -> DOM
-  // node), plus a one-shot guard so we only scroll once per subject visit
-  // (not on every tab switch / re-render), plus a temporary highlight id.
-  const cardRefs = useRef(new Map())
+  // Auto-scroll-to-last-played: a one-shot guard so we only scroll once
+  // per subject visit (not on every re-render), plus a temporary
+  // highlight id for the brief glow ring on the target card.
   const hasScrolledRef = useRef(false)
   const [highlightId, setHighlightId] = useState(null)
 
@@ -358,7 +355,6 @@ export default function SubjectDetail() {
   useEffect(() => {
     hasScrolledRef.current = false
     setHighlightId(null)
-    cardRefs.current.clear()
   }, [subjectId])
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -419,8 +415,9 @@ export default function SubjectDetail() {
 
   // Once the matching tab's cards are actually mounted, scroll the
   // last-played card into view and give it a brief highlight ring.
-  // First attempt is delayed to wait out the tab's ~0.15s fade so we
-  // measure the card at its resting position.
+  // Looks the card up by a data-content-id attribute via querySelector
+  // (not a ref map) — refs on list items can silently fail to register
+  // in time when the list re-renders a lot; a live DOM query can't miss.
   useEffect(() => {
     if (!lastPlayedContent || hasScrolledRef.current) return
     const targetTab = isPdfType(lastPlayedContent) ? 'pdf' : 'video'
@@ -432,7 +429,7 @@ export default function SubjectDetail() {
 
     const tryScroll = () => {
       if (cancelled || hasScrolledRef.current) return
-      const el = cardRefs.current.get(lastPlayedContent.id)
+      const el = findCardEl(lastPlayedContent.id)
       if (el) {
         hasScrolledRef.current = true
         scrollCardIntoView(el)
@@ -441,40 +438,16 @@ export default function SubjectDetail() {
         return
       }
       attempts += 1
-      if (attempts < 20) timeoutId = setTimeout(tryScroll, 100)
+      if (attempts < 25) timeoutId = setTimeout(tryScroll, 100)
       else console.warn('[SubjectDetail] Could not find last-played card to scroll to:', lastPlayedContent.id)
     }
 
-    timeoutId = setTimeout(tryScroll, 200)
+    timeoutId = setTimeout(tryScroll, 150)
     return () => {
       cancelled = true
       if (timeoutId) clearTimeout(timeoutId)
     }
-  }, [lastPlayedContent, tab, allContents])
-
-  const scrollToLastPlayedNow = () => {
-    if (!lastPlayedContent) return
-    const targetTab = isPdfType(lastPlayedContent) ? 'pdf' : 'video'
-    if (tab !== targetTab) {
-      setTab(targetTab)
-      // Grid for the new tab mounts a beat later — wait for it.
-      setTimeout(() => {
-        const el = cardRefs.current.get(lastPlayedContent.id)
-        if (el) {
-          scrollCardIntoView(el)
-          setHighlightId(lastPlayedContent.id)
-          setTimeout(() => setHighlightId(null), 2200)
-        }
-      }, 200)
-      return
-    }
-    const el = cardRefs.current.get(lastPlayedContent.id)
-    if (el) {
-      scrollCardIntoView(el)
-      setHighlightId(lastPlayedContent.id)
-      setTimeout(() => setHighlightId(null), 2200)
-    }
-  }
+  }, [lastPlayedContent, tab])
 
   const videosCount = allContents.filter(isVideoType).length
   const pdfsCount   = allContents.filter(isPdfType).length
@@ -609,54 +582,36 @@ export default function SubjectDetail() {
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.08, duration: 0.4 }}
-        className="flex items-center justify-between gap-2 mb-4"
+        className="flex items-center gap-1.5 p-1 rounded-xl mb-4 w-fit"
+        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
       >
-        <div className="flex items-center gap-1.5 p-1 rounded-xl w-fit"
-          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          {TABS.map(t => {
-            const active = tab === t.key
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 active:scale-95"
+        {TABS.map(t => {
+          const active = tab === t.key
+          return (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 active:scale-95"
+              style={{
+                background: active ? t.accentBg : 'transparent',
+                border: active ? `1px solid ${t.accentBorder}` : '1px solid transparent',
+                color: active ? t.accent : 'rgba(255,255,255,0.35)',
+              }}
+            >
+              <t.Icon size={11} />
+              {t.label}
+              <span
+                className="text-[10px] font-bold px-1.5 py-px rounded-full min-w-[18px] text-center"
                 style={{
-                  background: active ? t.accentBg : 'transparent',
-                  border: active ? `1px solid ${t.accentBorder}` : '1px solid transparent',
-                  color: active ? t.accent : 'rgba(255,255,255,0.35)',
+                  background: active ? t.accentBorder : 'rgba(255,255,255,0.06)',
+                  color: active ? t.accent : 'rgba(255,255,255,0.3)',
                 }}
               >
-                <t.Icon size={11} />
-                {t.label}
-                <span
-                  className="text-[10px] font-bold px-1.5 py-px rounded-full min-w-[18px] text-center"
-                  style={{
-                    background: active ? t.accentBorder : 'rgba(255,255,255,0.06)',
-                    color: active ? t.accent : 'rgba(255,255,255,0.3)',
-                  }}
-                >
-                  {t.count}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-
-        {lastPlayedContent && (
-          <button
-            onClick={scrollToLastPlayedNow}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all active:scale-95 flex-shrink-0"
-            style={{
-              background: 'rgba(16,185,129,0.12)',
-              border: '1px solid rgba(16,185,129,0.28)',
-              color: '#34d399',
-            }}
-          >
-            <Play size={10} fill="#34d399" />
-            Continue
-          </button>
-        )}
+                {t.count}
+              </span>
+            </button>
+          )
+        })}
       </motion.div>
 
       {/* ── CONTENT ── */}
@@ -674,7 +629,6 @@ export default function SubjectDetail() {
             courseId={courseId}
             subjectId={subjectId}
             completedContentIds={completedContentIds}
-            cardRefs={cardRefs}
             highlightId={highlightId}
           />
         </motion.div>
