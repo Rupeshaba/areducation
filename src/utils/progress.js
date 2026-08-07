@@ -12,6 +12,7 @@ const STORAGE_KEY = 'ar_completed_content_ids'
 const MIGRATION_FLAG = 'ar_completed_migrated_v2'
 const LOG_KEY = 'ar_completion_log'
 const MAX_LOG_ENTRIES = 500
+const LAST_PLAYED_KEY = 'ar_last_played'
 
 function readRaw() {
   try {
@@ -167,6 +168,66 @@ export function getWeeklyActivity() {
     days.push({ label: dayLabels[d.getDay()], count })
   }
   return days
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// "Last played" tracking — remembers, per subject, which content the user
+// opened most recently, so SubjectDetail can auto-scroll back to it.
+// Stored as { [subjectId]: { contentId, ts } } so multiple subjects each
+// keep their own last-played pointer instead of overwriting one another.
+// ─────────────────────────────────────────────────────────────────────────
+
+function readLastPlayedMap() {
+  try {
+    const raw = localStorage.getItem(LAST_PLAYED_KEY)
+    const parsed = raw ? JSON.parse(raw) : {}
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeLastPlayedMap(map) {
+  try {
+    localStorage.setItem(LAST_PLAYED_KEY, JSON.stringify(map))
+  } catch {
+    /* storage full or unavailable — fail silently */
+  }
+}
+
+/**
+ * Call this the moment the user opens a piece of content (video or PDF) —
+ * typically on click, right before navigating to the content page. Safe to
+ * call repeatedly; only the most recent call per subject sticks.
+ */
+export function setLastPlayed(contentId, meta = {}) {
+  if (!contentId || !meta.subjectId) return
+  const map = readLastPlayedMap()
+  map[meta.subjectId] = { contentId, ts: Date.now() }
+  writeLastPlayedMap(map)
+}
+
+/**
+ * Returns the content id last opened within a given subject, or null if
+ * nothing has been played there yet (or on a fresh device).
+ */
+export function getLastPlayed(subjectId) {
+  if (!subjectId) return null
+  const map = readLastPlayedMap()
+  return map[subjectId]?.contentId ?? null
+}
+
+/**
+ * Clears the last-played pointer for a subject — e.g. if the referenced
+ * content no longer exists in the list, callers can drop the stale entry.
+ */
+export function clearLastPlayed(subjectId) {
+  if (!subjectId) return
+  const map = readLastPlayedMap()
+  if (map[subjectId]) {
+    delete map[subjectId]
+    writeLastPlayedMap(map)
+  }
 }
 
 export function toggleContentCompleted(contentId) {
