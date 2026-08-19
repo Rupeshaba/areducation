@@ -55,6 +55,8 @@ export default function MyCourses() {
           const daysLeft = (!isFree && purchase.expiresAt) ? Math.ceil((purchase.expiresAt - Date.now()) / 86400000) : null
           const isExpired = daysLeft !== null && daysLeft <= 0
           const isUrgent = daysLeft !== null && !isExpired && daysLeft <= 30
+          const isBlocked = !!purchase.blocked
+          const isLocked = isBlocked || isExpired
 
           // Get progress from local cache (subject/content structure + local completion state)
           const progress = courseProgress[courseId] || { completed: 0, total: 0 }
@@ -85,8 +87,12 @@ export default function MyCourses() {
                 {/* Gradient so the text stays readable over the image */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
 
-                {/* Free / Expiry badge */}
-                {isFree ? (
+                {/* Free / Expiry / Blocked badge */}
+                {isBlocked ? (
+                  <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border bg-red-500/20 text-red-300 border-red-500/20">
+                    Blocked
+                  </div>
+                ) : isFree ? (
                   <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border bg-emerald-500/20 text-emerald-300 border-emerald-500/20">
                     FREE
                   </div>
@@ -121,14 +127,19 @@ export default function MyCourses() {
                     </div>
                   )}
 
+                  {isBlocked && purchase.blockReason && (
+                    <p className="text-[11px] text-red-300/90 mb-2 line-clamp-2">{purchase.blockReason}</p>
+                  )}
+
                   <Link
                     to={`/courses/${courseId}/subjects`}
+                    onClick={(e) => { if (isLocked) e.preventDefault() }}
                     className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-all
-                      ${isExpired
+                      ${isLocked
                         ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed pointer-events-none'
                         : 'bg-primary-500 hover:bg-primary-600 text-white active:scale-95'}`}
                   >
-                    <Play size={14} /> Start Learning
+                    <Play size={14} /> {isBlocked ? 'Access Blocked' : 'Start Learning'}
                     <ChevronRight size={14} />
                   </Link>
                 </div>
