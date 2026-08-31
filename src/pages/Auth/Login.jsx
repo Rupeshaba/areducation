@@ -56,19 +56,19 @@ export default function Login() {
               <img src={APP_LOGO_URL} alt="AR Education" className="w-full h-full object-cover" />
             </div>
             <div>
-              <div className="text-xl font-bold text-white">AR Education</div>
+              <div className="text-xl font-bold text-gray-900">AR Education</div>
               <div className="text-xs text-gray-500">Competitive Exam Prep</div>
             </div>
           </div>
         </div>
 
-        <div className="card border border-white/8">
-          <h1 className="text-2xl font-bold text-white mb-1">Welcome back</h1>
+        <div className="card border border-gray-200">
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Welcome back</h1>
           <p className="text-gray-500 text-sm mb-6">Sign in to continue your journey</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-sm text-gray-400 mb-1.5 block">Email address</label>
+              <label className="text-sm text-gray-500 mb-1.5 block">Email address</label>
               <div className="relative">
                 <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
@@ -83,7 +83,7 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="text-sm text-gray-400 mb-1.5 block">Password</label>
+              <label className="text-sm text-gray-500 mb-1.5 block">Password</label>
               <div className="relative">
                 <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
                 <input
@@ -97,7 +97,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 >
                   {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -105,7 +105,7 @@ export default function Login() {
             </div>
 
             <div className="flex justify-end">
-              <Link to="/forgot-password" className="text-sm text-primary-400 hover:text-primary-300">
+              <Link to="/forgot-password" className="text-sm text-primary-500 hover:text-primary-600">
                 Forgot password?
               </Link>
             </div>
@@ -123,14 +123,14 @@ export default function Login() {
 
           <Link
             to="/sync-login"
-            className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-400 hover:text-primary-300 border border-white/8 hover:border-primary-500/30 rounded-xl py-2.5 transition-colors"
+            className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-primary-600 border border-gray-200 hover:border-primary-500/40 rounded-xl py-2.5 transition-colors"
           >
             <QrCode size={15} /> Sync from another device
           </Link>
 
           <p className="text-center text-gray-500 text-sm mt-5">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-primary-400 hover:text-primary-300 font-medium">
+            <Link to="/signup" className="text-primary-500 hover:text-primary-600 font-medium">
               Create account
             </Link>
           </p>
