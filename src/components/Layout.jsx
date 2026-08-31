@@ -99,7 +99,7 @@ function RichNotificationPopup({ notif, onClose }) {
               </a>
             )}
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-900 flex-shrink-0 mt-0.5">
+          <button onClick={onClose} className="text-gray-600 hover:text-gray-900 flex-shrink-0 mt-0.5">
             <X size={16} />
           </button>
         </div>
@@ -318,7 +318,7 @@ export default function Layout() {
                 )}
                 <span className="font-bold text-gray-900 text-[15px] tracking-tight">AR Education</span>
               </Link>
-              <button className="text-gray-500 hover:text-gray-900 p-1.5 rounded-lg hover:bg-gray-100" onClick={() => setSidebarOpen(false)}>
+              <button className="text-gray-600 hover:text-gray-900 p-1.5 rounded-lg hover:bg-gray-100" onClick={() => setSidebarOpen(false)}>
                 <X size={18} />
               </button>
             </div>
@@ -334,7 +334,7 @@ export default function Layout() {
               )}
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-white truncate max-w-[150px]">{user?.name || 'Student'}</div>
-                <div className="text-xs text-gray-500 truncate max-w-[150px]">{user?.email}</div>
+                <div className="text-xs text-gray-600 truncate max-w-[150px]">{user?.email}</div>
               </div>
             </div>
           </div>
@@ -349,7 +349,7 @@ export default function Layout() {
                 onClick={() => setSidebarOpen(false)}
                 className={({ isActive }) => `
                   relative flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all
-                  ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}
+                  ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}
                 `}
               >
                 {({ isActive }) => (
@@ -368,7 +368,7 @@ export default function Layout() {
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => `
                 relative flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all
-                ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}
+                ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}
               `}
             >
               {({ isActive }) => (
@@ -384,13 +384,13 @@ export default function Layout() {
 
           <div className="px-3 pb-5 space-y-0.5 border-t border-gray-200 pt-3">
             <NavLink to="/notifications" onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) => `flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all relative ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}>
+              className={({ isActive }) => `flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all relative ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}>
               <Bell size={17} />
               Notifications
               <Badge count={unreadCount} position="sidebar" />
             </NavLink>
             <NavLink to="/profile" onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) => `flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}>
+              className={({ isActive }) => `flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}>
               <User size={17} />Profile
             </NavLink>
             <button onClick={handleLogout}
@@ -426,7 +426,7 @@ export default function Layout() {
                 end={exact}
                 className={({ isActive }) => `
                   relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                  ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}
+                  ${isActive ? 'text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}
                 `}
               >
                 {({ isActive }) => (
@@ -447,7 +447,7 @@ export default function Layout() {
               to="/doubt-chat"
               className={({ isActive }) => `
                 relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}
+                ${isActive ? 'text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}
               `}
             >
               {({ isActive }) => (
@@ -468,7 +468,7 @@ export default function Layout() {
               to="/notifications"
               className={({ isActive }) => `
                 relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}
+                ${isActive ? 'text-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}
               `}
             >
               {({ isActive }) => (
@@ -501,7 +501,7 @@ export default function Layout() {
               )}
               <div className="min-w-0">
                 <p className="text-gray-800 text-sm font-medium truncate">{user?.name?.split(' ')[0] || 'Student'}</p>
-                <p className="text-gray-500 text-[11px] truncate">View profile</p>
+                <p className="text-gray-600 text-[11px] truncate">View profile</p>
               </div>
             </NavLink>
             <button onClick={handleLogout}
@@ -518,7 +518,7 @@ export default function Layout() {
         {!hideSidebar && (
           <div className="lg:hidden sticky top-0 z-20 flex items-center justify-between px-4 h-16 rounded-b-2xl
             bg-white/90 backdrop-blur-2xl border-b border-gray-200 shadow-lg shadow-black/20">
-            <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-gray-900 p-2 -ml-2 rounded-xl hover:bg-gray-100">
+            <button onClick={() => setSidebarOpen(true)} className="text-gray-600 hover:text-gray-900 p-2 -ml-2 rounded-xl hover:bg-gray-100">
               <Menu size={20} />
             </button>
             <Link to="/" className="flex items-center gap-2">
@@ -535,11 +535,11 @@ export default function Layout() {
 
             {/* Mobile header: Doubt Chat + Bell icons with badges */}
             <div className="flex items-center gap-1">
-              <NavLink to="/doubt-chat" className="relative text-gray-500 hover:text-gray-900 p-2 rounded-xl hover:bg-gray-100">
+              <NavLink to="/doubt-chat" className="relative text-gray-600 hover:text-gray-900 p-2 rounded-xl hover:bg-gray-100">
                 <MessageSquare size={19} />
                 <Badge count={chatUnread} position="icon" />
               </NavLink>
-              <NavLink to="/notifications" className="relative text-gray-500 hover:text-gray-900 p-2 rounded-xl hover:bg-gray-100">
+              <NavLink to="/notifications" className="relative text-gray-600 hover:text-gray-900 p-2 rounded-xl hover:bg-gray-100">
                 <Bell size={19} />
                 <Badge count={unreadCount} position="icon" />
               </NavLink>
@@ -576,9 +576,9 @@ export default function Layout() {
                     {isActive && (
                       <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary-500/20 to-primary-400/10" />
                     )}
-                    <Icon size={18} className={isActive ? 'text-primary-400' : 'text-gray-500'} strokeWidth={isActive ? 2.4 : 2} />
+                    <Icon size={18} className={isActive ? 'text-primary-400' : 'text-gray-600'} strokeWidth={isActive ? 2.4 : 2} />
                   </div>
-                  <span className={isActive ? 'text-primary-400 font-bold' : 'text-gray-500'}>{label}</span>
+                  <span className={isActive ? 'text-primary-400 font-bold' : 'text-gray-600'}>{label}</span>
                 </>
               )}
             </NavLink>
