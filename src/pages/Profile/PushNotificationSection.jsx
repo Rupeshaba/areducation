@@ -67,22 +67,22 @@ export default function PushNotificationSection() {
       transition={{ delay: 0.2, duration: 0.5 }}
       className="space-y-3"
     >
-      <h2 className="text-[13px] font-semibold text-white/60 px-1">Push Notifications</h2>
+      <h2 className="text-[13px] font-semibold text-gray-600 px-1">Push Notifications</h2>
 
-      <div className="flex items-center justify-between p-4 rounded-2xl bg-[#0E101A] border border-white/[0.05]">
+      <div className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-200 shadow-sm">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="w-9 h-9 rounded-xl bg-white/[0.05] flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
             {subscribed ? (
-              <BellRing size={16} className="text-primary-400" />
+              <BellRing size={16} className="text-primary-500" />
             ) : (
-              <BellOff size={16} className="text-white/40" />
+              <BellOff size={16} className="text-gray-400" />
             )}
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-semibold text-white">
+            <span className="text-sm font-semibold text-gray-900">
               {subscribed ? 'Enabled' : permission === 'denied' ? 'Blocked' : 'Disabled'}
             </span>
-            <span className="text-[11px] text-white/40 mt-0.5">
+            <span className="text-[11px] text-gray-500 mt-0.5">
               {permission === 'denied'
                 ? 'Phone/browser settings se allow karna hoga'
                 : subscribed
@@ -98,7 +98,7 @@ export default function PushNotificationSection() {
             onClick={subscribed ? handleDisable : handleEnable}
             className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
               subscribed
-                ? 'bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300'
+                ? 'bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700'
                 : 'bg-primary-500 hover:bg-primary-600 text-white'
             }`}
           >
