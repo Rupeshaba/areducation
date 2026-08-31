@@ -20,15 +20,15 @@ function InfoRow({ icon: Icon, label, value, onClick, isStatus = false }) {
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.99 }}
       onClick={onClick}
-      className="flex items-center justify-between p-4 rounded-2xl bg-[#0E101A] border border-white/[0.05] hover:bg-white/[0.03] transition-colors cursor-pointer active:bg-white/[0.05]"
+      className="flex items-center justify-between p-4 rounded-2xl bg-white border border-gray-200 shadow-sm hover:bg-gray-50 transition-colors cursor-pointer active:bg-gray-100"
     >
       <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className="w-9 h-9 rounded-xl bg-white/[0.05] flex items-center justify-center flex-shrink-0">
-          <Icon size={16} className="text-white/40" />
+        <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center flex-shrink-0">
+          <Icon size={16} className="text-gray-500" />
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="text-[10px] font-medium uppercase tracking-wider text-white/40">{label}</span>
-          <span className="text-sm font-semibold text-white truncate mt-0.5">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">{label}</span>
+          <span className="text-sm font-semibold text-gray-900 truncate mt-0.5">
             {isStatus ? (
               <span className="flex items-center gap-2">
                 Active <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -39,7 +39,7 @@ function InfoRow({ icon: Icon, label, value, onClick, isStatus = false }) {
           </span>
         </div>
       </div>
-      <ChevronRight size={16} className="text-white/20 flex-shrink-0" />
+      <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
     </motion.div>
   )
 }
@@ -48,16 +48,16 @@ function InfoRow({ icon: Icon, label, value, onClick, isStatus = false }) {
 function BottomSheetField({ icon: Icon, label, value, onChange, placeholder, type = 'text', autoFocus = false, isSelect = false, options = [] }) {
   return (
     <div className="space-y-2 mb-3">
-      <label className="text-[10px] font-medium uppercase tracking-wider text-white/40 ml-1">{label}</label>
+      <label className="text-[10px] font-medium uppercase tracking-wider text-gray-500 ml-1">{label}</label>
       <div className="relative">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
           <Icon size={16} />
         </div>
         {isSelect ? (
           <select
             value={value}
             onChange={onChange}
-            className="w-full bg-[#0A0B12] border border-white/[0.08] rounded-2xl pl-11 pr-4 py-3.5 text-sm font-medium text-white focus:outline-none focus:border-primary-400/50 focus:ring-1 focus:ring-primary-400/30 transition-all appearance-none"
+            className="w-full bg-white border border-gray-300 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-medium text-gray-900 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/30 transition-all appearance-none"
           >
             <option value="">Select Exam</option>
             {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
@@ -69,7 +69,7 @@ function BottomSheetField({ icon: Icon, label, value, onChange, placeholder, typ
             onChange={onChange}
             placeholder={placeholder}
             autoFocus={autoFocus}
-            className="w-full bg-[#0A0B12] border border-white/[0.08] rounded-2xl pl-11 pr-4 py-3.5 text-sm font-medium text-white placeholder:text-white/20 focus:outline-none focus:border-primary-400/50 focus:ring-1 focus:ring-primary-400/30 transition-all"
+            className="w-full bg-white border border-gray-300 rounded-2xl pl-11 pr-4 py-3.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/30 transition-all"
           />
         )}
       </div>
@@ -163,7 +163,7 @@ export default function Profile() {
               />
             </motion.div>
 
-            <div className="relative w-[110px] h-[110px] rounded-full overflow-hidden border-2 border-[#05060A] z-10 bg-[#0E101A] flex-shrink-0 mx-auto">
+            <div className="relative w-[110px] h-[110px] rounded-full overflow-hidden border-2 border-white shadow-md z-10 bg-gray-100 flex-shrink-0 mx-auto">
               {displayAvatar ? (
                 <img src={displayAvatar} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
@@ -177,7 +177,7 @@ export default function Profile() {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={() => fileRef.current?.click()}
-              className="absolute bottom-1 right-2 w-9 h-9 bg-gradient-to-r from-primary-500 to-mint-500 rounded-full flex items-center justify-center shadow-lg border-2 border-[#05060A] z-20"
+              className="absolute bottom-1 right-2 w-9 h-9 bg-gradient-to-r from-primary-500 to-mint-500 rounded-full flex items-center justify-center shadow-lg border-2 border-white z-20"
             >
               <Camera size={14} className="text-white" />
             </motion.button>
@@ -185,13 +185,13 @@ export default function Profile() {
           </div>
 
           <div className="relative z-10 mb-6 flex flex-col items-center">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
               {user?.name || 'User'}
               <div className="w-5 h-5 bg-primary-500/20 rounded-full flex items-center justify-center border border-primary-500/30">
-                <CheckCircle size={12} className="text-primary-400" />
+                <CheckCircle size={12} className="text-primary-500" />
               </div>
             </h1>
-            <p className="text-sm text-white/50 mt-1">{user?.email}</p>
+            <p className="text-sm text-gray-500 mt-1">{user?.email}</p>
             <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full px-3 py-1 mt-3">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-[9px] font-medium text-emerald-400">Active</span>
@@ -202,18 +202,18 @@ export default function Profile() {
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex gap-2 absolute bottom-[-20px] z-20 bg-[#0E101A] border border-white/[0.08] p-2 rounded-2xl shadow-xl"
+              className="flex gap-2 absolute bottom-[-20px] z-20 bg-white border border-gray-200 p-2 rounded-2xl shadow-xl"
             >
               <button
                 onClick={uploadAvatar}
                 disabled={uploading}
-                className="px-4 py-1.5 rounded-full bg-primary-500 hover:bg-primary-400 text-white text-[10px] font-bold transition-colors disabled:opacity-50"
+                className="px-4 py-1.5 rounded-full bg-primary-500 hover:bg-primary-600 text-white text-[10px] font-bold transition-colors disabled:opacity-50"
               >
                 {uploading ? 'Saving...' : 'Save Photo'}
               </button>
               <button
                 onClick={() => { setAvatarFile(null); setAvatarPreview(null) }}
-                className="px-4 py-1.5 rounded-full border border-white/[0.08] text-white/50 hover:text-white/80 hover:bg-white/[0.05] text-[10px] font-bold transition-colors"
+                className="px-4 py-1.5 rounded-full border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-100 text-[10px] font-bold transition-colors"
               >
                 Cancel
               </button>
@@ -233,14 +233,14 @@ export default function Profile() {
             { icon: Target, label: 'Exam', value: user?.exam || 'None' },
             { icon: Flame, label: 'Streak', value: `${user?.streak || 0} days` },
           ].map((item, idx) => (
-            <div key={idx} className="flex flex-col items-center p-3 rounded-2xl bg-[#0E101A] border border-white/[0.05]">
-              <div className="w-8 h-8 rounded-xl bg-white/[0.05] flex items-center justify-center mb-1.5">
-                <item.icon size={14} className="text-white/40" />
+            <div key={idx} className="flex flex-col items-center p-3 rounded-2xl bg-white border border-gray-200 shadow-sm">
+              <div className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center mb-1.5">
+                <item.icon size={14} className="text-gray-500" />
               </div>
-              <span className="text-[8px] text-white/30 uppercase tracking-wider mb-0.5">{item.label}</span>
-              <span className="text-[11px] font-semibold text-white text-center leading-tight">
+              <span className="text-[8px] text-gray-400 uppercase tracking-wider mb-0.5">{item.label}</span>
+              <span className="text-[11px] font-semibold text-gray-900 text-center leading-tight">
                 {idx === 2 ? (
-                  <span className="text-amber-400">{item.value}</span>
+                  <span className="text-amber-600">{item.value}</span>
                 ) : (
                   item.value
                 )}
@@ -257,10 +257,10 @@ export default function Profile() {
           className="space-y-3"
         >
           <div className="flex items-center justify-between mb-1 px-1">
-            <h2 className="text-[13px] font-semibold text-white/60">Personal Information</h2>
+            <h2 className="text-[13px] font-semibold text-gray-600">Personal Information</h2>
             <button 
               onClick={() => setIsEditing(true)}
-              className="text-[11px] font-medium text-primary-400 hover:text-primary-300 transition-colors flex items-center gap-1"
+              className="text-[11px] font-medium text-primary-600 hover:text-primary-700 transition-colors flex items-center gap-1"
             >
               <Pencil size={12} /> Edit
             </button>
@@ -297,17 +297,17 @@ export default function Profile() {
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 30, stiffness: 300 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg bg-[#0E101A] rounded-t-3xl border-t border-white/[0.08] p-6 pb-10 max-h-[90vh] overflow-y-auto"
+              className="w-full max-w-lg bg-white rounded-t-3xl border-t border-gray-200 p-6 pb-10 max-h-[90vh] overflow-y-auto"
             >
-              <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-6" />
+              <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-6" />
 
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-white">Edit Profile</h3>
+                <h3 className="text-lg font-bold text-gray-900">Edit Profile</h3>
                 <button 
                   onClick={() => setIsEditing(false)}
-                  className="w-8 h-8 rounded-full bg-white/[0.05] flex items-center justify-center hover:bg-white/10 transition-colors"
+                  className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
                 >
-                  <X size={16} className="text-white/50" />
+                  <X size={16} className="text-gray-500" />
                 </button>
               </div>
 
@@ -318,13 +318,13 @@ export default function Profile() {
                 <BottomSheetField icon={MapPin} label="Address" value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Enter your address" />
               </div>
 
-              <div className="flex items-center gap-3 mt-8 pt-4 border-t border-white/[0.05]">
+              <div className="flex items-center gap-3 mt-8 pt-4 border-t border-gray-200">
                 <button
                   onClick={() => {
                     setIsEditing(false)
                     setForm({ name: user?.name || '', mobile: user?.mobile || '', exam: user?.exam || '', address: user?.address || '' })
                   }}
-                  className="flex-1 py-3.5 rounded-2xl border border-white/[0.08] text-sm font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+                  className="flex-1 py-3.5 rounded-2xl border border-gray-200 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
