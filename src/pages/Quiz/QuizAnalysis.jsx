@@ -1,13 +1,64 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  CheckCircle, XCircle, ChevronLeft, ChevronRight, X, BookOpen, Target, Clock
+  CheckCircle, XCircle, ChevronLeft, ChevronRight, X, BookOpen, Target, Clock, ChevronDown
 } from 'lucide-react'
 import api from '../../api/axios'
 import formatText from '../../utils/formatText'
 import { findAttemptById } from '../../utils/quizCache'
+
+const FILTERS = ['All', 'Wrong', 'Skipped', 'Correct']
+
+function statusOf(q) {
+  if (q?.isSkipped) return 'Skipped'
+  if (q?.isCorrect) return 'Correct'
+  return 'Wrong'
+}
+
+/* ═══ FILTER DROPDOWN ═══ */
+function FilterDropdown({ value, onChange, counts }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 border transition-all bg-white/10 border-white/15 text-white text-xs font-bold"
+      >
+        {value} {counts[value] !== undefined && <span className="text-white/50 font-medium">({counts[value]})</span>}
+        <ChevronDown size={13} className={`text-white/60 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.12 }}
+              className="absolute right-0 top-full mt-1.5 z-40 rounded-xl bg-[#0B0E1A] border border-white/[0.1] shadow-2xl overflow-hidden min-w-[130px]"
+            >
+              {FILTERS.map(f => (
+                <button
+                  key={f}
+                  onClick={() => { onChange(f); setOpen(false) }}
+                  className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 text-left text-xs font-semibold transition-colors ${
+                    value === f ? 'bg-primary-500/15 text-white' : 'text-white/70 hover:bg-white/[0.06]'
+                  }`}
+                >
+                  {f}
+                  <span className="text-white/40 font-medium">{counts[f] ?? 0}</span>
+                </button>
+              ))}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
 
 export default function QuizAnalysis() {
   const { attemptId } = useParams()
@@ -16,8 +67,10 @@ export default function QuizAnalysis() {
 
   const [currentQIndex, setCurrentQIndex] = useState(0)
   const [showPalette, setShowPalette] = useState(false)
+  const [filter, setFilter] = useState('All')
   const startX = useRef(null)
   const startY = useRef(null)
+  const scrollRef = useRef(null)
 
   // Cached attempts always carry a per-question time breakdown (measured
   // client-side during the quiz), so prefer the cache over the API/nav
@@ -37,7 +90,35 @@ export default function QuizAnalysis() {
   
   // Get questions - the API response has 'results' array at the top level
   const questions = result?.results || result?.questions || []
+
+  const counts = useMemo(() => {
+    const c = { All: questions.length, Wrong: 0, Skipped: 0, Correct: 0 }
+    questions.forEach(q => { c[statusOf(q)] += 1 })
+    return c
+  }, [questions])
+
+  // Indices into `questions` that match the active filter.
+  const filteredIndices = useMemo(() => {
+    if (filter === 'All') return questions.map((_, i) => i)
+    return questions.reduce((acc, q, i) => {
+      if (statusOf(q) === filter) acc.push(i)
+      return acc
+    }, [])
+  }, [questions, filter])
+
+  // Reset to the first matching question whenever the filter changes.
+  useEffect(() => {
+    setCurrentQIndex(filteredIndices[0] ?? 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter])
+
+  const posInFiltered = filteredIndices.indexOf(currentQIndex)
   const currentQ = questions[currentQIndex]
+
+  // Scroll the question content back to the top on every navigation.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'auto' })
+  }, [currentQIndex])
 
   // Format time in seconds to MM:SS
   const formatTime = (s) => {
@@ -48,10 +129,14 @@ export default function QuizAnalysis() {
   }
 
   const goNext = () => {
-    if (currentQIndex < questions.length - 1) setCurrentQIndex(p => p + 1)
+    if (posInFiltered !== -1 && posInFiltered < filteredIndices.length - 1) {
+      setCurrentQIndex(filteredIndices[posInFiltered + 1])
+    }
   }
   const goPrev = () => {
-    if (currentQIndex > 0) setCurrentQIndex(p => p - 1)
+    if (posInFiltered > 0) {
+      setCurrentQIndex(filteredIndices[posInFiltered - 1])
+    }
   }
 
   // Handle loading state
@@ -97,6 +182,7 @@ export default function QuizAnalysis() {
         </div>
 
         <div className="flex items-center gap-2">
+          <FilterDropdown value={filter} onChange={setFilter} counts={counts} />
           <div className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 border transition-all bg-white/10 border-white/15">
             <Clock size={13} className="text-white/50" />
             <span className="text-xs font-bold tabular-nums text-white">
@@ -108,10 +194,10 @@ export default function QuizAnalysis() {
 
       {/* ===== ACTION BAR (desktop/tablet) ===== */}
       <div className="hidden sm:flex flex-shrink-0 bg-[#f8fafc] border-b border-[#dfe7ef] items-center justify-center px-2 sm:px-3 h-[48px] gap-1.5">
-        <button onClick={goPrev} disabled={currentQIndex === 0} className="act-btn">
+        <button onClick={goPrev} disabled={posInFiltered <= 0} className="act-btn">
           <ChevronLeft size={14} /> Prev
         </button>
-        <button onClick={goNext} disabled={currentQIndex === questions.length - 1} className="act-btn">
+        <button onClick={goNext} disabled={posInFiltered === -1 || posInFiltered === filteredIndices.length - 1} className="act-btn">
           Next <ChevronRight size={14} />
         </button>
       </div>
@@ -123,7 +209,9 @@ export default function QuizAnalysis() {
             <div className="flex items-center justify-between mb-3 gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-sm font-bold text-gray-800 whitespace-nowrap">
-                  Question {currentQIndex + 1}<span className="text-gray-400 font-medium">/{questions.length}</span>
+                  {filteredIndices.length === 0
+                    ? `${filter} — 0`
+                    : <>Question {posInFiltered + 1}<span className="text-gray-400 font-medium">/{filteredIndices.length}</span></>}
                 </span>
                 {currentQ?.timeTaken && (
                   <span className="text-xs text-gray-500 flex-shrink-0 flex items-center gap-1">
@@ -132,15 +220,17 @@ export default function QuizAnalysis() {
                 )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                  currentQ?.isCorrect
-                    ? 'bg-mint-500/10 text-mint-400 border-mint-500/20'
-                    : currentQ?.isSkipped
-                    ? 'bg-white/[0.05] text-gray-400 border-white/[0.1]'
-                    : 'bg-danger-500/10 text-danger-400 border-danger-500/20'
-                }`}>
-                  {currentQ?.isCorrect ? '✓ Correct' : currentQ?.isSkipped ? '− Skipped' : '✗ Incorrect'}
-                </span>
+                {currentQ && (
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                    currentQ?.isCorrect
+                      ? 'bg-mint-500/10 text-mint-400 border-mint-500/20'
+                      : currentQ?.isSkipped
+                      ? 'bg-white/[0.05] text-gray-400 border-white/[0.1]'
+                      : 'bg-danger-500/10 text-danger-400 border-danger-500/20'
+                  }`}>
+                    {currentQ?.isCorrect ? '✓ Correct' : currentQ?.isSkipped ? '− Skipped' : '✗ Incorrect'}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -149,11 +239,20 @@ export default function QuizAnalysis() {
               <motion.div
                 className="h-full bg-[#1299FD]"
                 initial={false}
-                animate={{ width: `${((currentQIndex + 1) / Math.max(questions.length, 1)) * 100}%` }}
+                animate={{ width: `${filteredIndices.length ? ((posInFiltered + 1) / filteredIndices.length) * 100 : 0}%` }}
                 transition={{ duration: 0.25 }}
               />
             </div>
 
+            {filteredIndices.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center shadow-sm">
+                  <BookOpen size={26} className="text-gray-300" />
+                </div>
+                <p className="text-gray-500 text-sm font-medium">No {filter.toLowerCase()} questions {filter === 'Correct' ? 'yet' : '🎉'}</p>
+                <button onClick={() => setFilter('All')} className="text-primary-500 text-xs font-bold">Show All</button>
+              </div>
+            ) : (
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentQIndex}
@@ -163,32 +262,32 @@ export default function QuizAnalysis() {
                 transition={{ duration: 0.15 }}
                 className="flex-1 flex flex-col min-h-0"
               >
-                <div className="bg-white border border-[#dfe7ef] rounded-xl p-3 sm:p-4 lg:p-5 mb-3 shadow-sm flex-shrink-0">
-                  <p className="text-gray-900 text-sm sm:text-base lg:text-lg font-semibold leading-relaxed whitespace-pre-wrap">
-                    {formatText(currentQ?.question)}
-                  </p>
-                </div>
+                <div
+                  ref={scrollRef}
+                  className="flex-1 min-h-0 overflow-y-auto pr-1"
+                  style={{ touchAction: 'pan-y' }}
+                  onTouchStart={(e) => {
+                    startX.current = e.touches[0].clientX
+                    startY.current = e.touches[0].clientY
+                  }}
+                  onTouchEnd={(e) => {
+                    if (startX.current === null) return
+                    const dx = startX.current - e.changedTouches[0].clientX
+                    const dy = Math.abs(startY.current - e.changedTouches[0].clientY)
+                    startX.current = null
+                    startY.current = null
+                    if (Math.abs(dx) < 56 || dy > 70) return
+                    if (dx > 0) goNext()
+                    else goPrev()
+                  }}
+                >
+                  <div className="bg-white border border-[#dfe7ef] rounded-xl p-3 sm:p-4 lg:p-5 mb-3 shadow-sm">
+                    <p className="text-gray-900 text-sm sm:text-base lg:text-lg font-semibold leading-relaxed whitespace-pre-wrap">
+                      {formatText(currentQ?.question)}
+                    </p>
+                  </div>
 
-                <div className="flex-1 min-h-0">
-                  <div 
-                    className="h-full overflow-y-auto pr-1"
-                    style={{ touchAction: 'pan-y' }}
-                    onTouchStart={(e) => {
-                      startX.current = e.touches[0].clientX
-                      startY.current = e.touches[0].clientY
-                    }}
-                    onTouchEnd={(e) => {
-                      if (startX.current === null) return
-                      const dx = startX.current - e.changedTouches[0].clientX
-                      const dy = Math.abs(startY.current - e.changedTouches[0].clientY)
-                      startX.current = null
-                      startY.current = null
-                      if (Math.abs(dx) < 56 || dy > 70) return
-                      if (dx > 0) goNext()
-                      else goPrev()
-                    }}
-                  >
-                    <div className="space-y-2 sm:space-y-2.5">
+                  <div className="space-y-2 sm:space-y-2.5">
                       {currentQ?.options?.map((opt, j) => {
                         const isCorrect = j === currentQ.correctAnswer
                         const isSelected = j === currentQ.givenAnswer
@@ -229,22 +328,24 @@ export default function QuizAnalysis() {
                           </div>
                         )
                       })}
-                    </div>
                   </div>
-                </div>
 
-                {/* Explanation - always shown inline */}
-                {currentQ?.explanation && (
-                  <div className="mt-3 rounded-lg bg-amber-500/[0.06] border border-amber-500/20 p-3 sm:p-3.5 flex-shrink-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <BookOpen size={14} className="text-amber-500" />
-                      <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">Explanation</span>
+                  {/* Explanation - now rendered below options, inside the
+                      same scroll container so the page scrolls as one
+                      column instead of clipping the explanation off-screen. */}
+                  {currentQ?.explanation && (
+                    <div className="mt-3 rounded-lg bg-amber-500/[0.06] border border-amber-500/20 p-3 sm:p-3.5">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <BookOpen size={14} className="text-amber-500" />
+                        <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">Explanation</span>
+                      </div>
+                      <p className="text-[13px] sm:text-sm text-gray-600 leading-relaxed">{formatText(currentQ.explanation)}</p>
                     </div>
-                    <p className="text-[13px] sm:text-sm text-gray-600 leading-relaxed">{formatText(currentQ.explanation)}</p>
-                  </div>
-                )}
+                  )}
+                </div>
               </motion.div>
             </AnimatePresence>
+            )}
           </div>
         </div>
       </div>
@@ -254,10 +355,10 @@ export default function QuizAnalysis() {
         <button onClick={() => setShowPalette(true)} className="nav-btn-mob !flex-[0.8]">
           <Target size={16} /> Palette
         </button>
-        <button onClick={goPrev} disabled={currentQIndex === 0} className="nav-btn-mob !flex-[0.8] disabled:opacity-30">
+        <button onClick={goPrev} disabled={posInFiltered <= 0} className="nav-btn-mob !flex-[0.8] disabled:opacity-30">
           <ChevronLeft size={16} /> Prev
         </button>
-        <button onClick={goNext} disabled={currentQIndex === questions.length - 1} className="nav-btn-mob !flex-[1.2] !bg-[#001123] !text-white !border-[#001123]">
+        <button onClick={goNext} disabled={posInFiltered === -1 || posInFiltered === filteredIndices.length - 1} className="nav-btn-mob !flex-[1.2] !bg-[#001123] !text-white !border-[#001123]">
           Next <ChevronRight size={16} />
         </button>
       </div>
@@ -301,6 +402,7 @@ export default function QuizAnalysis() {
                   {questions.map((_, i) => {
                     const q = questions[i]
                     const status = q?.isCorrect ? 'correct' : q?.isSkipped ? 'skipped' : 'incorrect'
+                    const matchesFilter = filter === 'All' || statusOf(q) === filter
                     return (
                       <button
                         key={i}
@@ -308,7 +410,9 @@ export default function QuizAnalysis() {
                           setCurrentQIndex(i)
                           setShowPalette(false)
                         }}
-                        className={`aspect-square rounded-md text-xs font-bold flex items-center justify-center ${
+                        className={`aspect-square rounded-md text-xs font-bold flex items-center justify-center transition-opacity ${
+                          !matchesFilter ? 'opacity-30' : ''
+                        } ${
                           i === currentQIndex ? 'bg-[#001123] text-white shadow-[0_0_0_2px_rgba(0,17,35,0.3)]' :
                           status === 'correct' ? 'bg-mint-500 text-white' :
                           status === 'skipped' ? 'bg-[#f3f4f6] border border-[#e5e7eb] text-[#374151]' :
@@ -348,11 +452,14 @@ export default function QuizAnalysis() {
             {questions.map((_, i) => {
               const q = questions[i]
               const status = q?.isCorrect ? 'correct' : q?.isSkipped ? 'skipped' : 'incorrect'
+              const matchesFilter = filter === 'All' || statusOf(q) === filter
               return (
                 <button
                   key={i}
                   onClick={() => setCurrentQIndex(i)}
-                  className={`aspect-square rounded-md text-xs font-bold flex items-center justify-center ${
+                  className={`aspect-square rounded-md text-xs font-bold flex items-center justify-center transition-opacity ${
+                    !matchesFilter ? 'opacity-30' : ''
+                  } ${
                     i === currentQIndex ? 'bg-[#001123] text-white shadow-[0_0_0_2px_rgba(0,17,35,0.3)]' :
                     status === 'correct' ? 'bg-mint-500 text-white' :
                     status === 'skipped' ? 'bg-[#f3f4f6] border border-[#e5e7eb] text-[#374151]' :
