@@ -164,6 +164,81 @@ export function mergeAttempts(remoteAttempts = []) {
   writeStore(store)
 }
 
+/**
+ * Build a "weak questions" practice set for a quiz from its attempt
+ * history. Target size = half the quiz (rounded up when odd), so a
+ * 15-question quiz yields 8.
+ *
+ * Priority:
+ *  1. Questions gotten wrong, most-frequently-wrong first (across all
+ *     cached attempts for this quiz — repeated mistakes surface first).
+ *  2. If that isn't enough to fill the target, top up with correctly
+ *     answered questions, slowest-answered first (most time taken).
+ *
+ * Questions are matched by their `question` text since attempt results
+ * don't carry a stable question id.
+ */
+export function buildWeakPracticeSet(subject, quizName) {
+  const entry = getQuizEntry(subject, quizName)
+  const attempts = entry?.attempts?.filter(a => Array.isArray(a.results) && a.results.length > 0) || []
+  if (attempts.length === 0) return []
+
+  const latest = attempts[0]
+  const total = latest.total || latest.results.length
+  const targetCount = Math.ceil(total / 2)
+
+  // key -> { question data, wrongCount, bestKnownTime }
+  const map = new Map()
+
+  attempts.forEach((attempt) => {
+    attempt.results.forEach((q, idx) => {
+      if (!q || !q.question) return
+      const key = q.question
+      const wasWrong = !q.isCorrect
+      const timeTaken = q.timeTaken || attempt.questionTimes?.[idx] || 0
+
+      if (!map.has(key)) {
+        map.set(key, {
+          question: q.question,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation,
+          wrongCount: 0,
+          correctCount: 0,
+          maxCorrectTime: 0,
+        })
+      }
+      const rec = map.get(key)
+      if (wasWrong) {
+        rec.wrongCount += 1
+      } else {
+        rec.correctCount += 1
+        if (timeTaken > rec.maxCorrectTime) rec.maxCorrectTime = timeTaken
+      }
+    })
+  })
+
+  const all = Array.from(map.values())
+
+  const wrongOnes = all
+    .filter(r => r.wrongCount > 0)
+    .sort((a, b) => b.wrongCount - a.wrongCount)
+
+  const picked = wrongOnes.slice(0, targetCount)
+
+  if (picked.length < targetCount) {
+    const pickedKeys = new Set(picked.map(p => p.question))
+    const correctFillers = all
+      .filter(r => r.wrongCount === 0 && !pickedKeys.has(r.question))
+      .sort((a, b) => b.maxCorrectTime - a.maxCorrectTime)
+    picked.push(...correctFillers.slice(0, targetCount - picked.length))
+  }
+
+  return picked.map(({ question, options, correctAnswer, explanation }) => ({
+    question, options, correctAnswer, explanation,
+  }))
+}
+
 /** Find a cached attempt by its attemptId, wherever it lives. */
 export function findAttemptById(attemptId) {
   if (!attemptId) return null
