@@ -21,6 +21,7 @@ import Quiz from "./pages/Quiz/QuizList"
 import QuizPlay from "./pages/Quiz/QuizPlay"
 import QuizResult from "./pages/Quiz/QuizResult"
 import QuizAnalysis from "./pages/Quiz/QuizAnalysis"
+import QuizPractice from "./pages/Quiz/QuizPractice"
 import Leaderboard from "./pages/Quiz/Leaderboard"
 import Progress from "./pages/Progress/Progress"
 import DoubtChat from "./pages/DoubtChat/DoubtChat"
@@ -49,6 +50,7 @@ function App() {
         <Route path="/play/:subject/:name" element={<QuizPlay />} />
         <Route path="/play/result/:attemptId" element={<QuizResult />} />
         <Route path="/play/analysis/:attemptId" element={<QuizAnalysis />} />
+        <Route path="/play/practice" element={<QuizPractice />} />
 
         {/* All Student Routes - Protected */}
         <Route element={<PrivateRoute role="student" />}>
@@ -56,6 +58,7 @@ function App() {
           <Route path="/courses/:courseId/subjects/:subjectId/content/:contentId" element={<MediaContent />} />
           <Route path="/courses/:courseId/subjects/:subjectId/chapters/:chapterId/content/:contentId" element={<MediaContent />} />
           <Route path="/quiz/analysis/:attemptId" element={<QuizAnalysis />} />
+          <Route path="/quiz/practice" element={<QuizPractice />} />
           <Route path="/quiz/:subject/:name/play" element={<QuizPlay />} />
           {/* Book Reader renders OUTSIDE Layout — full screen experience */}
           <Route path="/books/:bookId" element={<BookReader />} />
