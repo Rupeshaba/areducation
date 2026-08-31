@@ -6,13 +6,13 @@ import {
   CheckCircle, XCircle, MinusCircle, Trophy, RotateCcw,
   BarChart3, ChevronLeft, ChevronRight, X, Target,
   ChevronDown, Clock, TrendingUp, Check, Share2, Crown,
-  Timer, Target as TargetIcon
+  Timer, Target as TargetIcon, Dumbbell
 } from 'lucide-react'
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid
 } from 'recharts'
 import api from '../../api/axios'
-import { findAttemptById, getQuizEntry } from '../../utils/quizCache'
+import { findAttemptById, getQuizEntry, buildWeakPracticeSet } from '../../utils/quizCache'
 import ShareQuizModal from '../../components/ShareQuizModal'
 
 /* ═══ SWIPE HOOK ═══ */
@@ -558,7 +558,17 @@ export default function QuizResult() {
   const strokeDashoffset = circumference - (result.score / 100) * circumference
 
   const questions = result.results || []
-  
+
+  const weakPracticeSet = useMemo(() => (
+    subject && quizName ? buildWeakPracticeSet(subject, quizName) : []
+  ), [subject, quizName])
+
+  const startWeakPractice = () => {
+    navigate(`${routeBase}/practice`, {
+      state: { questions: weakPracticeSet, subject, quizName, routeBase },
+    })
+  }
+
   const goNext = () => {
     if (currentQIndex < questions.length - 1) setCurrentQIndex(p => p + 1)
   }
@@ -708,6 +718,19 @@ export default function QuizResult() {
             <BarChart3 size={17} className="text-purple-400" /> Analysis
           </button>
         </motion.div>
+
+        {/* PRACTICE WEAK QUESTIONS */}
+        {weakPracticeSet.length > 0 && (
+          <motion.button
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.52 }}
+            onClick={startWeakPractice}
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#20233B] border border-purple-500/30 text-purple-200 text-[15px] font-bold transition-all active:scale-[0.97]"
+          >
+            <Dumbbell size={17} className="text-purple-400" /> Practice Weak Qs ({weakPracticeSet.length})
+          </motion.button>
+        )}
 
         {/* PROGRESS GRAPH */}
         <motion.div
