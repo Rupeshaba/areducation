@@ -189,7 +189,7 @@ function StatCard({ icon: Icon, value, label, sublabel, color }) {
       </div>
       <div className="text-base font-black text-gray-900 leading-none truncate">{value}</div>
       <div className="text-[10px] font-semibold text-gray-600 mt-1 truncate">{label}</div>
-      {sublabel && <div className="text-[9px] text-gray-400 mt-0.5 truncate">{sublabel}</div>}
+      {sublabel && <div className="text-[9px] text-gray-500 mt-0.5 truncate">{sublabel}</div>}
     </div>
   )
 }
@@ -227,7 +227,7 @@ function WelcomeHero({ user, isLoading, streak, todayPoints, progressPercent }) 
 
       <div className="relative flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-gray-100 text-gray-500 border border-gray-200">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 border border-gray-200">
             <Sparkles size={10} className="text-primary-400" />
             {greeting}
           </span>
@@ -245,12 +245,12 @@ function WelcomeHero({ user, isLoading, streak, todayPoints, progressPercent }) 
             </span>{' '}
             <span className="inline-block animate-wave">👋</span>
           </h1>
-          <p className="text-xs text-gray-500">Today is a great day to learn something new! ✨</p>
+          <p className="text-xs text-gray-600">Today is a great day to learn something new! ✨</p>
         </div>
 
         <div className="text-center flex-shrink-0">
           <ProgressRing percent={progressPercent} />
-          <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-400 mt-1.5 max-w-[90px] leading-snug">
+          <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-500 mt-1.5 max-w-[90px] leading-snug">
             Overall progress of your goal
           </p>
         </div>
@@ -306,7 +306,7 @@ function ContinueLearning({ item, title, to, videoPercent }) {
                       style={{ width: `${videoPercent}%`, background: 'linear-gradient(90deg, #6D5EF5, #2DD4BF)' }}
                     />
                   </div>
-                  <span className="text-[9px] font-semibold text-gray-500 flex-shrink-0">{videoPercent}% completed</span>
+                  <span className="text-[9px] font-semibold text-gray-600 flex-shrink-0">{videoPercent}% completed</span>
                 </div>
               )}
 
@@ -350,9 +350,9 @@ function ScrollRow({ icon: Icon, title, count, seeAllTo, children }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 flex items-center gap-1.5">
           <Icon size={13} className="text-primary-400" />
-          {title} {count > 0 && <span className="text-gray-400">({count})</span>}
+          {title} {count > 0 && <span className="text-gray-500">({count})</span>}
         </h3>
         {seeAllTo && (
           <Link to={seeAllTo} className="text-xs font-semibold text-primary-400 hover:text-primary-300 transition-colors">
@@ -461,7 +461,7 @@ function QuizHistoryCard({ entry, index }) {
               <span className="text-[8px] font-extrabold uppercase tracking-wider px-1 py-0.5 rounded bg-primary-500/25 text-primary-200">
                 {attemptsCount}x
               </span>
-              <RotateCcw size={10} className="text-gray-400 group-hover:text-primary-300 transition-colors" />
+              <RotateCcw size={10} className="text-gray-500 group-hover:text-primary-300 transition-colors" />
             </div>
           </div>
         </div>
@@ -483,7 +483,7 @@ function EmptyState() {
         <GraduationCap size={22} className="text-primary-400" />
       </div>
       <h3 className="text-base font-bold text-gray-900 mb-1">Start your journey</h3>
-      <p className="text-xs text-gray-500 mb-4 max-w-xs mx-auto leading-relaxed">
+      <p className="text-xs text-gray-600 mb-4 max-w-xs mx-auto leading-relaxed">
         Your recent lessons and quizzes will show up here. Pick a course to get going.
       </p>
       <Link to="/free-courses" className="btn-primary inline-flex items-center gap-1.5 text-sm">
@@ -622,7 +622,7 @@ export default function Home() {
 
       {/* Quick access */}
       <div>
-        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2.5">Quick Access</h3>
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2.5">Quick Access</h3>
         <div className="grid grid-cols-4 gap-2">
           {staticCards.map((card, i) => (
             <QuickAccessCard key={i} {...card} />
