@@ -6,7 +6,7 @@
   * { box-sizing: border-box; }
 
   body {
-    @apply bg-[#F7F8FC] text-gray-800 font-sans;
+    @apply bg-[#F7F8FC] text-gray-900 font-sans;
     background-image:
       radial-gradient(ellipse at 15% 0%, rgba(109, 94, 245, 0.06) 0%, transparent 55%),
       radial-gradient(ellipse at 90% 30%, rgba(45, 212, 191, 0.04) 0%, transparent 50%);
@@ -47,7 +47,7 @@
   }
 
   .btn-ghost {
-    @apply bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-5 py-2.5 rounded-xl
+    @apply bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium px-5 py-2.5 rounded-xl
            border border-gray-200 transition-all duration-200 active:scale-[0.98];
   }
 
@@ -59,7 +59,7 @@
   /* ── Forms ────────────────────────────────────────────────── */
   .input-field {
     @apply w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-gray-900
-           placeholder:text-gray-400 focus:outline-none focus:border-primary-500/50
+           placeholder:text-gray-500 focus:outline-none focus:border-primary-500/50
            focus:ring-2 focus:ring-primary-500/20 transition-all duration-200;
   }
 
@@ -74,7 +74,7 @@
 
   /* ── Typography helpers ───────────────────────────────────── */
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-wide text-gray-400;
+    @apply text-[11px] font-semibold uppercase tracking-wide text-gray-500;
   }
 
   .page-title {
