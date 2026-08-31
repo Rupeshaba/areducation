@@ -52,14 +52,14 @@ const TYPE_CFG = {
 function Shimmer({ className = '' }) {
   return (
     <div className={`rounded-xl ${className}`}
-      style={{ background: 'rgba(255,255,255,0.05)', animation: 'shimmerPulse 1.8s ease-in-out infinite' }} />
+      style={{ background: 'rgba(0,0,0,0.06)', animation: 'shimmerPulse 1.8s ease-in-out infinite' }} />
   )
 }
 
 function ShimmerCard() {
   return (
     <div className="rounded-2xl overflow-hidden"
-      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+      style={{ background: '#F0F1F6', border: '1px solid rgba(0,0,0,0.06)' }}>
       <Shimmer className="w-full aspect-[16/9]" style={{ borderRadius: 0 }} />
       <div className="p-2.5 space-y-1.5">
         <Shimmer className="h-3.5 w-4/5 rounded" />
@@ -259,13 +259,13 @@ function ContentCard({ content, courseId, subjectId, chapterId, index, completed
       {/* Context Menu */}
       {showContextMenu && (
         <div
-          className="fixed z-50 bg-dark-800 border border-white/20 rounded-lg py-1 px-1 shadow-lg"
+          className="fixed z-50 bg-white border border-gray-200 rounded-lg py-1 px-1 shadow-lg"
           style={{ left: contextPos.x, top: contextPos.y }}
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={handleMarkCompleted}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs text-white hover:bg-white/10 rounded"
+            className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-800 hover:bg-gray-100 rounded"
           >
             <CheckCircle size={12} />
             {isCompleted ? 'Unmark Completed' : 'Mark as Completed'}
@@ -291,12 +291,12 @@ function ContentGrid({ contents, tab, courseId, subjectId, completedContentIds, 
   if (!filtered.length) return (
     <div className="flex flex-col items-center py-16 text-center">
       <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-3"
-        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+        style={{ background: '#F0F1F6', border: '1px solid rgba(0,0,0,0.06)' }}>
         {tab === 'video'
-          ? <Play size={20} className="text-white/20" />
-          : <FileText size={20} className="text-white/20" />}
+          ? <Play size={20} className="text-gray-400" />
+          : <FileText size={20} className="text-gray-400" />}
       </div>
-      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>
+      <p className="text-xs text-gray-500">
         No {tab === 'video' ? 'videos' : 'PDFs'} here yet.
       </p>
     </div>
@@ -490,8 +490,8 @@ export default function SubjectDetail() {
         style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)' }}>
         <AlertCircle size={24} style={{ color: 'rgba(248,113,113,0.7)' }} />
       </div>
-      <h3 className="text-sm font-black text-white mb-1">Failed to Load</h3>
-      <p className="text-xs mb-5" style={{ color: 'rgba(255,255,255,0.38)' }}>Something went wrong. Please try again.</p>
+      <h3 className="text-sm font-black text-gray-900 mb-1">Failed to Load</h3>
+      <p className="text-xs mb-5 text-gray-500">Something went wrong. Please try again.</p>
       <button onClick={() => refetch()}
         className="px-4 py-2 rounded-xl text-white text-xs font-bold active:scale-95"
         style={{ background: 'rgba(99,102,241,0.85)' }}>
@@ -503,8 +503,8 @@ export default function SubjectDetail() {
   /* ── Not found ── */
   if (!subject) return (
     <div className="flex flex-col items-center py-20 text-center">
-      <BookOpen size={28} className="text-white/20 mb-3" />
-      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>Subject not found.</p>
+      <BookOpen size={28} className="text-gray-400 mb-3" />
+      <p className="text-xs text-gray-500">Subject not found.</p>
     </div>
   )
 
@@ -530,9 +530,9 @@ export default function SubjectDetail() {
             </div>
           )}
           <div className="min-w-0">
-            <h1 className="text-base font-black text-white leading-tight line-clamp-1">{subject.name}</h1>
+            <h1 className="text-base font-black text-gray-900 leading-tight line-clamp-1">{subject.name}</h1>
             {subject.description && (
-              <p className="text-[11px] mt-0.5 line-clamp-1" style={{ color: 'rgba(255,255,255,0.38)' }}>
+              <p className="text-[11px] mt-0.5 line-clamp-1 text-gray-500">
                 {subject.description}
               </p>
             )}
@@ -543,7 +543,7 @@ export default function SubjectDetail() {
         {allContents.length > 0 && (
           <div className="relative w-10 h-10 flex-shrink-0">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-              <circle cx="18" cy="18" r="16" stroke="rgba(255,255,255,0.1)" strokeWidth="2" fill="none" />
+              <circle cx="18" cy="18" r="16" stroke="rgba(0,0,0,0.1)" strokeWidth="2" fill="none" />
               <circle
                 cx="18" cy="18" r="16"
                 stroke="#10b981"
@@ -555,7 +555,7 @@ export default function SubjectDetail() {
                 className="transition-all duration-500"
               />
             </svg>
-            <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
+            <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-gray-900">
               {Math.round((completedContentIds.size / allContents.length) * 100)}%
             </div>
           </div>
@@ -583,7 +583,7 @@ export default function SubjectDetail() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.08, duration: 0.4 }}
         className="flex items-center gap-1.5 p-1 rounded-xl mb-4 w-fit"
-        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+        style={{ background: '#F0F1F6', border: '1px solid rgba(0,0,0,0.06)' }}
       >
         {TABS.map(t => {
           const active = tab === t.key
@@ -595,7 +595,7 @@ export default function SubjectDetail() {
               style={{
                 background: active ? t.accentBg : 'transparent',
                 border: active ? `1px solid ${t.accentBorder}` : '1px solid transparent',
-                color: active ? t.accent : 'rgba(255,255,255,0.35)',
+                color: active ? t.accent : '#6B7280',
               }}
             >
               <t.Icon size={11} />
@@ -603,8 +603,8 @@ export default function SubjectDetail() {
               <span
                 className="text-[10px] font-bold px-1.5 py-px rounded-full min-w-[18px] text-center"
                 style={{
-                  background: active ? t.accentBorder : 'rgba(255,255,255,0.06)',
-                  color: active ? t.accent : 'rgba(255,255,255,0.3)',
+                  background: active ? t.accentBorder : 'rgba(0,0,0,0.06)',
+                  color: active ? t.accent : '#9CA3AF',
                 }}
               >
                 {t.count}
