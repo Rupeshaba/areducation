@@ -2,7 +2,7 @@ import { Outlet, NavLink, useNavigate, useLocation, Link } from 'react-router-do
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Home, Play, Trophy, TrendingUp,
+  Home, Play, TrendingUp,
   ShoppingBag, User, Bell, LogOut, Menu, X, Zap,
   Info, Phone, MessageSquare
 } from 'lucide-react'
@@ -18,7 +18,6 @@ import { subscribeToPush, isPushSupported, getPushPermissionState } from '../uti
 const NAV = [
   { to: '/', icon: Home, label: 'Home', exact: true },
   { to: '/my-courses', icon: Play, label: 'My Courses' },
-  { to: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
   { to: '/progress', icon: TrendingUp, label: 'Progress' },
   { to: '/store', icon: ShoppingBag, label: 'Store' },
   { to: '/about', icon: Info, label: 'About Us' },
