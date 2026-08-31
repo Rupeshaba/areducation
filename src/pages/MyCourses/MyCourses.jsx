@@ -35,8 +35,8 @@ export default function MyCourses() {
         <BookOpen size={32} className="text-primary-400 opacity-50" />
       </div>
       <div>
-        <h2 className="text-lg font-bold text-white mb-1">No Courses Yet</h2>
-        <p className="text-gray-400 text-sm">Visit the store to enroll in courses.</p>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">No Courses Yet</h2>
+        <p className="text-gray-600 text-sm">Visit the store to enroll in courses.</p>
       </div>
       <Link to="/store" className="btn-primary flex items-center gap-2">
         <ShoppingBag size={16} /> Browse Courses
@@ -46,7 +46,7 @@ export default function MyCourses() {
 
   return (
     <div className="max-w-3xl">
-      <h1 className="text-2xl font-bold text-white mb-6">My Courses</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">My Courses</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {purchases.map((purchase, i) => {
           const course = purchase.courseDetails || {}
