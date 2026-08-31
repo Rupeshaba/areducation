@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  BookOpen, Trophy, TrendingUp, Flame, Play, ArrowRight,
+  BookOpen, TrendingUp, Play, ArrowRight,
   Sparkles, GraduationCap, MessageSquare, ShoppingBag, Book, History,
   FileText, Brain, RotateCcw, Zap, ChevronRight,
 } from 'lucide-react'
@@ -177,25 +177,8 @@ function ProgressRing({ percent }) {
   )
 }
 
-/* ── Momentum stat card ──────────────────────────────────────────────── */
-function StatCard({ icon: Icon, value, label, sublabel, color }) {
-  return (
-    <div
-      className="flex-1 min-w-0 rounded-2xl p-2.5 border-l-2"
-      style={{ background: `${color}12`, borderColor: color }}
-    >
-      <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-1.5" style={{ background: `${color}22` }}>
-        <Icon size={13} style={{ color }} />
-      </div>
-      <div className="text-base font-black text-gray-900 leading-none truncate">{value}</div>
-      <div className="text-[10px] font-semibold text-gray-600 mt-1 truncate">{label}</div>
-      {sublabel && <div className="text-[9px] text-gray-500 mt-0.5 truncate">{sublabel}</div>}
-    </div>
-  )
-}
-
-/* ── Welcome hero (greeting + progress ring + stat row) ──────────────── */
-function WelcomeHero({ user, isLoading, streak, todayPoints, progressPercent }) {
+/* ── Welcome hero (greeting + progress ring) ──────────────────────────── */
+function WelcomeHero({ user, isLoading, progressPercent }) {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   const firstName = user?.name?.split(' ')[0] || 'Student'
@@ -205,11 +188,6 @@ function WelcomeHero({ user, isLoading, streak, todayPoints, progressPercent }) 
       <div className="space-y-3 pt-2">
         <Shimmer className="h-4 w-32" />
         <Shimmer className="h-9 w-56" />
-        <div className="flex gap-2">
-          <Shimmer className="h-20 flex-1" />
-          <Shimmer className="h-20 flex-1" />
-          <Shimmer className="h-20 flex-1" />
-        </div>
       </div>
     )
   }
@@ -254,12 +232,6 @@ function WelcomeHero({ user, isLoading, streak, todayPoints, progressPercent }) 
             Overall progress of your goal
           </p>
         </div>
-      </div>
-
-      <div className="flex gap-2.5 mt-4">
-        <StatCard icon={Flame} value={streak} label="Day Streak" sublabel="Keep it up! 🔥" color="#FFB020" />
-        <StatCard icon={Trophy} value={todayPoints} label="Points Today" sublabel="Doing great! ✨" color="#2DD4BF" />
-        <StatCard icon={TrendingUp} value={`${progressPercent}%`} label="Course Progress" sublabel="Keep learning 🚀" color="#8B7CFF" />
       </div>
     </motion.div>
   )
@@ -515,11 +487,6 @@ export default function Home() {
   const classItems = recentlyWatched.filter(item => item.type !== 'pdf')
   const notesItems = recentlyWatched.filter(item => item.type === 'pdf')
 
-  const { data: pointsData, isLoading: pointsLoading } = useQuery({
-    queryKey: ['my-points'],
-    queryFn: () => api.get('/my-points').then(r => r.data),
-  })
-
   const { data: lastWatchedData } = useQuery({
     queryKey: ['user-last-watched'],
     queryFn: () => api.get('/user/progress').then(r => r.data),
@@ -532,7 +499,6 @@ export default function Home() {
     gcTime: 24 * 60 * 60 * 1000,
   })
 
-  const points = pointsData?.points || {}
   const lastWatched = lastWatchedData?.progress || {}
   const purchases = purchasesData?.purchases || []
 
@@ -584,11 +550,9 @@ export default function Home() {
     }
   }
 
-  const isLoading = pointsLoading || purchasesLoading
+  const isLoading = purchasesLoading
 
   const progressPercent = overall.total > 0 ? Math.round((overall.completed / overall.total) * 100) : 0
-  const streak = user?.streak || 0
-  const todayPoints = points.daily || 0
 
   const staticCards = [
     { to: '/free-courses', icon: BookOpen, label: 'Free Courses', accent: '#2DD4BF', delay: 0.12 },
@@ -606,8 +570,6 @@ export default function Home() {
       <WelcomeHero
         user={user}
         isLoading={isLoading}
-        streak={streak}
-        todayPoints={todayPoints}
         progressPercent={progressPercent}
       />
 
