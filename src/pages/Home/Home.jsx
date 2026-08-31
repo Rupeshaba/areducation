@@ -17,16 +17,16 @@ import { getRecentQuizzes } from '../../utils/quizCache'
 /* ═══════════════════════════════════════════════════════════════════════
    AR Education — Home
    Built around the app's "Indigo Aurora" system: indigo primary with
-   mint + amber accents over a deep, softly-lit dark canvas.
+   mint + amber accents over a clean, light canvas.
    ═══════════════════════════════════════════════════════════════════════ */
 
 /* ── Shimmer placeholder ─────────────────────────────────────────────── */
 function Shimmer({ className = '' }) {
   return (
-    <div className={`rounded-2xl relative overflow-hidden bg-white/[0.04] ${className}`}>
+    <div className={`rounded-2xl relative overflow-hidden bg-gray-100 ${className}`}>
       <div
         className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite]"
-        style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)' }}
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(0,0,0,0.05), transparent)' }}
       />
     </div>
   )
@@ -35,7 +35,7 @@ function Shimmer({ className = '' }) {
 /* ── Brand logo fallback (for thumbnails that fail to load) ──────────── */
 function LogoFallback() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-dark-700">
+    <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
       <img src={APP_LOGO_URL} alt="" className="w-1/3 h-1/3 object-contain opacity-25 grayscale" />
     </div>
   )
@@ -86,7 +86,7 @@ function HeroSlider() {
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="relative w-full aspect-[16/8] rounded-3xl overflow-hidden border border-white/[0.07] bg-dark-700"
+      className="relative w-full aspect-[16/8] rounded-3xl overflow-hidden border border-gray-200 bg-gray-100"
     >
       <motion.div
         className="flex h-full cursor-grab active:cursor-grabbing"
@@ -171,7 +171,7 @@ function ProgressRing({ percent }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-lg font-black text-white leading-none">{percent}%</span>
+        <span className="text-lg font-black text-gray-900 leading-none">{percent}%</span>
       </div>
     </div>
   )
@@ -187,9 +187,9 @@ function StatCard({ icon: Icon, value, label, sublabel, color }) {
       <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-1.5" style={{ background: `${color}22` }}>
         <Icon size={13} style={{ color }} />
       </div>
-      <div className="text-base font-black text-white leading-none truncate">{value}</div>
-      <div className="text-[10px] font-semibold text-white/70 mt-1 truncate">{label}</div>
-      {sublabel && <div className="text-[9px] text-white/40 mt-0.5 truncate">{sublabel}</div>}
+      <div className="text-base font-black text-gray-900 leading-none truncate">{value}</div>
+      <div className="text-[10px] font-semibold text-gray-600 mt-1 truncate">{label}</div>
+      {sublabel && <div className="text-[9px] text-gray-400 mt-0.5 truncate">{sublabel}</div>}
     </div>
   )
 }
@@ -227,12 +227,12 @@ function WelcomeHero({ user, isLoading, streak, todayPoints, progressPercent }) 
 
       <div className="relative flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-white/[0.05] text-white/55 border border-white/[0.06]">
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-gray-100 text-gray-500 border border-gray-200">
             <Sparkles size={10} className="text-primary-400" />
             {greeting}
           </span>
 
-          <h1 className="text-2xl sm:text-4xl font-black text-white leading-tight tracking-tight mt-2.5 mb-1.5">
+          <h1 className="text-2xl sm:text-4xl font-black text-gray-900 leading-tight tracking-tight mt-2.5 mb-1.5">
             Hey,{' '}
             <span
               style={{
@@ -245,12 +245,12 @@ function WelcomeHero({ user, isLoading, streak, todayPoints, progressPercent }) 
             </span>{' '}
             <span className="inline-block animate-wave">👋</span>
           </h1>
-          <p className="text-xs text-white/45">Today is a great day to learn something new! ✨</p>
+          <p className="text-xs text-gray-500">Today is a great day to learn something new! ✨</p>
         </div>
 
         <div className="text-center flex-shrink-0">
           <ProgressRing percent={progressPercent} />
-          <p className="text-[9px] font-semibold uppercase tracking-wider text-white/40 mt-1.5 max-w-[90px] leading-snug">
+          <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-400 mt-1.5 max-w-[90px] leading-snug">
             Overall progress of your goal
           </p>
         </div>
@@ -280,11 +280,11 @@ function ContinueLearning({ item, title, to, videoPercent }) {
         >
           <div className="flex items-stretch gap-2.5 p-2">
             {/* thumbnail */}
-            <div className="relative w-20 sm:w-28 aspect-video rounded-xl overflow-hidden flex-shrink-0 bg-dark-700">
+            <div className="relative w-20 sm:w-28 aspect-video rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
               <CardThumbnail item={item} alt={title} fallback={<LogoFallback />} />
               <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
                 <div className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                  <Play size={13} className="text-dark-900 ml-0.5" fill="currentColor" />
+                  <Play size={13} className="text-gray-800 ml-0.5" fill="currentColor" />
                 </div>
               </div>
             </div>
@@ -294,19 +294,19 @@ function ContinueLearning({ item, title, to, videoPercent }) {
               <span className="text-[9px] font-bold uppercase tracking-wider text-primary-300 mb-0.5">
                 Continue learning
               </span>
-              <h3 className="text-[13px] sm:text-sm font-bold text-white leading-snug line-clamp-1">
+              <h3 className="text-[13px] sm:text-sm font-bold text-gray-900 leading-snug line-clamp-1">
                 {title || 'Resume your last lesson'}
               </h3>
 
               {videoPercent > 0 && (
                 <div className="flex items-center gap-2 mt-1.5">
-                  <div className="h-1 flex-1 rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-1 flex-1 rounded-full bg-gray-200 overflow-hidden">
                     <div
                       className="h-full rounded-full"
                       style={{ width: `${videoPercent}%`, background: 'linear-gradient(90deg, #6D5EF5, #2DD4BF)' }}
                     />
                   </div>
-                  <span className="text-[9px] font-semibold text-white/50 flex-shrink-0">{videoPercent}% completed</span>
+                  <span className="text-[9px] font-semibold text-gray-500 flex-shrink-0">{videoPercent}% completed</span>
                 </div>
               )}
 
@@ -338,7 +338,7 @@ function QuickAccessCard({ to, icon: Icon, label, accent, delay }) {
           <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${accent}22` }}>
             <Icon size={15} style={{ color: accent }} />
           </div>
-          <h3 className="text-[10.5px] font-bold text-white leading-tight truncate w-full">{label}</h3>
+          <h3 className="text-[10.5px] font-bold text-gray-900 leading-tight truncate w-full">{label}</h3>
         </div>
       </Link>
     </motion.div>
@@ -350,9 +350,9 @@ function ScrollRow({ icon: Icon, title, count, seeAllTo, children }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-white/45 flex items-center gap-1.5">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
           <Icon size={13} className="text-primary-400" />
-          {title} {count > 0 && <span className="text-white/30">({count})</span>}
+          {title} {count > 0 && <span className="text-gray-400">({count})</span>}
         </h3>
         {seeAllTo && (
           <Link to={seeAllTo} className="text-xs font-semibold text-primary-400 hover:text-primary-300 transition-colors">
@@ -388,8 +388,8 @@ function WatchHistoryCard({ item, index }) {
       style={{ scrollSnapAlign: 'start' }}
     >
       <Link to={itemUrl} className="block group">
-        <div className="rounded-xl overflow-hidden border border-white/[0.08] bg-white/[0.02]">
-          <div className="relative aspect-video bg-dark-700">
+        <div className="rounded-xl overflow-hidden border border-gray-200 bg-white">
+          <div className="relative aspect-video bg-gray-100">
             <CardThumbnail item={item} alt={item.title} fallback={<LogoFallback />} />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
@@ -405,13 +405,13 @@ function WatchHistoryCard({ item, index }) {
 
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
               <div className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center">
-                {isPdf ? <FileText size={12} className="text-dark-900" /> : <Play size={12} className="text-dark-900 ml-0.5" fill="currentColor" />}
+                {isPdf ? <FileText size={12} className="text-gray-800" /> : <Play size={12} className="text-gray-800 ml-0.5" fill="currentColor" />}
               </div>
             </div>
           </div>
 
           <div className="p-1.5">
-            <p className="text-[10px] font-bold text-white line-clamp-1 leading-snug">
+            <p className="text-[10px] font-bold text-gray-900 line-clamp-1 leading-snug">
               {item.title || 'Untitled Lesson'}
             </p>
           </div>
@@ -454,14 +454,14 @@ function QuizHistoryCard({ entry, index }) {
           </div>
 
           <div>
-            <p className="text-[10px] font-bold text-white line-clamp-1 leading-snug mb-1">
+            <p className="text-[10px] font-bold text-gray-900 line-clamp-1 leading-snug mb-1">
               {entry.quizName}
             </p>
             <div className="flex items-center justify-between">
               <span className="text-[8px] font-extrabold uppercase tracking-wider px-1 py-0.5 rounded bg-primary-500/25 text-primary-200">
                 {attemptsCount}x
               </span>
-              <RotateCcw size={10} className="text-white/30 group-hover:text-primary-300 transition-colors" />
+              <RotateCcw size={10} className="text-gray-400 group-hover:text-primary-300 transition-colors" />
             </div>
           </div>
         </div>
@@ -477,13 +477,13 @@ function EmptyState() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3, duration: 0.5 }}
-      className="rounded-3xl border border-white/[0.07] bg-white/[0.02] p-6 text-center"
+      className="rounded-3xl border border-gray-200 bg-white p-6 text-center"
     >
       <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-primary-500/15 border border-primary-500/25 mb-3">
         <GraduationCap size={22} className="text-primary-400" />
       </div>
-      <h3 className="text-base font-bold text-white mb-1">Start your journey</h3>
-      <p className="text-xs text-white/50 mb-4 max-w-xs mx-auto leading-relaxed">
+      <h3 className="text-base font-bold text-gray-900 mb-1">Start your journey</h3>
+      <p className="text-xs text-gray-500 mb-4 max-w-xs mx-auto leading-relaxed">
         Your recent lessons and quizzes will show up here. Pick a course to get going.
       </p>
       <Link to="/free-courses" className="btn-primary inline-flex items-center gap-1.5 text-sm">
@@ -622,7 +622,7 @@ export default function Home() {
 
       {/* Quick access */}
       <div>
-        <h3 className="text-xs font-bold uppercase tracking-wider text-white/45 mb-2.5">Quick Access</h3>
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2.5">Quick Access</h3>
         <div className="grid grid-cols-4 gap-2">
           {staticCards.map((card, i) => (
             <QuickAccessCard key={i} {...card} />
