@@ -18,15 +18,15 @@ function CourseCard({ course, isPurchased, onBuy, purchaseStatus }) {
         animate={{ opacity: 1, y: 0 }}
         className="card overflow-hidden h-full flex flex-col"
       >
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
-          <h2 className="font-bold text-white">{course.name}</h2>
-          <button onClick={() => setShowDetail(false)} className="text-gray-400 hover:text-white">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
+          <h2 className="font-bold text-gray-900">{course.name}</h2>
+          <button onClick={() => setShowDetail(false)} className="text-gray-400 hover:text-gray-900">
             <ExternalLink size={16} />
           </button>
         </div>
         
         <div className="flex-1 mb-4">
-          <p className="text-sm text-gray-300 mb-4">{course.description}</p>
+          <p className="text-sm text-gray-600 mb-4">{course.description}</p>
           
           {course.subjects?.length > 0 && (
             <div className="mb-4">
@@ -170,45 +170,45 @@ export default function Store() {
   if (step === 'payment' && selectedCourse) {
     return (
       <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold text-white mb-6">Complete Payment</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Complete Payment</h1>
         <div className="card mb-4">
-          <div className="font-semibold text-white mb-1">{selectedCourse.name}</div>
-          <div className="text-2xl font-bold text-primary-400">₹{selectedCourse.price}</div>
+          <div className="font-semibold text-gray-900 mb-1">{selectedCourse.name}</div>
+          <div className="text-2xl font-bold text-primary-600">₹{selectedCourse.price}</div>
         </div>
 
         <div className="card mb-4 text-center">
-          <div className="flex items-center gap-2 justify-center text-gray-400 mb-3">
+          <div className="flex items-center gap-2 justify-center text-gray-500 mb-3">
             <QrCode size={18} /> Scan to Pay
           </div>
           {settings.qrCodeUrl ? (
             <img src={settings.qrCodeUrl} alt="QR Code" className="w-52 h-52 mx-auto rounded-xl object-contain" />
           ) : (
-            <div className="w-52 h-52 mx-auto bg-dark-700 rounded-xl flex items-center justify-center text-gray-500 text-sm">
+            <div className="w-52 h-52 mx-auto bg-gray-100 border border-gray-200 rounded-xl flex items-center justify-center text-gray-500 text-sm">
               QR not set
             </div>
           )}
           {settings.upiId && (
-            <div className="mt-3 text-sm text-gray-400">
-              UPI: <span className="text-white font-mono">{settings.upiId}</span>
+            <div className="mt-3 text-sm text-gray-500">
+              UPI: <span className="text-gray-900 font-mono">{settings.upiId}</span>
             </div>
           )}
         </div>
 
         <div className="card space-y-3">
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">Transaction ID (optional)</label>
+            <label className="text-xs text-gray-500 mb-1 block">Transaction ID (optional)</label>
             <input value={txnId} onChange={e => setTxnId(e.target.value)} placeholder="UTR / Transaction ID" className="input-field" />
           </div>
           <div>
-            <label className="text-xs text-gray-400 mb-1 block">Payment Screenshot <span className="text-red-400">*</span></label>
+            <label className="text-xs text-gray-500 mb-1 block">Payment Screenshot <span className="text-red-500">*</span></label>
             <label className={`flex items-center gap-2 input-field cursor-pointer hover:border-primary-500/50 transition-all ${!file && 'border-dashed'}`}>
               <Upload size={15} className="text-gray-500 flex-shrink-0" />
-              <span className={`text-sm truncate ${file ? 'text-white' : 'text-gray-500'}`}>
+              <span className={`text-sm truncate ${file ? 'text-gray-900' : 'text-gray-500'}`}>
                 {file ? file.name : 'Click to upload screenshot'}
               </span>
               <input type="file" accept="image/*" onChange={e => setFile(e.target.files[0])} className="hidden" />
             </label>
-            <p className="text-xs text-gray-600 mt-1">Screenshot is required for verification</p>
+            <p className="text-xs text-gray-500 mt-1">Screenshot is required for verification</p>
           </div>
           <button
             onClick={() => submitPayment.mutate()}
@@ -230,7 +230,7 @@ export default function Store() {
           <ShoppingBag size={20} className="text-primary-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white">Store</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Store</h1>
           <p className="text-gray-500 text-sm">Unlock premium courses</p>
         </div>
       </div>
