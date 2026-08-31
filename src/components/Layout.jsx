@@ -57,7 +57,7 @@ function Badge({ count, position = 'sidebar' }) {
     )
   }
   return (
-    <span className="absolute -top-1 -right-1 bg-danger-500 text-white text-[9px] font-bold min-w-[16px] h-4 px-0.5 rounded-full flex items-center justify-center leading-none ring-2 ring-dark-900">
+    <span className="absolute -top-1 -right-1 bg-danger-500 text-white text-[9px] font-bold min-w-[16px] h-4 px-0.5 rounded-full flex items-center justify-center leading-none ring-2 ring-white">
       {label}
     </span>
   )
@@ -71,7 +71,7 @@ function RichNotificationPopup({ notif, onClose }) {
       initial={{ opacity: 0, y: -40, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -20, scale: 0.95 }}
-      className="fixed top-4 right-4 z-[999] max-w-sm w-full bg-dark-800 border border-primary-500/30 rounded-2xl shadow-2xl shadow-primary-500/10 overflow-hidden"
+      className="fixed top-4 right-4 z-[999] max-w-sm w-full bg-white border border-primary-500/30 rounded-2xl shadow-2xl shadow-primary-500/10 overflow-hidden"
     >
       {notif.imageUrl && (
         <img src={notif.imageUrl} alt="" className="w-full h-32 object-cover" />
@@ -79,27 +79,27 @@ function RichNotificationPopup({ notif, onClose }) {
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
-            {notif.title && <div className="font-bold text-white mb-1">{notif.title}</div>}
+            {notif.title && <div className="font-bold text-gray-900 mb-1">{notif.title}</div>}
             {notif.richContent ? (
               <div
-                className="text-sm text-gray-300"
+                className="text-sm text-gray-600"
                 dangerouslySetInnerHTML={{ __html: notif.richContent }}
               />
             ) : (
-              <div className="text-sm text-gray-300">{notif.message}</div>
+              <div className="text-sm text-gray-600">{notif.message}</div>
             )}
             {notif.linkUrl && (
               <a
                 href={notif.linkUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-block text-xs text-primary-400 hover:text-primary-300 underline"
+                className="mt-2 inline-block text-xs text-primary-600 hover:text-primary-700 underline"
               >
                 {notif.linkText || 'Open Link'}
               </a>
             )}
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white flex-shrink-0 mt-0.5">
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-900 flex-shrink-0 mt-0.5">
             <X size={16} />
           </button>
         </div>
@@ -280,7 +280,7 @@ export default function Layout() {
   const chatUnread = chatCountData?.unreadCount || 0
 
   return (
-    <div className="flex h-screen overflow-hidden bg-dark-900">
+    <div className="flex h-screen overflow-hidden bg-[#F7F8FC]">
       <AnimatePresence>
         {popupNotif && (
           <RichNotificationPopup notif={popupNotif} onClose={() => setPopupNotif(null)} />
@@ -299,7 +299,7 @@ export default function Layout() {
       {!hideSidebar && (
         <aside className={`
           fixed lg:hidden inset-y-0 left-0 z-40 w-72 flex flex-col
-          bg-dark-800 border-r border-white/[0.06]
+          bg-white border-r border-gray-200
           transform transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}>
@@ -316,14 +316,14 @@ export default function Layout() {
                     <Zap size={17} className="text-white" fill="white" />
                   </div>
                 )}
-                <span className="font-bold text-white text-[15px] tracking-tight">AR Education</span>
+                <span className="font-bold text-gray-900 text-[15px] tracking-tight">AR Education</span>
               </Link>
-              <button className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-white/5" onClick={() => setSidebarOpen(false)}>
+              <button className="text-gray-500 hover:text-gray-900 p-1.5 rounded-lg hover:bg-gray-100" onClick={() => setSidebarOpen(false)}>
                 <X size={18} />
               </button>
             </div>
 
-            <div className="relative flex items-center gap-3 p-3 rounded-2xl bg-white/[0.04] border border-white/[0.06]">
+            <div className="relative flex items-center gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-200">
               {user?.avatarUrl ? (
                 <img src={user.avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover ring-2 ring-primary-500/30" />
               ) : (
@@ -349,7 +349,7 @@ export default function Layout() {
                 onClick={() => setSidebarOpen(false)}
                 className={({ isActive }) => `
                   relative flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all
-                  ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'}
+                  ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}
                 `}
               >
                 {({ isActive }) => (
@@ -368,7 +368,7 @@ export default function Layout() {
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => `
                 relative flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all
-                ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'}
+                ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}
               `}
             >
               {({ isActive }) => (
@@ -382,15 +382,15 @@ export default function Layout() {
             </NavLink>
           </nav>
 
-          <div className="px-3 pb-5 space-y-0.5 border-t border-white/[0.06] pt-3">
+          <div className="px-3 pb-5 space-y-0.5 border-t border-gray-200 pt-3">
             <NavLink to="/notifications" onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) => `flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all relative ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'}`}>
+              className={({ isActive }) => `flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all relative ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}>
               <Bell size={17} />
               Notifications
               <Badge count={unreadCount} position="sidebar" />
             </NavLink>
             <NavLink to="/profile" onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) => `flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'}`}>
+              className={({ isActive }) => `flex items-center gap-3 pl-4 pr-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive ? 'bg-primary-500/12 text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`}>
               <User size={17} />Profile
             </NavLink>
             <button onClick={handleLogout}
@@ -404,8 +404,8 @@ export default function Layout() {
       {/* ── DESKTOP PERMANENT SIDEBAR ────────────────────────────────────────── */}
       {!hideSidebar && (
         <aside className="hidden lg:flex fixed inset-y-0 left-0 z-30 w-[248px] flex-col
-          bg-dark-800/70 backdrop-blur-2xl border-r border-white/[0.06]">
-          <Link to="/" className="flex items-center gap-3 px-5 h-20 border-b border-white/[0.06]">
+          bg-white/80 backdrop-blur-2xl border-r border-gray-200">
+          <Link to="/" className="flex items-center gap-3 px-5 h-20 border-b border-gray-200">
             {logoUrl ? (
               <img src={logoUrl} alt="Logo" className="w-9 h-9 rounded-xl object-cover" />
             ) : (
@@ -414,7 +414,7 @@ export default function Layout() {
                 <Zap size={17} className="text-white" fill="white" />
               </div>
             )}
-            <span className="font-bold text-white text-[15px] tracking-tight">AR Education</span>
+            <span className="font-bold text-gray-900 text-[15px] tracking-tight">AR Education</span>
           </Link>
 
           <nav className="flex-1 overflow-y-auto px-3.5 py-5 space-y-1">
@@ -426,7 +426,7 @@ export default function Layout() {
                 end={exact}
                 className={({ isActive }) => `
                   relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                  ${isActive ? 'text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'}
+                  ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}
                 `}
               >
                 {({ isActive }) => (
@@ -447,7 +447,7 @@ export default function Layout() {
               to="/doubt-chat"
               className={({ isActive }) => `
                 relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                ${isActive ? 'text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'}
+                ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}
               `}
             >
               {({ isActive }) => (
@@ -468,7 +468,7 @@ export default function Layout() {
               to="/notifications"
               className={({ isActive }) => `
                 relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                ${isActive ? 'text-white' : 'text-gray-400 hover:text-white hover:bg-white/[0.05]'}
+                ${isActive ? 'text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}
               `}
             >
               {({ isActive }) => (
@@ -487,9 +487,9 @@ export default function Layout() {
           </nav>
 
           {/* Bottom: profile + logout */}
-          <div className="p-3.5 border-t border-white/[0.06] space-y-1">
+          <div className="p-3.5 border-t border-gray-200 space-y-1">
             <NavLink to="/profile" className={({ isActive }) =>
-              `flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm transition-all ${isActive ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'}`
+              `flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-sm transition-all ${isActive ? 'bg-gray-100' : 'hover:bg-gray-100'}`
             }>
               {user?.avatarUrl ? (
                 <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
@@ -500,7 +500,7 @@ export default function Layout() {
                 </div>
               )}
               <div className="min-w-0">
-                <p className="text-gray-200 text-sm font-medium truncate">{user?.name?.split(' ')[0] || 'Student'}</p>
+                <p className="text-gray-800 text-sm font-medium truncate">{user?.name?.split(' ')[0] || 'Student'}</p>
                 <p className="text-gray-500 text-[11px] truncate">View profile</p>
               </div>
             </NavLink>
@@ -517,8 +517,8 @@ export default function Layout() {
         {/* Mobile header */}
         {!hideSidebar && (
           <div className="lg:hidden sticky top-0 z-20 flex items-center justify-between px-4 h-16 rounded-b-2xl
-            bg-dark-800/90 backdrop-blur-2xl border-b border-white/[0.06] shadow-lg shadow-black/20">
-            <button onClick={() => setSidebarOpen(true)} className="text-gray-300 hover:text-white p-2 -ml-2 rounded-xl hover:bg-white/5">
+            bg-white/90 backdrop-blur-2xl border-b border-gray-200 shadow-lg shadow-black/20">
+            <button onClick={() => setSidebarOpen(true)} className="text-gray-500 hover:text-gray-900 p-2 -ml-2 rounded-xl hover:bg-gray-100">
               <Menu size={20} />
             </button>
             <Link to="/" className="flex items-center gap-2">
@@ -530,16 +530,16 @@ export default function Layout() {
                   <Zap size={15} className="text-white" fill="white" />
                 </div>
               )}
-              <span className="font-bold text-white text-sm tracking-tight">AR Education</span>
+              <span className="font-bold text-gray-900 text-sm tracking-tight">AR Education</span>
             </Link>
 
             {/* Mobile header: Doubt Chat + Bell icons with badges */}
             <div className="flex items-center gap-1">
-              <NavLink to="/doubt-chat" className="relative text-gray-300 hover:text-white p-2 rounded-xl hover:bg-white/5">
+              <NavLink to="/doubt-chat" className="relative text-gray-500 hover:text-gray-900 p-2 rounded-xl hover:bg-gray-100">
                 <MessageSquare size={19} />
                 <Badge count={chatUnread} position="icon" />
               </NavLink>
-              <NavLink to="/notifications" className="relative text-gray-300 hover:text-white p-2 rounded-xl hover:bg-white/5">
+              <NavLink to="/notifications" className="relative text-gray-500 hover:text-gray-900 p-2 rounded-xl hover:bg-gray-100">
                 <Bell size={19} />
                 <Badge count={unreadCount} position="icon" />
               </NavLink>
@@ -560,7 +560,7 @@ export default function Layout() {
       {/* ── MOBILE BOTTOM TAB BAR (enhanced with glow) ──────────────────────── */}
       {!hideSidebar && (
         <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 flex items-stretch justify-around
-          rounded-t-[28px] bg-dark-800/95 backdrop-blur-2xl border-t border-x border-white/[0.08] shadow-2xl shadow-black/40 pt-2 px-2"
+          rounded-t-[28px] bg-white/95 backdrop-blur-2xl border-t border-x border-gray-200 shadow-2xl shadow-black/40 pt-2 px-2"
           style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}>
           {BOTTOM_NAV.map(({ to, icon: Icon, label, exact }) => (
             <NavLink
