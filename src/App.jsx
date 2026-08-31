@@ -22,7 +22,6 @@ import QuizPlay from "./pages/Quiz/QuizPlay"
 import QuizResult from "./pages/Quiz/QuizResult"
 import QuizAnalysis from "./pages/Quiz/QuizAnalysis"
 import QuizPractice from "./pages/Quiz/QuizPractice"
-import Leaderboard from "./pages/Quiz/Leaderboard"
 import Progress from "./pages/Progress/Progress"
 import DoubtChat from "./pages/DoubtChat/DoubtChat"
 import FreeCourses from "./pages/FreeCourses/FreeCourses"
@@ -73,7 +72,6 @@ function App() {
             <Route path="/free-courses" element={<FreeCourses />} />
             <Route path="/books" element={<Books />} />
             <Route path="/watch-history" element={<WatchHistory />} />
-            <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="/my-courses" element={<MyCourses />} />
             <Route path="/courses/:courseId/subjects" element={<Subjects />} />
             <Route path="/courses/:courseId/subjects/:subjectId" element={<SubjectDetail />} />
