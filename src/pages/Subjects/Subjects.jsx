@@ -1,248 +1,153 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import {
-  BookOpen, AlertCircle, GraduationCap,
-  Layers, Sparkles, ArrowRight, CheckCircle
-} from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { BookOpen, Play, Clock, ShoppingBag, ChevronRight, Calendar, CheckCircle, TrendingUp } from 'lucide-react'
 import api from '../../api/axios'
 import { useCoursesProgress } from '../../hooks/useCoursesProgress'
 import CardThumbnail from '../../components/CardThumbnail'
 
-/* ═══ SHIMMER ═══ */
-function Shimmer({ className = '' }) {
-  return (
-    <div
-      className={`rounded-lg ${className}`}
-      style={{ background: 'rgba(255,255,255,0.05)', animation: 'shimmerPulse 1.8s ease-in-out infinite' }}
-    />
-  )
-}
-
-function ShimmerCard() {
-  return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-      <Shimmer className="w-full aspect-[16/9]" style={{ borderRadius: 0 }} />
-      <div className="p-3 space-y-2">
-        <Shimmer className="h-4 w-4/5 rounded" />
-        <Shimmer className="h-3 w-3/5 rounded" />
-      </div>
-    </div>
-  )
-}
-
-/* ═══ SUBJECT CARD ═══ */
-function SubjectCard({ subject, courseId, index, subjectProgress }) {
-  const accent = subject.color || '#6366f1'
-  const progress = subjectProgress?.[subject.id] || { completed: 0, total: 0 }
-  const progressPct = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.07, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-    >
-      <Link
-        to={`/courses/${courseId}/subjects/${subject.id}`}
-        className="group relative flex flex-col overflow-hidden rounded-2xl h-full aspect-[4/5] transition-all duration-300 hover:scale-[1.02]"
-        style={{ border: '1px solid rgba(255,255,255,0.07)' }}
-      >
-        {/* Thumbnail fills the entire card */}
-        <CardThumbnail
-          item={subject}
-          alt={subject.name}
-          className="group-hover:scale-105 transition-transform duration-600 ease-out"
-          fallback={
-            <div className="absolute inset-0 flex items-center justify-center"
-              style={{ background: `linear-gradient(135deg, ${accent}12, ${accent}06)` }}>
-              {subject.icon && subject.icon.length <= 2 ? (
-                <span className="text-4xl">{subject.icon}</span>
-              ) : (
-                <GraduationCap size={36} style={{ color: accent, opacity: 0.3 }} />
-              )}
-            </div>
-          }
-        />
-        {/* Gradient so the text stays readable over the image */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
-
-        {/* Left accent bar */}
-        <div
-          className="absolute left-0 top-0 bottom-0 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-400 z-10"
-          style={{ background: `linear-gradient(to bottom, ${accent}, ${accent}44)` }}
-        />
-
-        {/* Progress Circle Overlay */}
-        {progress.total > 0 && (
-          <div className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-dark-900/80 backdrop-blur-sm border border-white/10 flex items-center justify-center z-10">
-            <svg className="w-7 h-7 -rotate-90" viewBox="0 0 20 20">
-              <circle cx="10" cy="10" r="8" stroke="rgba(255,255,255,0.1)" strokeWidth="2" fill="none" />
-              <circle
-                cx="10" cy="10" r="8"
-                stroke="#10b981"
-                strokeWidth="2"
-                fill="none"
-                strokeDasharray={`${2 * Math.PI * 8}`}
-                strokeDashoffset={`${2 * Math.PI * 8 * (1 - progressPct / 100)}`}
-                strokeLinecap="round"
-                className="transition-all duration-500"
-              />
-            </svg>
-            <span className="absolute text-[8px] font-bold text-white">{progressPct}%</span>
-          </div>
-        )}
-
-        {/* Content — pinned to the bottom, over the image */}
-        <div className="relative z-10 flex items-center justify-between gap-2 px-3 py-2.5 mt-auto">
-          <div className="min-w-0">
-            <h3 className="text-xs font-bold text-white line-clamp-1 transition-colors duration-200 drop-shadow-md">
-              {subject.name}
-            </h3>
-            {subject.description && (
-              <p className="text-[10px] mt-0.5 line-clamp-1 text-white/50">
-                {subject.description}
-              </p>
-            )}
-          </div>
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110 backdrop-blur-sm"
-            style={{ background: `${accent}30`, border: `1px solid ${accent}40` }}
-          >
-            <ArrowRight size={12} style={{ color: accent }} />
-          </div>
-        </div>
-      </Link>
-    </motion.div>
-  )
-}
-
-/* ═══ EMPTY STATE ═══ */
-function EmptyState() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center py-20 text-center"
-    >
-      <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-        <BookOpen size={28} className="text-white/20" />
-      </div>
-      <h3 className="text-base font-black text-white mb-1">No Subjects Yet</h3>
-      <p className="text-xs max-w-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.38)' }}>
-        This course is being prepared. Check back soon.
-      </p>
-    </motion.div>
-  )
-}
-
-/* ═══ ERROR STATE ═══ */
-function ErrorState({ onRetry }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center py-20 text-center"
-    >
-      <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-        style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)' }}>
-        <AlertCircle size={28} style={{ color: 'rgba(248,113,113,0.7)' }} />
-      </div>
-      <h3 className="text-base font-black text-white mb-1">Failed to Load</h3>
-      <p className="text-xs mb-6 max-w-xs leading-relaxed" style={{ color: 'rgba(255,255,255,0.38)' }}>
-        Something went wrong. Please try again.
-      </p>
-      <button
-        onClick={onRetry}
-        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-xs font-bold transition-all active:scale-95"
-        style={{ background: 'rgba(99,102,241,0.85)' }}
-      >
-        <Sparkles size={13} /> Try Again
-      </button>
-    </motion.div>
-  )
-}
-
-/* ═══ MAIN ═══ */
-export default function Subjects() {
-  const { courseId } = useParams()
-
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['course-subjects', courseId],
-    queryFn: () => api.get(`/courses/${courseId}/subjects`).then(r => r.data),
-    enabled: !!courseId,
+export default function MyCourses() {
+  const { data: purchasesData, isLoading: purchasesLoading } = useQuery({
+    queryKey: ['purchases'],
+    queryFn: () => api.get('/store/my-purchases').then(r => r.data),
     staleTime: 5 * 60 * 1000,
     gcTime: 24 * 60 * 60 * 1000,
-    retry: 2,
   })
+  const purchases = purchasesData?.purchases || []
 
-  const { subjectProgress } = useCoursesProgress(courseId)
+  // Progress for every purchased course, fetched in parallel and cached
+  // (persisted across reloads) — replaces the old sequential per-course
+  // backend loop that made this page slow to load.
+  const courseIds = purchases.map(p => p.courseId).filter(Boolean)
+  const { courseProgress, isLoading: progressLoading } = useCoursesProgress(courseIds)
 
-  const subjects = data?.subjects || []
+  const isLoading = purchasesLoading
+
+  if (isLoading) return (
+    <div className="flex justify-center py-20">
+      <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+
+  if (purchases.length === 0) return (
+    <div className="flex flex-col items-center py-20 gap-4 text-center max-w-sm mx-auto">
+      <div className="w-16 h-16 bg-primary-500/10 rounded-2xl flex items-center justify-center">
+        <BookOpen size={32} className="text-primary-400 opacity-50" />
+      </div>
+      <div>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">No Courses Yet</h2>
+        <p className="text-gray-600 text-sm">Visit the store to enroll in courses.</p>
+      </div>
+      <Link to="/store" className="btn-primary flex items-center gap-2">
+        <ShoppingBag size={16} /> Browse Courses
+      </Link>
+    </div>
+  )
 
   return (
-    <div className="max-w-2xl pb-12">
+    <div className="max-w-3xl">
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">My Courses</h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {purchases.map((purchase, i) => {
+          const course = purchase.courseDetails || {}
+          const courseId = course.id || course._id || purchase.courseId
+          const isFree = purchase.isFree || course.isFree
+          const daysLeft = (!isFree && purchase.expiresAt) ? Math.ceil((purchase.expiresAt - Date.now()) / 86400000) : null
+          const isExpired = daysLeft !== null && daysLeft <= 0
+          const isUrgent = daysLeft !== null && !isExpired && daysLeft <= 30
+          const isBlocked = !!purchase.blocked
+          const isLocked = isBlocked || isExpired
 
-      {/* ── HEADER ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className="flex items-center justify-between mb-5"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)' }}>
-            <Layers size={17} style={{ color: '#818cf8' }} />
-          </div>
-          <div>
-            <h1 className="text-lg font-black text-white leading-none">Subjects</h1>
-            <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.38)' }}>
-              Choose a subject to start
-            </p>
-          </div>
-        </div>
+          // Get progress from local cache (subject/content structure + local completion state)
+          const progress = courseProgress[courseId] || { completed: 0, total: 0 }
+          const progressPercent = progress.total > 0
+            ? Math.round((progress.completed / progress.total) * 100)
+            : 0
 
-        {!isLoading && subjects.length > 0 && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <BookOpen size={11} style={{ color: 'rgba(129,140,248,0.8)' }} />
-            <span className="text-[11px] font-bold" style={{ color: 'rgba(255,255,255,0.6)' }}>
-              {subjects.length} subjects
-            </span>
-          </div>
-        )}
-      </motion.div>
+          return (
+            <motion.div
+              key={purchase.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.06 }}
+            >
+              <div className="glass rounded-2xl overflow-hidden border border-white/5 hover:border-primary-500/25 transition-all group relative h-56">
+                {/* Thumbnail fills the entire card */}
+                <CardThumbnail
+                  item={course}
+                  alt={purchase.courseName}
+                  className="group-hover:scale-105 transition-transform duration-300"
+                  fallback={
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-primary-600/20 via-primary-500/10 to-primary-900/20">
+                      <BookOpen size={36} className="text-primary-500/40 mb-1" />
+                      <span className="text-primary-400/40 text-xs font-medium uppercase tracking-wider">Course</span>
+                    </div>
+                  }
+                />
+                {/* Gradient so the text stays readable over the image */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
 
-      {/* ── LOADING ── */}
-      {isLoading && (
-        <div className="grid grid-cols-2 gap-2.5">
-          {Array.from({ length: 6 }).map((_, i) => <ShimmerCard key={i} />)}
-        </div>
-      )}
+                {/* Free / Expiry / Blocked badge */}
+                {isBlocked ? (
+                  <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border bg-red-500/20 text-red-300 border-red-500/20">
+                    Blocked
+                  </div>
+                ) : isFree ? (
+                  <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border bg-emerald-500/20 text-emerald-300 border-emerald-500/20">
+                    FREE
+                  </div>
+                ) : daysLeft !== null && (
+                  <div className={`absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border
+                    ${isExpired
+                      ? 'bg-red-500/20 text-red-300 border-red-500/20'
+                      : isUrgent
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/20'
+                      : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/20'}`}>
+                    <Calendar size={10} />
+                    {isExpired ? 'Expired' : `${daysLeft}d left`}
+                  </div>
+                )}
 
-      {/* ── ERROR ── */}
-      {isError && <ErrorState onRetry={refetch} />}
+                {/* Text + actions pinned to the bottom, inside the card, over the image */}
+                <div className="absolute inset-x-0 bottom-0 p-4">
+                  <h3 className="font-bold text-white text-sm mb-2 line-clamp-2 leading-snug drop-shadow-md">
+                    {purchase.courseName}
+                  </h3>
 
-      {/* ── EMPTY ── */}
-      {!isLoading && !isError && subjects.length === 0 && <EmptyState />}
+                  {/* Progress Bar */}
+                  {progress.total > 0 && (
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between text-[10px] text-gray-300 mb-1">
+                        <span>Progress</span>
+                        <span>{progressPercent}%</span>
+                      </div>
+                      <div className="h-1.5 bg-white/15 rounded-full overflow-hidden">
+                        <div className="h-full bg-primary-500 rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
+                      </div>
+                    </div>
+                  )}
 
-      {/* ── GRID ── */}
-      {!isLoading && !isError && subjects.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-          {subjects.map((subject, i) => (
-            <SubjectCard key={subject.id} subject={subject} courseId={courseId} index={i} subjectProgress={subjectProgress} />
-          ))}
-        </div>
-      )}
+                  {isBlocked && purchase.blockReason && (
+                    <p className="text-[11px] text-red-300/90 mb-2 line-clamp-2">{purchase.blockReason}</p>
+                  )}
 
-      <style>{`
-        @keyframes shimmerPulse {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 0.9; }
-        }
-      `}</style>
+                  <Link
+                    to={`/courses/${courseId}/subjects`}
+                    onClick={(e) => { if (isLocked) e.preventDefault() }}
+                    className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-all
+                      ${isLocked
+                        ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed pointer-events-none'
+                        : 'bg-primary-500 hover:bg-primary-600 text-white active:scale-95'}`}
+                  >
+                    <Play size={14} /> {isBlocked ? 'Access Blocked' : 'Start Learning'}
+                    <ChevronRight size={14} />
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          )
+        })}
+      </div>
     </div>
   )
 }
