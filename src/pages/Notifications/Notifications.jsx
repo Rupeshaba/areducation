@@ -40,7 +40,7 @@ export default function Notifications() {
     <div className="max-w-2xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Notifications</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
           {unread > 0 && <p className="text-sm text-gray-500 mt-0.5">{unread} unread</p>}
         </div>
         <div className="flex gap-2">
@@ -50,7 +50,7 @@ export default function Notifications() {
             </button>
           )}
           {notifications.length > 0 && (
-            <button onClick={() => deleteAllNotif.mutate()} disabled={deleteAllNotif.isPending} className="btn-ghost text-sm flex items-center gap-1.5 text-red-400 hover:text-red-300">
+            <button onClick={() => deleteAllNotif.mutate()} disabled={deleteAllNotif.isPending} className="btn-ghost text-sm flex items-center gap-1.5 text-red-500 hover:text-red-600">
               <Trash2 size={14} /> Delete All
             </button>
           )}
@@ -72,26 +72,26 @@ export default function Notifications() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
-              className={`card flex items-start gap-3 transition-all ${!notif.read ? 'border-primary-500/20 bg-primary-500/3' : 'hover:border-white/10'}`}
+              className={`card flex items-start gap-3 transition-all ${!notif.read ? 'border-primary-500/25 bg-primary-500/5' : 'hover:border-gray-300'}`}
             >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${!notif.read ? 'bg-primary-500/20' : 'bg-white/5'}`}>
-                <Bell size={14} className={!notif.read ? 'text-primary-400' : 'text-gray-500'} />
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${!notif.read ? 'bg-primary-500/15' : 'bg-gray-100'}`}>
+                <Bell size={14} className={!notif.read ? 'text-primary-500' : 'text-gray-500'} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-white text-sm">{notif.title}</div>
-                {notif.message && <div className="text-gray-400 text-sm mt-0.5">{notif.message}</div>}
-                <div className="text-xs text-gray-600 mt-1">
+                <div className="font-semibold text-gray-900 text-sm">{notif.title}</div>
+                {notif.message && <div className="text-gray-500 text-sm mt-0.5">{notif.message}</div>}
+                <div className="text-xs text-gray-500 mt-1">
                   {formatDistanceToNow(notif.createdAt, { addSuffix: true })}
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
                 {!notif.read && (
-                  <button onClick={() => markRead.mutate(notif.id)} className="p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-primary-400 transition-colors">
+                  <button onClick={() => markRead.mutate(notif.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-primary-500 transition-colors">
                     <Check size={14} />
                   </button>
                 )}
                 {notif.personal && (
-                  <button onClick={() => deleteNotif.mutate(notif.id)} className="p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-red-400 transition-colors">
+                  <button onClick={() => deleteNotif.mutate(notif.id)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-red-500 transition-colors">
                     <Trash2 size={14} />
                   </button>
                 )}
