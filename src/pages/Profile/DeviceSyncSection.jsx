@@ -102,15 +102,15 @@ export default function DeviceSyncSection() {
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         onClick={() => setOpen(true)}
-        className="w-full flex items-center justify-between gap-3 p-4 rounded-2xl border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.06] transition-colors group"
+        className="w-full flex items-center justify-between gap-3 p-4 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 shadow-sm transition-colors group"
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary-500/20 flex items-center justify-center">
-            <QrCode size={18} className="text-primary-400" />
+          <div className="w-10 h-10 rounded-xl bg-primary-500/15 flex items-center justify-center">
+            <QrCode size={18} className="text-primary-500" />
           </div>
           <div className="flex flex-col items-start">
-            <span className="text-sm font-semibold text-white">Device Sync</span>
-            <span className="text-[10px] text-white/40">Add a new phone or laptop</span>
+            <span className="text-sm font-semibold text-gray-900">Device Sync</span>
+            <span className="text-[10px] text-gray-500">Add a new phone or laptop</span>
           </div>
         </div>
       </motion.button>
