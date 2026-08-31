@@ -64,13 +64,13 @@ export default function VerifyOTP() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
-        <div className="card border border-white/8 text-center">
+        <div className="card border border-gray-200 text-center">
           <div className="w-14 h-14 rounded-2xl bg-primary-500/15 flex items-center justify-center mx-auto mb-4">
-            <Mail size={24} className="text-primary-400" />
+            <Mail size={24} className="text-primary-500" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-1">Verify Email</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Verify Email</h1>
           <p className="text-gray-500 text-sm mb-1">Enter the 6-digit code sent to</p>
-          <p className="text-primary-400 text-sm font-medium mb-6">{email}</p>
+          <p className="text-primary-500 text-sm font-medium mb-6">{email}</p>
 
           <div className="flex justify-center gap-2 mb-6">
             {otp.map((digit, i) => (
@@ -83,8 +83,8 @@ export default function VerifyOTP() {
                 value={digit}
                 onChange={e => handleChange(i, e.target.value)}
                 onKeyDown={e => handleKeyDown(i, e)}
-                className="w-11 h-13 text-center text-xl font-bold bg-dark-700 border border-white/10 rounded-xl
-                           text-white focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                className="w-11 h-13 text-center text-xl font-bold bg-white border border-gray-300 rounded-xl
+                           text-gray-900 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
               />
             ))}
           </div>
@@ -102,7 +102,7 @@ export default function VerifyOTP() {
           <button
             onClick={() => resendMutation.mutate()}
             disabled={cooldown > 0 || resendMutation.isPending}
-            className="text-sm text-gray-400 hover:text-primary-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 mx-auto transition-colors"
+            className="text-sm text-gray-500 hover:text-primary-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 mx-auto transition-colors"
           >
             <RefreshCw size={14} />
             {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend OTP'}
