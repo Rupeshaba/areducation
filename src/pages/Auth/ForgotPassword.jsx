@@ -28,11 +28,11 @@ export default function ForgotPassword() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-sm">
-        <div className="card border border-white/8">
+        <div className="card border border-gray-200">
           <div className="w-12 h-12 rounded-2xl bg-primary-500/15 flex items-center justify-center mb-4">
-            <KeyRound size={22} className="text-primary-400" />
+            <KeyRound size={22} className="text-primary-500" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-1">Reset Password</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">Reset Password</h1>
           <p className="text-gray-500 text-sm mb-6">
             {step === 1 ? 'Enter your registered email' : 'Enter OTP and new password'}
           </p>
