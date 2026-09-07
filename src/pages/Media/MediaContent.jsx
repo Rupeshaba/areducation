@@ -11,7 +11,7 @@ import {
 import api from '../../api/axios'
 import { markContentCompleted, setLastPlayed, isContentCompleted } from '../../utils/progress'
 import PdfReader from '../../components/PdfReader'
-import { goFullscreenLandscape, exitFullscreenAndUnlock } from '../../utils/fullscreen'
+import { goFullscreenLandscape, exitFullscreenAndUnlock, useForcedLandscapeStyle } from '../../utils/fullscreen'
 import CardThumbnail from '../../components/CardThumbnail'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -99,6 +99,16 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
   const [skipFlash,    setSkipFlash]    = useState(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
+  // Rotates the player box with CSS when fullscreen + still portrait, so
+  // fullscreen always looks landscape immediately, not just on devices
+  // where screen.orientation.lock() actually works.
+  const forcedLandscapeStyle = useForcedLandscapeStyle(isFullscreen)
+
+  // Once the user has tapped play once, every later source swap (e.g.
+  // picking the next item in the playlist) should autoplay directly
+  // instead of showing the tap-to-play poster again.
+  const startedOnceRef = useRef(false)
+
   const url = content.url
 
   // Setup source (HLS or plain mp4) as soon as we mount so it's ready to play instantly on tap.
@@ -106,6 +116,7 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
     const video = videoRef.current
     if (!video || !url) return
     setError(null); setLoading(true); setLevels([]); setCurrentLevel(-1)
+    setCurrentTime(0); setDuration(0); setBuffered(0)
 
     if (isHLSURL(url)) {
       if (Hls.isSupported()) {
@@ -184,6 +195,9 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
           v.currentTime = pos
         }
       }
+      // Switching to this video from the playlist (user already started
+      // playback once) — play it right away, no second tap needed.
+      if (startedOnceRef.current) v.play().catch(() => {})
     }
 
     v.addEventListener('timeupdate', onTime)
@@ -238,6 +252,7 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
 
   const handleStart = () => {
     setStarted(true)
+    startedOnceRef.current = true
     const v = videoRef.current
     v?.play().catch(() => {})
   }
@@ -316,7 +331,8 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
   return (
     <div
       ref={containerRef}
-      className={isFullscreen ? 'fixed inset-0 bg-black z-[100]' : 'relative w-full aspect-video bg-black overflow-hidden rounded-2xl'}
+      className={isFullscreen ? `bg-black z-[100] ${forcedLandscapeStyle ? '' : 'fixed inset-0'}` : 'relative w-full aspect-video bg-black overflow-hidden rounded-2xl'}
+      style={isFullscreen ? forcedLandscapeStyle || undefined : undefined}
     >
       <div
         className="absolute inset-0 select-none touch-none"
@@ -446,7 +462,10 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
           </div>
         )}
 
-        <BackIcon onClick={isFullscreen ? toggleFullscreen : onBack} visible={!started || showCtrl} />
+        {/* Back icon only makes sense here in fullscreen (to drop back to
+            inline) — otherwise the header above the player already has a
+            back button, so we don't duplicate it on top of the video. */}
+        {isFullscreen && <BackIcon onClick={toggleFullscreen} visible={showCtrl} />}
 
         <style>{`
           .mc-btn { width:32px; height:32px; display:flex; align-items:center; justify-content:center; color:white; border-radius:8px; transition:color .15s,transform .1s,background .15s; flex-shrink:0; }
@@ -499,6 +518,8 @@ function YouTubeStage({ content, onBack, contentId, onEnded }) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showCtrl, setShowCtrl] = useState(true)
   const hideTimer = useRef(null)
+
+  const forcedLandscapeStyle = useForcedLandscapeStyle(isFullscreen)
 
   useEffect(() => {
     const onFS = () => {
@@ -603,7 +624,6 @@ function YouTubeStage({ content, onBack, contentId, onEnded }) {
       <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden flex flex-col items-center justify-center gap-2">
         <AlertTriangle size={28} className="text-danger-400" />
         <p className="text-gray-400 text-sm">YouTube URL parse nahi hua</p>
-        <BackIcon onClick={onBack} />
       </div>
     )
   }
@@ -611,7 +631,8 @@ function YouTubeStage({ content, onBack, contentId, onEnded }) {
   return (
     <div
       ref={containerRef}
-      className={isFullscreen ? 'fixed inset-0 bg-black z-[100]' : 'relative w-full aspect-video bg-black overflow-hidden rounded-2xl'}
+      className={isFullscreen ? `bg-black z-[100] ${forcedLandscapeStyle ? '' : 'fixed inset-0'}` : 'relative w-full aspect-video bg-black overflow-hidden rounded-2xl'}
+      style={isFullscreen ? forcedLandscapeStyle || undefined : undefined}
       onMouseMove={() => started && resetHide()}
       onTouchStart={() => started && resetHide()}
     >
@@ -646,7 +667,9 @@ function YouTubeStage({ content, onBack, contentId, onEnded }) {
           </button>
         </>
       )}
-      <BackIcon onClick={isFullscreen ? toggleFullscreen : onBack} visible={!started || showCtrl} />
+      {/* Same rule as the native player: back icon shown only to exit
+          fullscreen — the header above already has the real back button. */}
+      {isFullscreen && <BackIcon onClick={toggleFullscreen} visible={showCtrl} />}
     </div>
   )
 }
@@ -683,8 +706,8 @@ function PlaylistItem({ item, isActive, onClick }) {
     <button
       data-content-id={item.id}
       onClick={onClick}
-      className={`w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition-all duration-300 ${
-        isActive ? 'ring-2 ring-primary-500/70' : ''
+      className={`w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition-all duration-300 active:scale-[0.98] ${
+        isActive ? 'ring-2 ring-primary-500/70' : 'hover:border-primary-500/30 hover:bg-white'
       }`}
       style={{
         background: isActive ? 'rgba(99,102,241,0.08)' : '#F7F8FC',
@@ -856,13 +879,15 @@ export default function MediaContent() {
     navigate(backUrl, { replace: true })
   }, [navigate, backUrl])
 
-  // Switch which content is playing without a full page reload — replaces
-  // the URL so back-navigation still lands on the subject page, not on
-  // every video visited along the way.
+  // Switch which content is playing without a full page reload. Always the
+  // flat /content/:contentId route (chapterId only ever as a query param)
+  // so this is the same <Route> match as before — React Router just swaps
+  // params instead of unmounting/remounting MediaContent, which is what
+  // used to make tapping a playlist item look like a page refresh.
   const playItem = useCallback((item) => {
     const targetChapterId = item._chapterId ?? null
     const url = targetChapterId
-      ? `/courses/${courseId}/subjects/${subjectId}/chapters/${targetChapterId}/content/${item.id}?chapterId=${targetChapterId}`
+      ? `/courses/${courseId}/subjects/${subjectId}/content/${item.id}?chapterId=${targetChapterId}`
       : `/courses/${courseId}/subjects/${subjectId}/content/${item.id}`
     navigate(url, { replace: true })
   }, [navigate, courseId, subjectId])
@@ -909,39 +934,54 @@ export default function MediaContent() {
 
   if (content.type === 'video' || content.type === 'hls') {
     return (
-      <div className="max-w-2xl">
-        {/* Header — simple back + title, page scrolls normally */}
-        <div className="flex items-center gap-3 mb-4">
-          <button onClick={handleBack} className="w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">
-            <ChevronLeft size={20} />
-          </button>
-          <h1 className="text-base font-bold text-gray-900 line-clamp-1">{content.title}</h1>
-        </div>
+      <div className="min-h-screen bg-[#F7F8FC]">
+        <div className="mx-auto w-full max-w-2xl">
+          {/* Sticky stage — header + player pin to the top of the viewport
+              as the page scrolls, so only the playlist underneath moves.
+              The player itself never scrolls. */}
+          <div className="sticky top-0 z-30 bg-[#F7F8FC]/95 backdrop-blur-md px-3 sm:px-4 pt-3 pb-3">
+            <div className="flex items-center gap-3 mb-3">
+              <button
+                onClick={handleBack}
+                className="w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 active:scale-90 transition-all"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <h1 className="text-base font-bold text-gray-900 line-clamp-1 flex-1">{content.title}</h1>
+            </div>
 
-        {/* Player */}
-        {isYT
-          ? <YouTubeStage content={content} onBack={handleBack} contentId={contentId} onEnded={handleEnded} />
-          : <NativeVideoStage content={content} onEnded={handleEnded} onBack={handleBack} contentId={contentId} />}
-
-        {/* Playlist — same subject's content, current item highlighted + auto-scrolled to */}
-        {videoPlaylist.length > 0 && (
-          <div className="mt-5">
-            <h2 className="text-sm font-black text-gray-900 mb-2.5 flex items-center gap-2">
-              <Video size={14} className="text-primary-500" />
-              Up next in this subject
-            </h2>
-            <div className="flex flex-col gap-2">
-              {videoPlaylist.map((item) => (
-                <PlaylistItem
-                  key={item.id}
-                  item={item}
-                  isActive={item.id === contentId}
-                  onClick={() => playItem(item)}
-                />
-              ))}
+            <div className="shadow-lg shadow-gray-900/5 rounded-2xl">
+              {isYT
+                ? <YouTubeStage content={content} onBack={handleBack} contentId={contentId} onEnded={handleEnded} />
+                : <NativeVideoStage content={content} onEnded={handleEnded} onBack={handleBack} contentId={contentId} />}
             </div>
           </div>
-        )}
+
+          {/* Playlist — same subject's content, current item highlighted +
+              auto-scrolled to. This is the only part of the page meant to
+              scroll past the pinned player above. */}
+          {videoPlaylist.length > 0 && (
+            <div className="px-3 sm:px-4 pb-24 pt-1">
+              <div className="flex items-center justify-between mb-2.5">
+                <h2 className="text-sm font-black text-gray-900 flex items-center gap-2">
+                  <Video size={14} className="text-primary-500" />
+                  Up next in this subject
+                </h2>
+                <span className="text-[11px] font-semibold text-gray-400">{videoPlaylist.length} videos</span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {videoPlaylist.map((item) => (
+                  <PlaylistItem
+                    key={item.id}
+                    item={item}
+                    isActive={item.id === contentId}
+                    onClick={() => playItem(item)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     )
   }
