@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { BookOpen, Play, Clock, ShoppingBag, ChevronRight, Calendar, CheckCircle, TrendingUp, AlertCircle, Zap } from 'lucide-react'
+import { BookOpen, Play, Clock, ShoppingBag, ChevronRight, Calendar, CheckCircle, TrendingUp, AlertCircle, Zap, Lock } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import { useCoursesProgress } from '../../hooks/useCoursesProgress'
 import CardThumbnail from '../../components/CardThumbnail'
+import { setLastOpenedCourse, getLastOpenedCourseTs } from '../../utils/progress'
 import { io } from 'socket.io-client'
 
 export default function MyCourses() {
@@ -147,6 +148,14 @@ export default function MyCourses() {
     }
   }, [refetchPurchases])
 
+  // Most recently opened course (via "Start Learning") floats to the top;
+  // courses never opened on this device keep their original order after that.
+  const sortedPurchases = [...purchases].sort((a, b) => {
+    const idA = a.courseDetails?.id || a.courseDetails?._id || a.courseId
+    const idB = b.courseDetails?.id || b.courseDetails?._id || b.courseId
+    return getLastOpenedCourseTs(idB) - getLastOpenedCourseTs(idA)
+  })
+
   const isLoading = purchasesLoading
 
   if (isLoading) return (
@@ -204,7 +213,7 @@ export default function MyCourses() {
       {/* Courses Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <AnimatePresence>
-          {purchases.map((purchase, i) => {
+          {sortedPurchases.map((purchase, i) => {
             const course = purchase.courseDetails || {}
             const courseId = course.id || course._id || purchase.courseId
             const isFree = purchase.isFree || course.isFree
@@ -231,52 +240,57 @@ export default function MyCourses() {
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ delay: i * 0.06 }}
               >
-                <div className="glass rounded-2xl overflow-hidden border border-white/5 hover:border-primary-500/25 transition-all group relative h-56">
-                  {/* Thumbnail */}
-                  <CardThumbnail
-                    item={course}
-                    alt={purchase.courseName}
-                    className="group-hover:scale-105 transition-transform duration-300"
+                <div className="rounded-2xl overflow-hidden bg-white border border-black/5 shadow-sm hover:shadow-md transition-all group flex flex-col">
+                  {/* Thumbnail — no overlay, full image visible */}
+                  <div className="relative w-full aspect-video bg-gray-100 flex-shrink-0">
+                    <CardThumbnail
+                      item={course}
+                      alt={purchase.courseName}
+                      className="group-hover:scale-105 transition-transform duration-300"
                     />
 
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
+                    {isLocked && (
+                      <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
+                        <Lock size={22} className="text-white/90" />
+                      </div>
+                    )}
 
-                  {/* Status Badge */}
-                  {isBlocked ? (
-                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border bg-red-500/20 text-red-300 border-red-500/20">
-                      <Zap size={10} /> Blocked
-                    </div>
-                  ) : isFree ? (
-                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border bg-emerald-500/20 text-emerald-300 border-emerald-500/20">
-                      FREE
-                    </div>
-                  ) : daysLeft !== null && (
-                    <div className={`absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border
-                      ${isExpired
-                        ? 'bg-red-500/20 text-red-300 border-red-500/20'
-                        : isUrgent
-                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/20'
-                        : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/20'}`}>
-                      <Calendar size={10} />
-                      {isExpired ? 'Expired' : `${daysLeft}d left`}
-                    </div>
-                  )}
+                    {/* Status Badge */}
+                    {isBlocked ? (
+                      <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border bg-red-500/20 text-red-100 border-red-500/30">
+                        <Zap size={10} /> Blocked
+                      </div>
+                    ) : isFree ? (
+                      <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border bg-emerald-500/20 text-emerald-100 border-emerald-500/30">
+                        FREE
+                      </div>
+                    ) : daysLeft !== null && (
+                      <div className={`absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border
+                        ${isExpired
+                          ? 'bg-red-500/20 text-red-100 border-red-500/30'
+                          : isUrgent
+                          ? 'bg-amber-500/20 text-amber-100 border-amber-500/30'
+                          : 'bg-emerald-500/20 text-emerald-100 border-emerald-500/30'}`}>
+                        <Calendar size={10} />
+                        {isExpired ? 'Expired' : `${daysLeft}d left`}
+                      </div>
+                    )}
+                  </div>
 
-                  {/* Content */}
-                  <div className="absolute inset-x-0 bottom-0 p-4">
-                    <h3 className="font-bold text-white text-sm mb-2 line-clamp-2 leading-snug drop-shadow-md">
+                  {/* Content — below thumbnail, on plain background */}
+                  <div className="p-4 flex flex-col flex-1">
+                    <h3 className="font-bold text-gray-900 text-sm mb-2 line-clamp-2 leading-snug">
                       {purchase.courseName}
                     </h3>
 
                     {/* Progress Bar */}
                     {progress.total > 0 && (
                       <div className="mb-3">
-                        <div className="flex items-center justify-between text-[10px] text-gray-300 mb-1">
+                        <div className="flex items-center justify-between text-[10px] text-gray-500 mb-1">
                           <span>Progress</span>
                           <span>{progressPercent}%</span>
                         </div>
-                        <div className="h-1.5 bg-white/15 rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                           <div className="h-full bg-primary-500 rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
                         </div>
                       </div>
@@ -284,16 +298,19 @@ export default function MyCourses() {
 
                     {/* Block Reason */}
                     {isBlocked && purchase.blockReason && (
-                      <p className="text-[11px] text-red-300/90 mb-2 line-clamp-2">{purchase.blockReason}</p>
+                      <p className="text-[11px] text-red-500 mb-2 line-clamp-2">{purchase.blockReason}</p>
                     )}
 
                     {/* CTA Button */}
                     <Link
                       to={`/courses/${courseId}/subjects`}
-                      onClick={(e) => { if (isLocked) e.preventDefault() }}
-                      className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-all
+                      onClick={(e) => {
+                        if (isLocked) { e.preventDefault(); return }
+                        setLastOpenedCourse(courseId)
+                      }}
+                      className={`mt-auto w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-all
                         ${isLocked
-                          ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed pointer-events-none'
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none'
                           : 'bg-primary-500 hover:bg-primary-600 text-white active:scale-95'}`}
                     >
                       <Play size={14} /> {isBlocked ? 'Access Blocked' : 'Start Learning'}
