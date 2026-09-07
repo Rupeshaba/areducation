@@ -23,7 +23,7 @@ import { getRecentQuizzes } from '../../utils/quizCache'
 /* ── Shimmer placeholder ─────────────────────────────────────────────── */
 function Shimmer({ className = '' }) {
   return (
-    <div className={`rounded-2xl relative overflow-hidden bg-slate-100 ${className}`}>
+    <div className={`rounded-2xl relative overflow-hidden bg-gray-100 ${className}`}>
       <div
         className="absolute inset-0 -translate-x-full animate-[shimmer_1.8s_infinite]"
         style={{ background: 'linear-gradient(90deg, transparent, rgba(0,0,0,0.05), transparent)' }}
@@ -35,7 +35,7 @@ function Shimmer({ className = '' }) {
 /* ── Brand logo fallback (for thumbnails that fail to load) ──────────── */
 function LogoFallback() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
+    <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
       <img src={APP_LOGO_URL} alt="" className="w-1/3 h-1/3 object-contain opacity-25 grayscale" />
     </div>
   )
@@ -86,7 +86,7 @@ function HeroSlider() {
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="relative w-full aspect-[16/8] rounded-3xl overflow-hidden border border-slate-200/80 bg-slate-100"
+      className="relative w-full aspect-[16/8] rounded-3xl overflow-hidden border border-gray-200 bg-gray-100"
     >
       <motion.div
         className="flex h-full cursor-grab active:cursor-grabbing"
@@ -156,11 +156,11 @@ function ProgressRing({ percent }) {
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
         <defs>
           <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#4F46E5" />
-            <stop offset="100%" stopColor="#8B5CF6" />
+            <stop offset="0%" stopColor="#6D5EF5" />
+            <stop offset="100%" stopColor="#2DD4BF" />
           </linearGradient>
         </defs>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#E2E8F0" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
         <motion.circle
           cx={size / 2} cy={size / 2} r={r} fill="none"
           stroke="url(#ringGradient)" strokeWidth={stroke} strokeLinecap="round"
@@ -171,7 +171,7 @@ function ProgressRing({ percent }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-lg font-black text-slate-900 leading-none">{percent}%</span>
+        <span className="text-lg font-black text-gray-900 leading-none">{percent}%</span>
       </div>
     </div>
   )
@@ -205,24 +205,30 @@ function WelcomeHero({ user, isLoading, progressPercent }) {
 
       <div className="relative flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-200/70">
-            <Sparkles size={10} className="text-amber-500 fill-amber-500" />
+          <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 border border-gray-200">
+            <Sparkles size={10} className="text-primary-400" />
             {greeting}
           </span>
 
-          <h1 className="text-2xl sm:text-4xl font-black text-slate-900 leading-tight tracking-tight mt-2.5 mb-1.5">
+          <h1 className="text-2xl sm:text-4xl font-black text-gray-900 leading-tight tracking-tight mt-2.5 mb-1.5">
             Hey,{' '}
-            <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 bg-clip-text text-transparent">
+            <span
+              style={{
+                background: 'linear-gradient(120deg, #8B7CFF 0%, #6D5EF5 45%, #2DD4BF 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
               {firstName}
             </span>{' '}
             <span className="inline-block animate-wave">👋</span>
           </h1>
-          <p className="text-xs text-slate-500 font-medium">Today is a great day to learn something new! ✨</p>
+          <p className="text-xs text-gray-600">Today is a great day to learn something new! ✨</p>
         </div>
 
         <div className="text-center flex-shrink-0">
           <ProgressRing percent={progressPercent} />
-          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mt-1.5 max-w-[90px] leading-snug">
+          <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-500 mt-1.5 max-w-[90px] leading-snug">
             Overall progress of your goal
           </p>
         </div>
@@ -240,41 +246,43 @@ function ContinueLearning({ item, title, to, videoPercent }) {
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
     >
       <Link to={to} className="block group">
-        <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200/80 shadow-sm
-          hover:border-indigo-400/80 hover:shadow-md hover:shadow-indigo-500/10 transition-all duration-200">
+        <div
+          className="relative overflow-hidden rounded-2xl border border-primary-500/25"
+          style={{ background: 'linear-gradient(120deg, rgba(109,94,245,0.18), rgba(45,212,191,0.06))' }}
+        >
           <div className="flex items-stretch gap-2.5 p-2">
             {/* thumbnail */}
-            <div className="relative w-20 sm:w-28 aspect-video rounded-xl overflow-hidden flex-shrink-0 bg-slate-100">
+            <div className="relative w-20 sm:w-28 aspect-video rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
               <CardThumbnail item={item} alt={title} fallback={<LogoFallback />} />
               <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
                 <div className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                  <Play size={13} className="text-slate-800 ml-0.5" fill="currentColor" />
+                  <Play size={13} className="text-gray-800 ml-0.5" fill="currentColor" />
                 </div>
               </div>
             </div>
 
             {/* copy */}
             <div className="flex flex-col justify-center min-w-0 flex-1 pr-1">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider text-indigo-600 mb-0.5">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-primary-300 mb-0.5">
                 Continue learning
               </span>
-              <h3 className="text-[13px] sm:text-sm font-bold text-slate-900 leading-snug line-clamp-1">
+              <h3 className="text-[13px] sm:text-sm font-bold text-gray-900 leading-snug line-clamp-1">
                 {title || 'Resume your last lesson'}
               </h3>
 
               {videoPercent > 0 && (
                 <div className="flex items-center gap-2 mt-1.5">
-                  <div className="h-1 flex-1 rounded-full bg-slate-200 overflow-hidden">
+                  <div className="h-1 flex-1 rounded-full bg-gray-200 overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-indigo-600 to-violet-500"
-                      style={{ width: `${videoPercent}%` }}
+                      className="h-full rounded-full"
+                      style={{ width: `${videoPercent}%`, background: 'linear-gradient(90deg, #6D5EF5, #2DD4BF)' }}
                     />
                   </div>
-                  <span className="text-[9px] font-semibold text-slate-500 flex-shrink-0">{videoPercent}% completed</span>
+                  <span className="text-[9px] font-semibold text-gray-600 flex-shrink-0">{videoPercent}% completed</span>
                 </div>
               )}
 
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-violet-600 mt-1.5 group-hover:gap-2 transition-all">
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-mint-400 mt-1.5 group-hover:gap-2 transition-all">
                 Resume Learning <ChevronRight size={12} />
               </span>
             </div>
@@ -295,12 +303,14 @@ function QuickAccessCard({ to, icon: Icon, label, accent, delay }) {
       className="min-w-0"
     >
       <Link to={to} className="block group">
-        <div className="rounded-2xl px-1.5 py-3 bg-white border border-slate-200/80 shadow-sm flex flex-col items-center gap-1.5 text-center
-          transition-all duration-300 hover:border-indigo-400/80 hover:shadow-md hover:shadow-indigo-500/10 group-hover:scale-[1.03] active:scale-[0.97]">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${accent}18` }}>
+        <div
+          className="rounded-2xl px-1.5 py-3 border flex flex-col items-center gap-1.5 text-center transition-all duration-300 group-hover:scale-[1.03] active:scale-[0.97]"
+          style={{ background: `${accent}12`, borderColor: `${accent}2e` }}
+        >
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${accent}22` }}>
             <Icon size={15} style={{ color: accent }} />
           </div>
-          <h3 className="text-[10.5px] font-bold text-slate-900 leading-tight truncate w-full">{label}</h3>
+          <h3 className="text-[10.5px] font-bold text-gray-900 leading-tight truncate w-full">{label}</h3>
         </div>
       </Link>
     </motion.div>
@@ -312,12 +322,12 @@ function ScrollRow({ icon: Icon, title, count, seeAllTo, children }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-          <Icon size={13} className="text-indigo-500" />
-          {title} {count > 0 && <span className="text-slate-400">({count})</span>}
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 flex items-center gap-1.5">
+          <Icon size={13} className="text-primary-400" />
+          {title} {count > 0 && <span className="text-gray-500">({count})</span>}
         </h3>
         {seeAllTo && (
-          <Link to={seeAllTo} className="text-xs font-bold text-indigo-600 hover:text-violet-600 transition-colors">
+          <Link to={seeAllTo} className="text-xs font-semibold text-primary-400 hover:text-primary-300 transition-colors">
             View all
           </Link>
         )}
@@ -350,29 +360,30 @@ function WatchHistoryCard({ item, index }) {
       style={{ scrollSnapAlign: 'start' }}
     >
       <Link to={itemUrl} className="block group">
-        <div className="rounded-xl overflow-hidden border border-slate-200/80 bg-white shadow-sm
-          hover:border-indigo-400/80 hover:shadow-md hover:shadow-indigo-500/10 transition-all duration-200">
-          <div className="relative aspect-video bg-slate-100">
+        <div className="rounded-xl overflow-hidden border border-gray-200 bg-white">
+          <div className="relative aspect-video bg-gray-100">
             <CardThumbnail item={item} alt={item.title} fallback={<LogoFallback />} />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
             <span
-              className={`absolute top-1 left-1 text-[7px] font-extrabold uppercase tracking-wider px-1 py-0.5 rounded text-white ${
-                isPdf ? 'bg-red-500/90' : 'bg-indigo-600/90'
-              }`}
+              className="absolute top-1 left-1 text-[7px] font-extrabold uppercase tracking-wider px-1 py-0.5 rounded"
+              style={{
+                background: isPdf ? 'rgba(255,92,92,0.9)' : 'rgba(109,94,245,0.9)',
+                color: 'white',
+              }}
             >
               {isPdf ? 'PDF' : 'Video'}
             </span>
 
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
               <div className="w-7 h-7 rounded-full bg-white/90 flex items-center justify-center">
-                {isPdf ? <FileText size={12} className="text-slate-800" /> : <Play size={12} className="text-slate-800 ml-0.5" fill="currentColor" />}
+                {isPdf ? <FileText size={12} className="text-gray-800" /> : <Play size={12} className="text-gray-800 ml-0.5" fill="currentColor" />}
               </div>
             </div>
           </div>
 
           <div className="p-1.5">
-            <p className="text-[10px] font-bold text-slate-900 line-clamp-1 leading-snug">
+            <p className="text-[10px] font-bold text-gray-900 line-clamp-1 leading-snug">
               {item.title || 'Untitled Lesson'}
             </p>
           </div>
@@ -387,7 +398,7 @@ function QuizHistoryCard({ entry, index }) {
   const latest = entry.attempts[0]
   const attemptsCount = entry.attempts.length
   const score = Math.round(latest.score)
-  const scoreColor = score >= 75 ? '#10B981' : score >= 50 ? '#F59E0B' : '#EF4444'
+  const scoreColor = score >= 75 ? '#2DD4BF' : score >= 50 ? '#FFB020' : '#FF5C5C'
 
   return (
     <motion.div
@@ -398,26 +409,31 @@ function QuizHistoryCard({ entry, index }) {
       style={{ scrollSnapAlign: 'start' }}
     >
       <Link to={`/quiz/result/${latest.attemptId}`} className="block group">
-        <div className="rounded-xl overflow-hidden transition-all duration-300 relative aspect-[4/3.4] flex flex-col justify-between p-2
-          bg-white border border-slate-200/80 shadow-sm hover:border-indigo-400/80 hover:shadow-md hover:shadow-indigo-500/10 group-hover:scale-[1.02]">
-          <img src={APP_LOGO_URL} alt="" className="absolute inset-0 m-auto w-1/2 h-1/2 object-contain opacity-[0.05] pointer-events-none" />
+        <div
+          className="rounded-xl overflow-hidden transition-all duration-300 relative aspect-[4/3.4] flex flex-col justify-between p-2 group-hover:scale-[1.02]"
+          style={{
+            background: 'linear-gradient(140deg, rgba(109,94,245,0.16) 0%, rgba(109,94,245,0.03) 100%)',
+            border: '1px solid rgba(109,94,245,0.28)',
+          }}
+        >
+          <img src={APP_LOGO_URL} alt="" className="absolute inset-0 m-auto w-1/2 h-1/2 object-contain opacity-[0.06] pointer-events-none" />
 
           <div className="flex items-center justify-between">
-            <div className="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-200/70 flex items-center justify-center">
-              <Brain size={12} className="text-indigo-600" />
+            <div className="w-6 h-6 rounded-lg bg-primary-500/20 border border-primary-500/30 flex items-center justify-center">
+              <Brain size={12} className="text-primary-300" />
             </div>
             <div className="text-sm font-black" style={{ color: scoreColor }}>{score}%</div>
           </div>
 
           <div>
-            <p className="text-[10px] font-bold text-slate-900 line-clamp-1 leading-snug mb-1">
+            <p className="text-[10px] font-bold text-gray-900 line-clamp-1 leading-snug mb-1">
               {entry.quizName}
             </p>
             <div className="flex items-center justify-between">
-              <span className="text-[8px] font-extrabold uppercase tracking-wider px-1 py-0.5 rounded bg-indigo-50 text-indigo-600">
+              <span className="text-[8px] font-extrabold uppercase tracking-wider px-1 py-0.5 rounded bg-primary-500/25 text-primary-200">
                 {attemptsCount}x
               </span>
-              <RotateCcw size={10} className="text-slate-400 group-hover:text-indigo-500 transition-colors" />
+              <RotateCcw size={10} className="text-gray-500 group-hover:text-primary-300 transition-colors" />
             </div>
           </div>
         </div>
@@ -433,13 +449,13 @@ function EmptyState() {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3, duration: 0.5 }}
-      className="rounded-3xl border border-slate-200/80 bg-white shadow-sm p-6 text-center"
+      className="rounded-3xl border border-gray-200 bg-white p-6 text-center"
     >
-      <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-indigo-50 border border-indigo-200/70 mb-3">
-        <GraduationCap size={22} className="text-indigo-600" />
+      <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-primary-500/15 border border-primary-500/25 mb-3">
+        <GraduationCap size={22} className="text-primary-400" />
       </div>
-      <h3 className="text-base font-black text-slate-900 mb-1">Start your journey</h3>
-      <p className="text-xs text-slate-500 mb-4 max-w-xs mx-auto leading-relaxed">
+      <h3 className="text-base font-bold text-gray-900 mb-1">Start your journey</h3>
+      <p className="text-xs text-gray-600 mb-4 max-w-xs mx-auto leading-relaxed">
         Your recent lessons and quizzes will show up here. Pick a course to get going.
       </p>
       <Link to="/free-courses" className="btn-primary inline-flex items-center gap-1.5 text-sm">
@@ -568,7 +584,7 @@ export default function Home() {
 
       {/* Quick access */}
       <div>
-        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-2.5">Quick Access</h3>
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2.5">Quick Access</h3>
         <div className="grid grid-cols-4 gap-2">
           {staticCards.map((card, i) => (
             <QuickAccessCard key={i} {...card} />
