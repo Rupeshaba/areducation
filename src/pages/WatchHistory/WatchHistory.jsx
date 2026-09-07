@@ -19,14 +19,9 @@ function HistoryCard({ item, index }) {
       transition={{ delay: 0.05 + index * 0.03, duration: 0.4 }}
     >
       <Link to={itemUrl} className="block group">
-        <div className="p-4 rounded-2xl flex items-center gap-4 transition-all duration-300 relative overflow-hidden"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 107, 74, 0.08) 0%, rgba(255, 107, 74, 0.02) 100%)',
-            border: '1px solid rgba(255, 107, 74, 0.18)',
-          }}
+        <div className="p-3 rounded-2xl flex items-center gap-4 transition-all duration-300 bg-white border border-black/5 hover:shadow-md hover:border-primary-500/20"
         >
-          <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center relative shadow-md bg-white/[0.03]"
-            style={{ border: '1px solid rgba(255, 107, 74, 0.15)' }}>
+          <div className="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-gray-50">
             <CardThumbnail
               item={item}
               alt=""
@@ -37,19 +32,19 @@ function HistoryCard({ item, index }) {
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-white line-clamp-1 group-hover:text-primary-400 transition-colors duration-200">
+            <p className="text-sm font-bold text-gray-900 line-clamp-1 group-hover:text-primary-600 transition-colors duration-200">
               {item.title || 'Untitled Lesson'}
             </p>
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded"
-                style={{
-                  background: item.type === 'pdf' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255, 107, 74, 0.15)',
-                  color: item.type === 'pdf' ? '#ef4444' : '#FF9270',
-                }}>
+              <span className={`text-[9px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-full border ${
+                item.type === 'pdf'
+                  ? 'bg-danger-500/10 text-danger-600 border-danger-500/20'
+                  : 'bg-primary-500/10 text-primary-600 border-primary-500/20'
+              }`}>
                 {item.type === 'pdf' ? 'PDF' : 'Video'}
               </span>
               {item.lastActiveAt && (
-                <span className="text-[10px] text-white/30 flex items-center gap-1">
+                <span className="text-[10px] text-gray-400 flex items-center gap-1">
                   <Clock size={9} />
                   {new Date(item.lastActiveAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                 </span>
@@ -58,7 +53,7 @@ function HistoryCard({ item, index }) {
           </div>
 
           <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:translate-x-0.5 transition-all duration-300 bg-primary-500/10 border border-primary-500/20">
-            <ArrowRight size={12} className="text-primary-400" />
+            <ArrowRight size={12} className="text-primary-500" />
           </div>
         </div>
       </Link>
@@ -80,32 +75,34 @@ export default function WatchHistory() {
   }, [])
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto pb-10">
-      {/* Header */}
-      <div className="flex items-center gap-3 pt-2">
-        <Link to="/" className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all">
+    <div className="max-w-2xl mx-auto flex flex-col h-full">
+      {/* Header — static */}
+      <div className="flex items-center gap-3 pt-2 pb-4 flex-shrink-0">
+        <Link to="/" className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-all">
           <ChevronLeft size={18} />
         </Link>
         <div>
-          <h1 className="text-xl font-bold text-white">Watch History</h1>
-          <p className="text-xs text-white/40">Your recently watched content</p>
+          <h1 className="text-xl font-bold text-gray-900">Watch History</h1>
+          <p className="text-xs text-gray-500">Your recently watched content</p>
         </div>
       </div>
 
-      {/* History List */}
-      {history.length > 0 ? (
-        <div className="space-y-3">
-          {history.map((item, idx) => (
-            <HistoryCard key={item.contentId || idx} item={item} index={idx} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-10">
-          <Clock size={48} className="text-white/10 mx-auto mb-3" />
-          <p className="text-sm text-white/40">No watch history yet</p>
-          <p className="text-xs text-white/30 mt-1">Start watching content to see it here</p>
-        </div>
-      )}
+      {/* History List — scrollable */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {history.length > 0 ? (
+          <div className="space-y-3 pb-4">
+            {history.map((item, idx) => (
+              <HistoryCard key={item.contentId || idx} item={item} index={idx} />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10">
+            <Clock size={48} className="text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-500">No watch history yet</p>
+            <p className="text-xs text-gray-400 mt-1">Start watching content to see it here</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
