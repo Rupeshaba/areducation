@@ -6,7 +6,6 @@ import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import CardThumbnail from '../../components/CardThumbnail'
-import { DEFAULT_THUMBNAILS } from '../../constants/branding'
 
 function CourseCard({ course, isPurchased, onBuy, purchaseStatus }) {
   const [showDetail, setShowDetail] = useState(false)
@@ -63,11 +62,6 @@ function CourseCard({ course, isPurchased, onBuy, purchaseStatus }) {
         item={course}
         alt={course.name}
         className="group-hover:scale-105 transition-transform duration-300"
-        fallback={
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary-600/20 to-primary-500/5">
-            <img src={DEFAULT_THUMBNAILS.store} alt="" className="absolute inset-0 w-full h-full object-cover opacity-90" />
-          </div>
-        }
       />
       {/* Gradient so the text stays readable over the image */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-black/10" />
