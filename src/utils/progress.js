@@ -230,6 +230,57 @@ export function clearLastPlayed(subjectId) {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// "Last opened course" tracking — remembers, per user/device, the most
+// recent timestamp each course was opened via "Start Learning" on the
+// MyCourses screen, so that screen can auto-sort the most recently used
+// course to the top.
+// Stored as { [courseId]: ts }.
+// ─────────────────────────────────────────────────────────────────────────
+
+const LAST_OPENED_COURSE_KEY = 'ar_last_opened_course'
+
+function readLastOpenedCourseMap() {
+  try {
+    const raw = localStorage.getItem(LAST_OPENED_COURSE_KEY)
+    const parsed = raw ? JSON.parse(raw) : {}
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeLastOpenedCourseMap(map) {
+  try {
+    localStorage.setItem(LAST_OPENED_COURSE_KEY, JSON.stringify(map))
+  } catch {
+    /* storage full or unavailable — fail silently */
+  }
+}
+
+/**
+ * Call this the moment the user taps "Start Learning" on a course, right
+ * before navigating. Safe to call repeatedly; only the latest call per
+ * course sticks.
+ */
+export function setLastOpenedCourse(courseId) {
+  if (!courseId) return
+  const map = readLastOpenedCourseMap()
+  map[courseId] = Date.now()
+  writeLastOpenedCourseMap(map)
+}
+
+/**
+ * Returns the last-opened timestamp for a course, or 0 if it has never
+ * been opened on this device — so untouched courses naturally sort after
+ * ones with real activity while keeping a stable order among themselves.
+ */
+export function getLastOpenedCourseTs(courseId) {
+  if (!courseId) return 0
+  const map = readLastOpenedCourseMap()
+  return map[courseId] ?? 0
+}
+
 export function toggleContentCompleted(contentId) {
   if (isContentCompleted(contentId)) unmarkContentCompleted(contentId)
   else markContentCompleted(contentId)
