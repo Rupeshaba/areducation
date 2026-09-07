@@ -451,7 +451,7 @@ export default function SubjectDetail() {
 
   /* ── Loading ── */
   if (isLoading) return (
-    <div className="max-w-2xl">
+    <div className="w-full">
       <div className="flex items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-3 flex-1">
           <Shimmer className="w-10 h-10 rounded-xl flex-shrink-0" />
@@ -499,7 +499,7 @@ export default function SubjectDetail() {
   )
 
   return (
-    <div className="max-w-2xl h-full flex flex-col">
+    <div className="w-full h-full flex flex-col">
 
       {/* ── STICKY HEADER + TABS (does not scroll with the list) ── */}
       <div className="flex-shrink-0 pt-1 bg-[#F7F8FC] sticky top-0 z-10">
