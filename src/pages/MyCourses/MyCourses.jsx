@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import { useCoursesProgress } from '../../hooks/useCoursesProgress'
 import CardThumbnail from '../../components/CardThumbnail'
+import { getLastOpenedCourseTimestamps } from '../../utils/progress'
 import { io } from 'socket.io-client'
 
 export default function MyCourses() {
@@ -24,8 +25,22 @@ export default function MyCourses() {
 
   const purchases = purchasesData?.purchases || []
 
+  // Float the most recently opened course to the top. Falls back to the
+  // API's original order for courses that have never been opened (or on
+  // a fresh device with no local history).
+  const sortedPurchases = useMemo(() => {
+    const lastOpened = getLastOpenedCourseTimestamps()
+    return [...purchases].sort((a, b) => {
+      const idA = a.courseDetails?.id || a.courseDetails?._id || a.courseId
+      const idB = b.courseDetails?.id || b.courseDetails?._id || b.courseId
+      const tsA = lastOpened[idA] || 0
+      const tsB = lastOpened[idB] || 0
+      return tsB - tsA
+    })
+  }, [purchases])
+
   // Progress for every purchased course
-  const courseIds = purchases.map(p => p.courseId).filter(Boolean)
+  const courseIds = sortedPurchases.map(p => p.courseId).filter(Boolean)
   const { courseProgress, isLoading: progressLoading } = useCoursesProgress(courseIds)
 
   // ✅ NEW: Setup Socket.IO connection and listen for real-time updates
@@ -201,10 +216,10 @@ export default function MyCourses() {
         ))}
       </AnimatePresence>
 
-      {/* Courses Grid */}
+      {/* Courses List — 1 col on mobile, 2 cols on tablet+ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <AnimatePresence>
-          {purchases.map((purchase, i) => {
+          {sortedPurchases.map((purchase, i) => {
             const course = purchase.courseDetails || {}
             const courseId = course.id || course._id || purchase.courseId
             const isFree = purchase.isFree || course.isFree
@@ -226,63 +241,57 @@ export default function MyCourses() {
             return (
               <motion.div
                 key={purchase.id}
+                layout
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: isRemoving ? 0 : 1, y: 0, scale: isRemoving ? 0.95 : 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ delay: i * 0.06 }}
+                transition={{ delay: Math.min(i * 0.04, 0.3) }}
               >
-                <div className="glass rounded-2xl overflow-hidden border border-white/5 hover:border-primary-500/25 transition-all group relative h-56">
-                  {/* Thumbnail */}
-                  <CardThumbnail
-                    item={course}
-                    alt={purchase.courseName}
-                    className="group-hover:scale-105 transition-transform duration-300"
-                    fallback={
-                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-primary-600/20 via-primary-500/10 to-primary-900/20">
-                        <BookOpen size={36} className="text-primary-500/40 mb-1" />
-                        <span className="text-primary-400/40 text-xs font-medium uppercase tracking-wider">Course</span>
+                <div className="rounded-2xl overflow-hidden border border-gray-200 hover:border-primary-400/40 transition-all group bg-white">
+                  {/* Thumbnail — fixed short height, no text overlay on top of it */}
+                  <div className="relative w-full aspect-[16/9] bg-gray-100 overflow-hidden">
+                    <CardThumbnail
+                      item={course}
+                      alt={purchase.courseName}
+                      className="group-hover:scale-105 transition-transform duration-300"
+                    />
+
+                    {/* Status Badge — sits on the thumbnail corner, doesn't touch text */}
+                    {isBlocked ? (
+                      <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold backdrop-blur-sm border bg-red-500/90 text-white border-red-400/30">
+                        <Zap size={10} /> Blocked
                       </div>
-                    }
-                  />
+                    ) : isFree ? (
+                      <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold backdrop-blur-sm border bg-emerald-500/90 text-white border-emerald-400/30">
+                        FREE
+                      </div>
+                    ) : daysLeft !== null && (
+                      <div className={`absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold backdrop-blur-sm border
+                        ${isExpired
+                          ? 'bg-red-500/90 text-white border-red-400/30'
+                          : isUrgent
+                          ? 'bg-amber-500/90 text-white border-amber-400/30'
+                          : 'bg-emerald-500/90 text-white border-emerald-400/30'}`}>
+                        <Calendar size={10} />
+                        {isExpired ? 'Expired' : `${daysLeft}d left`}
+                      </div>
+                    )}
+                  </div>
 
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
-
-                  {/* Status Badge */}
-                  {isBlocked ? (
-                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border bg-red-500/20 text-red-300 border-red-500/20">
-                      <Zap size={10} /> Blocked
-                    </div>
-                  ) : isFree ? (
-                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border bg-emerald-500/20 text-emerald-300 border-emerald-500/20">
-                      FREE
-                    </div>
-                  ) : daysLeft !== null && (
-                    <div className={`absolute top-2.5 right-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold backdrop-blur-sm border
-                      ${isExpired
-                        ? 'bg-red-500/20 text-red-300 border-red-500/20'
-                        : isUrgent
-                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/20'
-                        : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/20'}`}>
-                      <Calendar size={10} />
-                      {isExpired ? 'Expired' : `${daysLeft}d left`}
-                    </div>
-                  )}
-
-                  {/* Content */}
-                  <div className="absolute inset-x-0 bottom-0 p-4">
-                    <h3 className="font-bold text-white text-sm mb-2 line-clamp-2 leading-snug drop-shadow-md">
+                  {/* Content — normal document flow below the thumbnail, plain background */}
+                  <div className="p-4">
+                    <h3 className="font-bold text-gray-900 text-sm mb-2 line-clamp-2 leading-snug">
                       {purchase.courseName}
                     </h3>
 
                     {/* Progress Bar */}
                     {progress.total > 0 && (
                       <div className="mb-3">
-                        <div className="flex items-center justify-between text-[10px] text-gray-300 mb-1">
+                        <div className="flex items-center justify-between text-[10px] text-gray-500 mb-1">
                           <span>Progress</span>
                           <span>{progressPercent}%</span>
                         </div>
-                        <div className="h-1.5 bg-white/15 rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                           <div className="h-full bg-primary-500 rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
                         </div>
                       </div>
@@ -290,7 +299,7 @@ export default function MyCourses() {
 
                     {/* Block Reason */}
                     {isBlocked && purchase.blockReason && (
-                      <p className="text-[11px] text-red-300/90 mb-2 line-clamp-2">{purchase.blockReason}</p>
+                      <p className="text-[11px] text-red-500 mb-2 line-clamp-2">{purchase.blockReason}</p>
                     )}
 
                     {/* CTA Button */}
@@ -299,7 +308,7 @@ export default function MyCourses() {
                       onClick={(e) => { if (isLocked) e.preventDefault() }}
                       className={`w-full flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-all
                         ${isLocked
-                          ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed pointer-events-none'
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none'
                           : 'bg-primary-500 hover:bg-primary-600 text-white active:scale-95'}`}
                     >
                       <Play size={14} /> {isBlocked ? 'Access Blocked' : 'Start Learning'}
