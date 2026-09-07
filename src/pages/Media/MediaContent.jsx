@@ -570,6 +570,8 @@ function YouTubeStage({ content, onBack, contentId, onEnded }) {
 
       playerRef.current = new YT.Player(playerElRef.current, {
         videoId: ytId,
+        width: '100%',
+        height: '100%',
         playerVars: {
           autoplay: 1,
           rel: 0,
@@ -652,9 +654,17 @@ function YouTubeStage({ content, onBack, contentId, onEnded }) {
               <div className="w-12 h-12 rounded-full border-2 border-danger-500/20 border-t-red-500 animate-spin" />
             </div>
           )}
-          <div className="w-full h-full absolute inset-0">
+          <div className="mc-yt-wrap w-full h-full absolute inset-0">
             <div ref={playerElRef} className="w-full h-full" />
           </div>
+
+          {/* YT.Player replaces the target div with its own <iframe>, sized
+              in pixels (defaults to 640x390) rather than filling the
+              parent — without this override the video stays a small fixed
+              box and doesn't rotate/fill the screen properly in
+              fullscreen. Forcing it to 100% here makes it track the
+              (possibly rotated) container exactly like the native player. */}
+          <style>{`.mc-yt-wrap iframe { width: 100% !important; height: 100% !important; display: block; }`}</style>
 
           {/* Fullscreen toggle — YouTube's own iframe controls handle play/pause/seek */}
           <button
