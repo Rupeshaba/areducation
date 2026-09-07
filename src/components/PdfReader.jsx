@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { ChevronLeft, FileText, AlertTriangle, RefreshCw, ExternalLink } from 'lucide-react'
 import * as pdfjsLib from 'pdfjs-dist'
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
-import { goFullscreenLandscape, exitFullscreenAndUnlock } from '../utils/fullscreen'
+import { goFullscreenOnly, exitFullscreenAndUnlock } from '../utils/fullscreen'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
@@ -240,30 +240,64 @@ export default function PdfReader({ url, title, onBack }) {
 
     const dist = (t1, t2) => Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
 
+    const applyLiveTransform = (scale) => {
+      const wrap = pagesWrapRef.current
+      if (!wrap) return
+      wrap.style.transform = `scale(${scale})`
+      wrap.style.transformOrigin = '50% 50%'
+    }
+
     const onTouchStart = (e) => {
       if (e.touches.length === 2) {
-        pinchRef.current = { startDist: dist(e.touches[0], e.touches[1]), startZoom: zoom }
+        pinchRef.current = { startDist: dist(e.touches[0], e.touches[1]), startZoom: zoom, rafId: null }
+        if (pagesWrapRef.current) {
+          pagesWrapRef.current.style.transition = 'none'
+          pagesWrapRef.current.style.willChange = 'transform'
+        }
       }
     }
     const onTouchMove = (e) => {
       if (e.touches.length === 2 && pinchRef.current) {
         e.preventDefault()
+        // Read touch positions synchronously (they'd go stale by next
+        // frame), but defer the actual style write to rAF so multiple
+        // touchmove events in the same frame collapse into a single,
+        // smooth paint instead of fighting the browser's layout pass.
         const d = dist(e.touches[0], e.touches[1])
         const live = pinchRef.current.startZoom * (d / pinchRef.current.startDist)
         const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, live))
-        if (pagesWrapRef.current) {
-          pagesWrapRef.current.style.transform = `scale(${clamped / zoom})`
-          pagesWrapRef.current.style.transformOrigin = '50% 50%'
-        }
         pinchRef.current.liveZoom = clamped
+        if (pinchRef.current.rafId) return
+        pinchRef.current.rafId = requestAnimationFrame(() => {
+          if (pinchRef.current) {
+            pinchRef.current.rafId = null
+            applyLiveTransform(clamped / zoom)
+          }
+        })
       }
     }
     const onTouchEnd = (e) => {
       if (e.touches.length < 2 && pinchRef.current) {
         const finalZoom = pinchRef.current.liveZoom || pinchRef.current.startZoom
+        if (pinchRef.current.rafId) cancelAnimationFrame(pinchRef.current.rafId)
         pinchRef.current = null
-        if (pagesWrapRef.current) pagesWrapRef.current.style.transform = ''
         setZoom(finalZoom)
+        const wrap = pagesWrapRef.current
+        if (wrap) {
+          // Ease the preview scale back to 1 instead of snapping it away —
+          // the pages re-render at the new resolution underneath at the
+          // same time, so this reads as one continuous smooth zoom rather
+          // than a jump the moment fingers lift.
+          wrap.style.transition = 'transform 180ms ease-out'
+          wrap.style.transform = 'scale(1)'
+          setTimeout(() => {
+            if (wrap) {
+              wrap.style.transition = ''
+              wrap.style.transform = ''
+              wrap.style.willChange = ''
+            }
+          }, 200)
+        }
       }
     }
 
@@ -344,7 +378,9 @@ export default function PdfReader({ url, title, onBack }) {
 
   const handleStart = async () => {
     setStarted(true)
-    await goFullscreenLandscape(containerRef.current, null)
+    // PDF stays in the device's own (normally portrait) orientation — only
+    // the video player forces landscape.
+    await goFullscreenOnly(containerRef.current)
   }
 
   const handleRetry = () => {
