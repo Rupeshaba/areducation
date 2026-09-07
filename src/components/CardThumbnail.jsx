@@ -5,7 +5,8 @@ import { APP_LOGO_URL } from '../constants/branding'
 /**
  * Fills its parent (use with a `relative` card wrapper) with a thumbnail
  * that is always shown in full — never cropped or zoomed — using
- * object-contain so the entire image fits within the available space.
+ * object-fill so the entire image stretches to fill the available space
+ * exactly — never cropped, never letterboxed with empty gaps.
  * Falls through maxres → hq → mq → default YouTube thumbnail sizes
  * automatically if one 404s. If none of those exist (a direct/self-hosted
  * video with no uploaded thumbnail), it falls back to the video file
@@ -35,7 +36,7 @@ export default function CardThumbnail({ item, alt = '', className = '', fallback
       <img
         src={candidates[idx]}
         alt={alt}
-        className={`absolute inset-0 w-full h-full object-contain bg-gray-50 ${className}`}
+        className={`absolute inset-0 w-full h-full object-fill bg-gray-50 ${className}`}
         onError={() => setIdx((i) => i + 1)}
       />
     )
@@ -50,7 +51,7 @@ export default function CardThumbnail({ item, alt = '', className = '', fallback
         muted
         playsInline
         preload="metadata"
-        className={`absolute inset-0 w-full h-full object-contain bg-gray-50 ${className}`}
+        className={`absolute inset-0 w-full h-full object-fill bg-gray-50 ${className}`}
         onError={() => setVideoFailed(true)}
       />
     )
