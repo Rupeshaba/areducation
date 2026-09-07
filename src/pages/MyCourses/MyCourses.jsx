@@ -180,8 +180,8 @@ export default function MyCourses() {
   )
 
   return (
-    <div className="max-w-3xl flex flex-col h-full">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6 flex-shrink-0">My Courses</h1>
+    <div className="max-w-3xl">
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">My Courses</h1>
 
       {/* ✅ NEW: Real-time Notifications Display */}
       <AnimatePresence>
@@ -191,7 +191,7 @@ export default function MyCourses() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={`mb-4 p-4 rounded-xl flex gap-3 items-start border flex-shrink-0 ${
+            className={`mb-4 p-4 rounded-xl flex gap-3 items-start border ${
               notif.type === 'deleted'
                 ? 'bg-red-500/10 border-red-500/30 text-red-300'
                 : notif.type === 'blocked'
@@ -210,11 +210,10 @@ export default function MyCourses() {
         ))}
       </AnimatePresence>
 
-      {/* Courses Grid — scrollable */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4">
-          <AnimatePresence>
-            {sortedPurchases.map((purchase, i) => {
+      {/* Courses Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <AnimatePresence>
+          {sortedPurchases.map((purchase, i) => {
             const course = purchase.courseDetails || {}
             const courseId = course.id || course._id || purchase.courseId
             const isFree = purchase.isFree || course.isFree
@@ -322,8 +321,7 @@ export default function MyCourses() {
               </motion.div>
             )
           })}
-          </AnimatePresence>
-        </div>
+        </AnimatePresence>
       </div>
     </div>
   )
