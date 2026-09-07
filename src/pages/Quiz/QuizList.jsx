@@ -83,14 +83,14 @@ export default function QuizList() {
   }
 
   return (
-    <div className="max-w-2xl pb-12">
+    <div className="max-w-2xl flex flex-col h-full">
 
-      {/* Header */}
+      {/* Header — static */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className="flex items-center justify-between mb-5"
+        className="flex items-center justify-between mb-5 flex-shrink-0"
       >
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center"
@@ -113,8 +113,8 @@ export default function QuizList() {
         </button>
       </motion.div>
 
-      {/* Search */}
-      <div className="mb-5">
+      {/* Search — static */}
+      <div className="mb-5 flex-shrink-0">
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -128,7 +128,8 @@ export default function QuizList() {
         </div>
       </div>
 
-      {/* Quiz List */}
+      {/* Quiz List — scrollable */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
       {filteredQuizzes.length === 0 ? (
         quizzes.length === 0 ? (
           <div className="flex flex-col items-center py-20 text-center">
@@ -270,6 +271,7 @@ export default function QuizList() {
           </AnimatePresence>
         </div>
       )}
+      </div>
 
       <ShareQuizModal
         open={!!shareTarget}
