@@ -30,7 +30,6 @@ function HistoryCard({ item, index }) {
             <CardThumbnail
               item={item}
               alt=""
-              fallback={<Play size={18} className="text-primary-400" />}
             />
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <Play size={12} fill="white" color="white" />
