@@ -158,7 +158,7 @@ export default function Subjects() {
   const subjects = data?.subjects || []
 
   return (
-    <div className="w-full flex flex-col h-full -mx-4">
+    <div className="full-bleed w-full flex flex-col h-full">
       {/* ── HEADER (static) ── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -205,7 +205,7 @@ export default function Subjects() {
         {/* ── EMPTY ── */}
         {!isLoading && !isError && subjects.length === 0 && <EmptyState />}
 
-        {/* ── LIST (no negative margin needed now, it's full width of the root) ── */}
+        {/* ── LIST ── */}
         {!isLoading && !isError && subjects.length > 0 && (
           <div className="flex flex-col gap-2.5 pb-4">
             {subjects.map((subject, i) => (
@@ -219,6 +219,12 @@ export default function Subjects() {
         @keyframes shimmerPulse {
           0%, 100% { opacity: 0.4; }
           50% { opacity: 0.9; }
+        }
+        /* Full-bleed utility to break out of any parent padding/max-width */
+        .full-bleed {
+          width: 100vw;
+          margin-left: calc(-50vw + 50%);
+          margin-right: calc(-50vw + 50%);
         }
       `}</style>
     </div>
