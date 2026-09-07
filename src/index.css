@@ -6,16 +6,20 @@
   * { box-sizing: border-box; }
 
   body {
-    @apply bg-slate-50 text-slate-900 font-sans;
+    @apply bg-[#F7F8FC] text-gray-900 font-sans;
+    background-image:
+      radial-gradient(ellipse at 15% 0%, rgba(109, 94, 245, 0.06) 0%, transparent 55%),
+      radial-gradient(ellipse at 90% 30%, rgba(45, 212, 191, 0.04) 0%, transparent 50%);
+    background-attachment: fixed;
     min-height: 100vh;
   }
 
   ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { @apply bg-slate-100; }
-  ::-webkit-scrollbar-thumb { @apply bg-indigo-400 rounded-full; }
+  ::-webkit-scrollbar-track { @apply bg-gray-100; }
+  ::-webkit-scrollbar-thumb { @apply bg-primary-400 rounded-full; }
 
   :focus-visible {
-    outline: 2px solid theme('colors.primary.500');
+    outline: 2px solid theme('colors.primary.400');
     outline-offset: 2px;
     border-radius: 6px;
   }
@@ -24,57 +28,57 @@
 @layer components {
   /* ── Surfaces ─────────────────────────────────────────────── */
   .glass {
-    @apply bg-white/85 backdrop-blur-2xl border border-slate-200/60;
+    @apply bg-white/80 backdrop-blur-xl border border-gray-200;
   }
 
   .card {
-    @apply bg-white border border-slate-200/80 rounded-2xl p-5 transition-all duration-200 shadow-sm;
+    @apply glass rounded-2xl p-5 transition-all duration-200 shadow-sm;
   }
 
   .card-hover {
-    @apply hover:border-indigo-400/80 hover:shadow-md hover:shadow-indigo-500/10;
+    @apply hover:border-primary-500/30 hover:bg-gray-50;
   }
 
   /* ── Buttons ──────────────────────────────────────────────── */
   .btn-primary {
-    @apply bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 hover:opacity-95 text-white
-           font-extrabold px-5 py-2.5 rounded-full transition-all duration-200 active:scale-[0.96]
-           disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-500/25;
+    @apply bg-primary-500 hover:bg-primary-600 text-white font-semibold px-5 py-2.5 rounded-xl
+           transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed
+           shadow-lg shadow-primary-500/20;
   }
 
   .btn-ghost {
-    @apply bg-white hover:bg-slate-50 text-slate-700 font-bold px-5 py-2.5 rounded-full
-           border border-slate-200/80 transition-all duration-200 active:scale-[0.96];
+    @apply bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium px-5 py-2.5 rounded-xl
+           border border-gray-200 transition-all duration-200 active:scale-[0.98];
   }
 
   .btn-danger {
-    @apply bg-red-50 hover:bg-red-100 text-red-600 font-bold px-5 py-2.5 rounded-full
-           border border-red-200/80 transition-all duration-200 active:scale-[0.96];
+    @apply bg-danger-500/10 hover:bg-danger-500/20 text-danger-600 font-semibold px-5 py-2.5 rounded-xl
+           border border-danger-500/25 transition-all duration-200 active:scale-[0.98];
   }
 
   /* ── Forms ────────────────────────────────────────────────── */
   .input-field {
-    @apply w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-slate-900
-           placeholder:text-slate-400 focus:outline-none focus:border-indigo-500/50
-           focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200;
+    @apply w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-gray-900
+           placeholder:text-gray-500 focus:outline-none focus:border-primary-500/50
+           focus:ring-2 focus:ring-primary-500/20 transition-all duration-200;
   }
 
   /* ── Badges / Chips ───────────────────────────────────────── */
   .chip {
-    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold;
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold;
   }
-  .chip-primary { @apply chip bg-indigo-50 text-indigo-600 border border-indigo-200/80; }
-  .chip-mint    { @apply chip bg-emerald-50 text-emerald-600 border border-emerald-200/80; }
-  .chip-amber   { @apply chip bg-amber-50 text-amber-600 border border-amber-200/80; }
-  .chip-danger  { @apply chip bg-red-50 text-red-600 border border-red-200/80; }
+  .chip-primary { @apply chip bg-primary-500/10 text-primary-600 border border-primary-500/25; }
+  .chip-mint    { @apply chip bg-mint-500/10 text-mint-600 border border-mint-500/25; }
+  .chip-amber   { @apply chip bg-amber-500/10 text-amber-600 border border-amber-500/25; }
+  .chip-danger  { @apply chip bg-danger-500/10 text-danger-600 border border-danger-500/25; }
 
   /* ── Typography helpers ───────────────────────────────────── */
   .eyebrow {
-    @apply text-[11px] font-bold uppercase tracking-wide text-slate-400;
+    @apply text-[11px] font-semibold uppercase tracking-wide text-gray-500;
   }
 
   .page-title {
-    @apply text-2xl font-black text-slate-900 tracking-tight;
+    @apply text-2xl font-bold text-gray-900 tracking-tight;
   }
 
   /* ── Layout ───────────────────────────────────────────────── */
@@ -87,6 +91,6 @@
   }
 
   .skeleton {
-    @apply rounded-lg bg-slate-200 animate-shimmer;
+    @apply rounded-lg bg-gray-200 animate-shimmer;
   }
 }
