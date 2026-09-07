@@ -35,8 +35,9 @@ function Shimmer({ className = '' }) {
 /* ── Brand logo fallback (for thumbnails that fail to load) ──────────── */
 function LogoFallback() {
   return (
-    <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-      <img src={APP_LOGO_URL} alt="" className="w-1/3 h-1/3 object-contain opacity-25 grayscale" />
+    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary-100 via-primary-50 to-mint-400/20">
+      <div className="absolute inset-0 opacity-40 bg-gradient-to-tr from-primary-500/20 via-transparent to-mint-500/20" />
+      <img src={APP_LOGO_URL} alt="" className="relative w-1/3 h-1/3 object-contain drop-shadow-sm" />
     </div>
   )
 }
