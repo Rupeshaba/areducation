@@ -127,8 +127,6 @@ export default function Layout() {
   // sticky part drifts instead of staying put.
   const SELF_SCROLL_ROUTES = [
     /^\/courses\/[^/]+\/subjects\/[^/]+(\/chapters\/[^/]+)?$/, // SubjectDetail
-    /^\/my-courses$/,
-    /^\/store$/,
     /^\/free-courses$/,
     /^\/courses\/[^/]+\/subjects$/, // Subjects list
     /^\/watch-history$/,
