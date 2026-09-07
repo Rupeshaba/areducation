@@ -218,8 +218,8 @@ export default function Store() {
   }
 
   return (
-    <div className="max-w-4xl flex flex-col h-full">
-      <div className="flex items-center gap-3 mb-6 flex-shrink-0">
+    <div className="max-w-4xl">
+      <div className="flex items-center gap-3 mb-6">
         <div className="w-10 h-10 rounded-xl bg-primary-500/15 flex items-center justify-center">
           <ShoppingBag size={20} className="text-primary-400" />
         </div>
@@ -229,26 +229,24 @@ export default function Store() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        {courses.length === 0 ? (
-          <div className="text-center py-20 text-gray-500">
-            <ShoppingBag size={40} className="mx-auto mb-3 opacity-30" />
-            <p>No courses available right now.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
-            {courses.map(course => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                isPurchased={getPurchaseStatus(course.id) === 'purchased'}
-                purchaseStatus={getPurchaseStatus(course.id)}
-                onBuy={(c) => { setSelectedCourse(c); setStep('payment') }}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      {courses.length === 0 ? (
+        <div className="text-center py-20 text-gray-500">
+          <ShoppingBag size={40} className="mx-auto mb-3 opacity-30" />
+          <p>No courses available right now.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {courses.map(course => (
+            <CourseCard
+              key={course.id}
+              course={course}
+              isPurchased={getPurchaseStatus(course.id) === 'purchased'}
+              purchaseStatus={getPurchaseStatus(course.id)}
+              onBuy={(c) => { setSelectedCourse(c); setStep('payment') }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
