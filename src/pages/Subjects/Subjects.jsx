@@ -191,8 +191,8 @@ export default function Subjects() {
         )}
       </motion.div>
 
-      {/* ── SCROLLABLE AREA ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      {/* ── SCROLLABLE AREA (now allows full-bleed list) ── */}
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
         {/* ── LOADING ── */}
         {isLoading && (
           <div className="flex flex-col gap-2.5">
@@ -206,9 +206,9 @@ export default function Subjects() {
         {/* ── EMPTY ── */}
         {!isLoading && !isError && subjects.length === 0 && <EmptyState />}
 
-        {/* ── LIST (strip rows, one per line — not a poster grid) ── */}
+        {/* ── LIST (full width breakout using negative margin) ── */}
         {!isLoading && !isError && subjects.length > 0 && (
-          <div className="flex flex-col gap-2.5 pb-4">
+          <div className="flex flex-col gap-2.5 pb-4 -mx-4">
             {subjects.map((subject, i) => (
               <SubjectCard key={subject.id} subject={subject} courseId={courseId} index={i} subjectProgress={subjectProgress} />
             ))}
