@@ -33,6 +33,17 @@ export function exitFullscreenAndUnlock() {
   try { window.screen?.orientation?.unlock?.() } catch (e) {}
 }
 
+// Plain fullscreen, no orientation lock at all — used by the PDF reader,
+// which (unlike video) should stay in whatever orientation the device is
+// already in (normally portrait) instead of forcing landscape.
+export async function goFullscreenOnly(el) {
+  try {
+    if (!document.fullscreenElement) {
+      await (el?.requestFullscreen?.() || el?.webkitRequestFullscreen?.())
+    }
+  } catch (e) { /* ignore */ }
+}
+
 // screen.orientation.lock() only actually rotates the screen on Android
 // Chrome-family browsers inside a fullscreen element — it's unsupported on
 // iOS Safari and most desktop browsers, so on those the video would open
