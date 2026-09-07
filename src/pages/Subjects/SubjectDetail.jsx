@@ -190,12 +190,6 @@ function ContentCard({ content, courseId, subjectId, chapterId, index, completed
           <CardThumbnail
             item={content}
             alt={content.title}
-            fallback={
-              <div className="absolute inset-0 flex items-center justify-center"
-                style={{ background: `radial-gradient(ellipse at center, ${cfg.grad}, rgba(10,10,26,0.97))` }}>
-                <Icon size={18} style={{ color: cfg.iconColor }} strokeWidth={1.5} />
-              </div>
-            }
           />
           {/* Play overlay for video types */}
           {isVideo && (
@@ -502,136 +496,143 @@ export default function SubjectDetail() {
   )
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl h-full flex flex-col">
 
-      {/* ── HEADER ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className="flex items-center justify-between gap-3 mb-5"
-      >
-        {/* Subject info */}
-        <div className="flex items-center gap-3 min-w-0">
-          {subject.thumbnailUrl ? (
-            <img src={subject.thumbnailUrl} alt={subject.name}
-              className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
-          ) : (
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-lg"
-              style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)' }}>
-              {subject.icon || '📚'}
+      {/* ── STICKY HEADER + TABS (does not scroll with the list) ── */}
+      <div className="flex-shrink-0 pt-1 bg-[#F7F8FC] sticky top-0 z-10">
+        {/* ── HEADER ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          className="flex items-center justify-between gap-3 mb-5"
+        >
+          {/* Subject info */}
+          <div className="flex items-center gap-3 min-w-0">
+            {subject.thumbnailUrl ? (
+              <img src={subject.thumbnailUrl} alt={subject.name}
+                className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
+            ) : (
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-lg"
+                style={{ background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)' }}>
+                {subject.icon || '📚'}
+              </div>
+            )}
+            <div className="min-w-0">
+              <h1 className="text-base font-black text-gray-900 leading-tight line-clamp-1">{subject.name}</h1>
+              {subject.description && (
+                <p className="text-[11px] mt-0.5 line-clamp-1 text-gray-500">
+                  {subject.description}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Progress Circle */}
+          {allContents.length > 0 && (
+            <div className="relative w-10 h-10 flex-shrink-0">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="16" stroke="rgba(0,0,0,0.1)" strokeWidth="2" fill="none" />
+                <circle
+                  cx="18" cy="18" r="16"
+                  stroke="#10b981"
+                  strokeWidth="2"
+                  fill="none"
+                  strokeDasharray={`${2 * Math.PI * 16}`}
+                  strokeDashoffset={`${2 * Math.PI * 16 * (1 - (completedContentIds.size / allContents.length))}`}
+                  strokeLinecap="round"
+                  className="transition-all duration-500"
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-gray-900">
+                {Math.round((completedContentIds.size / allContents.length) * 100)}%
+              </div>
             </div>
           )}
-          <div className="min-w-0">
-            <h1 className="text-base font-black text-gray-900 leading-tight line-clamp-1">{subject.name}</h1>
-            {subject.description && (
-              <p className="text-[11px] mt-0.5 line-clamp-1 text-gray-500">
-                {subject.description}
-              </p>
-            )}
-          </div>
-        </div>
 
-        {/* Progress Circle */}
-        {allContents.length > 0 && (
-          <div className="relative w-10 h-10 flex-shrink-0">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-              <circle cx="18" cy="18" r="16" stroke="rgba(0,0,0,0.1)" strokeWidth="2" fill="none" />
-              <circle
-                cx="18" cy="18" r="16"
-                stroke="#10b981"
-                strokeWidth="2"
-                fill="none"
-                strokeDasharray={`${2 * Math.PI * 16}`}
-                strokeDashoffset={`${2 * Math.PI * 16 * (1 - (completedContentIds.size / allContents.length))}`}
-                strokeLinecap="round"
-                className="transition-all duration-500"
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-gray-900">
-              {Math.round((completedContentIds.size / allContents.length) * 100)}%
-            </div>
-          </div>
-        )}
+          {/* Quiz button */}
+          <Link
+            to={`/quiz/${encodeURIComponent(subjectId)}`}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all duration-200 active:scale-95 flex-shrink-0"
+            style={{
+              background: 'linear-gradient(135deg, rgba(124,58,237,0.85), rgba(109,40,217,0.85))',
+              border: '1px solid rgba(167,139,250,0.25)',
+              boxShadow: '0 4px 16px rgba(124,58,237,0.2)',
+            }}
+          >
+            <Trophy size={12} />
+            Quiz
+            <Zap size={10} style={{ opacity: 0.7 }} />
+          </Link>
+        </motion.div>
 
-        {/* Quiz button */}
-        <Link
-          to={`/quiz/${encodeURIComponent(subjectId)}`}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white transition-all duration-200 active:scale-95 flex-shrink-0"
-          style={{
-            background: 'linear-gradient(135deg, rgba(124,58,237,0.85), rgba(109,40,217,0.85))',
-            border: '1px solid rgba(167,139,250,0.25)',
-            boxShadow: '0 4px 16px rgba(124,58,237,0.2)',
-          }}
+        {/* ── TABS ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08, duration: 0.4 }}
+          className="flex items-center gap-1.5 p-1 rounded-xl mb-4 w-fit"
+          style={{ background: '#F0F1F6', border: '1px solid rgba(0,0,0,0.06)' }}
         >
-          <Trophy size={12} />
-          Quiz
-          <Zap size={10} style={{ opacity: 0.7 }} />
-        </Link>
-      </motion.div>
-
-      {/* ── TABS ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.08, duration: 0.4 }}
-        className="flex items-center gap-1.5 p-1 rounded-xl mb-4 w-fit"
-        style={{ background: '#F0F1F6', border: '1px solid rgba(0,0,0,0.06)' }}
-      >
-        {TABS.map(t => {
-          const active = tab === t.key
-          return (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 active:scale-95"
-              style={{
-                background: active ? t.accentBg : 'transparent',
-                border: active ? `1px solid ${t.accentBorder}` : '1px solid transparent',
-                color: active ? t.accent : '#6B7280',
-              }}
-            >
-              <t.Icon size={11} />
-              {t.label}
-              <span
-                className="text-[10px] font-bold px-1.5 py-px rounded-full min-w-[18px] text-center"
+          {TABS.map(t => {
+            const active = tab === t.key
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 active:scale-95"
                 style={{
-                  background: active ? t.accentBorder : 'rgba(0,0,0,0.06)',
-                  color: active ? t.accent : '#9CA3AF',
+                  background: active ? t.accentBg : 'transparent',
+                  border: active ? `1px solid ${t.accentBorder}` : '1px solid transparent',
+                  color: active ? t.accent : '#6B7280',
                 }}
               >
-                {t.count}
-              </span>
-            </button>
-          )
-        })}
-      </motion.div>
-
-      {/* ── CONTENT ── */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={tab}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15, ease: 'easeOut' }}
-        >
-          <ContentGrid
-            contents={allContents}
-            tab={tab}
-            courseId={courseId}
-            subjectId={subjectId}
-            completedContentIds={completedContentIds}
-            highlightId={highlightId}
-          />
+                <t.Icon size={11} />
+                {t.label}
+                <span
+                  className="text-[10px] font-bold px-1.5 py-px rounded-full min-w-[18px] text-center"
+                  style={{
+                    background: active ? t.accentBorder : 'rgba(0,0,0,0.06)',
+                    color: active ? t.accent : '#9CA3AF',
+                  }}
+                >
+                  {t.count}
+                </span>
+              </button>
+            )
+          })}
         </motion.div>
-      </AnimatePresence>
+      </div>
+
+      {/* ── SCROLLABLE LIST — only this area scrolls, header/tabs stay put ── */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-28 lg:pb-8 no-scrollbar">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+          >
+            <ContentGrid
+              contents={allContents}
+              tab={tab}
+              courseId={courseId}
+              subjectId={subjectId}
+              completedContentIds={completedContentIds}
+              highlightId={highlightId}
+            />
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
       <style>{`
         @keyframes shimmerPulse {
           0%, 100% { opacity: 0.4; }
           50% { opacity: 0.9; }
         }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
       `}</style>
     </div>
   )
