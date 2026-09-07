@@ -19,19 +19,19 @@ function Shimmer({ className = '' }) {
   )
 }
 
-function ShimmerCard() {
+function ShimmerRow() {
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: '#F0F1F6', border: '1px solid rgba(0,0,0,0.06)' }}>
-      <Shimmer className="w-full aspect-[16/9]" style={{ borderRadius: 0 }} />
-      <div className="p-3 space-y-2">
-        <Shimmer className="h-4 w-4/5 rounded" />
-        <Shimmer className="h-3 w-3/5 rounded" />
+    <div className="flex items-center gap-3 p-2.5 rounded-2xl" style={{ background: '#F0F1F6', border: '1px solid rgba(0,0,0,0.06)' }}>
+      <Shimmer className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl flex-shrink-0" />
+      <div className="flex-1 space-y-2">
+        <Shimmer className="h-4 w-3/5 rounded" />
+        <Shimmer className="h-3 w-2/5 rounded" />
       </div>
     </div>
   )
 }
 
-/* ═══ SUBJECT CARD ═══ */
+/* ═══ SUBJECT ROW (list-strip style, not a poster tile) ═══ */
 function SubjectCard({ subject, courseId, index, subjectProgress }) {
   const accent = subject.color || '#6366f1'
   const progress = subjectProgress?.[subject.id] || { completed: 0, total: 0 }
@@ -39,78 +39,56 @@ function SubjectCard({ subject, courseId, index, subjectProgress }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.07, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ delay: index * 0.04, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
     >
       <Link
         to={`/courses/${courseId}/subjects/${subject.id}`}
-        className="group relative flex flex-col overflow-hidden rounded-2xl h-full aspect-[4/5] transition-all duration-300 hover:scale-[1.02]"
-        style={{ border: '1px solid rgba(255,255,255,0.07)' }}
+        className="group relative flex items-center gap-3 overflow-hidden rounded-2xl p-2.5 transition-all duration-300 active:scale-[0.98]"
+        style={{ background: '#F7F8FC', border: '1px solid rgba(0,0,0,0.06)' }}
       >
-        {/* Thumbnail fills the entire card */}
-        <CardThumbnail
-          item={subject}
-          alt={subject.name}
-          className="group-hover:scale-105 transition-transform duration-600 ease-out"
-          fallback={
-            <div className="absolute inset-0 flex items-center justify-center"
-              style={{ background: `linear-gradient(135deg, ${accent}12, ${accent}06)` }}>
-              {subject.icon && subject.icon.length <= 2 ? (
-                <span className="text-4xl">{subject.icon}</span>
-              ) : (
-                <GraduationCap size={36} style={{ color: accent, opacity: 0.3 }} />
-              )}
+        {/* Small square thumbnail — not a full-bleed poster */}
+        <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+          <CardThumbnail
+            item={subject}
+            alt={subject.name}
+            fallback={
+              <div className="absolute inset-0 flex items-center justify-center"
+                style={{ background: `linear-gradient(135deg, ${accent}12, ${accent}06)` }}>
+                {subject.icon && subject.icon.length <= 2 ? (
+                  <span className="text-2xl">{subject.icon}</span>
+                ) : (
+                  <GraduationCap size={22} style={{ color: accent, opacity: 0.4 }} />
+                )}
+              </div>
+            }
+          />
+          {progress.total > 0 && (
+            <div className="absolute bottom-0 inset-x-0 h-1 bg-black/10">
+              <div className="h-full transition-all duration-500" style={{ width: `${progressPct}%`, background: '#10b981' }} />
             </div>
-          }
-        />
-        {/* Gradient so the text stays readable over the image */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-transparent" />
+          )}
+        </div>
 
-        {/* Left accent bar */}
+        {/* Text content — takes remaining width */}
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-bold text-gray-900 line-clamp-1">{subject.name}</h3>
+          {subject.description && (
+            <p className="text-xs mt-0.5 line-clamp-1 text-gray-500">{subject.description}</p>
+          )}
+          {progress.total > 0 && (
+            <p className="text-[10px] mt-1 font-semibold" style={{ color: accent }}>
+              {progress.completed}/{progress.total} completed · {progressPct}%
+            </p>
+          )}
+        </div>
+
         <div
-          className="absolute left-0 top-0 bottom-0 w-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-400 z-10"
-          style={{ background: `linear-gradient(to bottom, ${accent}, ${accent}44)` }}
-        />
-
-        {/* Progress Circle Overlay */}
-        {progress.total > 0 && (
-          <div className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-dark-900/80 backdrop-blur-sm border border-white/10 flex items-center justify-center z-10">
-            <svg className="w-7 h-7 -rotate-90" viewBox="0 0 20 20">
-              <circle cx="10" cy="10" r="8" stroke="rgba(255,255,255,0.1)" strokeWidth="2" fill="none" />
-              <circle
-                cx="10" cy="10" r="8"
-                stroke="#10b981"
-                strokeWidth="2"
-                fill="none"
-                strokeDasharray={`${2 * Math.PI * 8}`}
-                strokeDashoffset={`${2 * Math.PI * 8 * (1 - progressPct / 100)}`}
-                strokeLinecap="round"
-                className="transition-all duration-500"
-              />
-            </svg>
-            <span className="absolute text-[8px] font-bold text-white">{progressPct}%</span>
-          </div>
-        )}
-
-        {/* Content — pinned to the bottom, over the image */}
-        <div className="relative z-10 flex items-center justify-between gap-2 px-3 py-2.5 mt-auto">
-          <div className="min-w-0">
-            <h3 className="text-xs font-bold text-white line-clamp-1 transition-colors duration-200 drop-shadow-md">
-              {subject.name}
-            </h3>
-            {subject.description && (
-              <p className="text-[10px] mt-0.5 line-clamp-1 text-white/50">
-                {subject.description}
-              </p>
-            )}
-          </div>
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110 backdrop-blur-sm"
-            style={{ background: `${accent}30`, border: `1px solid ${accent}40` }}
-          >
-            <ArrowRight size={12} style={{ color: accent }} />
-          </div>
+          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110"
+          style={{ background: `${accent}18`, border: `1px solid ${accent}30` }}
+        >
+          <ArrowRight size={14} style={{ color: accent }} />
         </div>
       </Link>
     </motion.div>
@@ -217,8 +195,8 @@ export default function Subjects() {
 
       {/* ── LOADING ── */}
       {isLoading && (
-        <div className="grid grid-cols-2 gap-2.5">
-          {Array.from({ length: 6 }).map((_, i) => <ShimmerCard key={i} />)}
+        <div className="flex flex-col gap-2.5">
+          {Array.from({ length: 6 }).map((_, i) => <ShimmerRow key={i} />)}
         </div>
       )}
 
@@ -228,9 +206,9 @@ export default function Subjects() {
       {/* ── EMPTY ── */}
       {!isLoading && !isError && subjects.length === 0 && <EmptyState />}
 
-      {/* ── GRID ── */}
+      {/* ── LIST (strip rows, one per line — not a poster grid) ── */}
       {!isLoading && !isError && subjects.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        <div className="flex flex-col gap-2.5">
           {subjects.map((subject, i) => (
             <SubjectCard key={subject.id} subject={subject} courseId={courseId} index={i} subjectProgress={subjectProgress} />
           ))}
