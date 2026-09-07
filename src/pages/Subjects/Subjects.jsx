@@ -158,14 +158,14 @@ export default function Subjects() {
   const subjects = data?.subjects || []
 
   return (
-    <div className="max-w-2xl pb-12">
+    <div className="max-w-2xl flex flex-col h-full">
 
-      {/* ── HEADER ── */}
+      {/* ── HEADER (static) ── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className="flex items-center justify-between mb-5"
+        className="flex items-center justify-between mb-5 flex-shrink-0"
       >
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl flex items-center justify-center"
@@ -191,27 +191,30 @@ export default function Subjects() {
         )}
       </motion.div>
 
-      {/* ── LOADING ── */}
-      {isLoading && (
-        <div className="flex flex-col gap-2.5">
-          {Array.from({ length: 6 }).map((_, i) => <ShimmerRow key={i} />)}
-        </div>
-      )}
+      {/* ── SCROLLABLE AREA ── */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {/* ── LOADING ── */}
+        {isLoading && (
+          <div className="flex flex-col gap-2.5">
+            {Array.from({ length: 6 }).map((_, i) => <ShimmerRow key={i} />)}
+          </div>
+        )}
 
-      {/* ── ERROR ── */}
-      {isError && <ErrorState onRetry={refetch} />}
+        {/* ── ERROR ── */}
+        {isError && <ErrorState onRetry={refetch} />}
 
-      {/* ── EMPTY ── */}
-      {!isLoading && !isError && subjects.length === 0 && <EmptyState />}
+        {/* ── EMPTY ── */}
+        {!isLoading && !isError && subjects.length === 0 && <EmptyState />}
 
-      {/* ── LIST (strip rows, one per line — not a poster grid) ── */}
-      {!isLoading && !isError && subjects.length > 0 && (
-        <div className="flex flex-col gap-2.5">
-          {subjects.map((subject, i) => (
-            <SubjectCard key={subject.id} subject={subject} courseId={courseId} index={i} subjectProgress={subjectProgress} />
-          ))}
-        </div>
-      )}
+        {/* ── LIST (strip rows, one per line — not a poster grid) ── */}
+        {!isLoading && !isError && subjects.length > 0 && (
+          <div className="flex flex-col gap-2.5 pb-4">
+            {subjects.map((subject, i) => (
+              <SubjectCard key={subject.id} subject={subject} courseId={courseId} index={i} subjectProgress={subjectProgress} />
+            ))}
+          </div>
+        )}
+      </div>
 
       <style>{`
         @keyframes shimmerPulse {
