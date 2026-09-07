@@ -6,7 +6,6 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../api/axios'
 import CardThumbnail from '../../components/CardThumbnail'
-import { DEFAULT_THUMBNAILS } from '../../constants/branding'
 
 /* ═══ COURSE CARD ═══ */
 function FreeCourseCard({ course, index, onEnroll, isEnrolled }) {
@@ -28,9 +27,6 @@ function FreeCourseCard({ course, index, onEnroll, isEnrolled }) {
             item={course}
             alt={course.name}
             className="group-hover:scale-105 transition-transform duration-700 ease-out"
-            fallback={
-              <img src={DEFAULT_THUMBNAILS.freeCourses} alt="" className="absolute inset-0 w-full h-full object-cover" />
-            }
           />
           {/* Gradient so the text stays readable over the image */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
