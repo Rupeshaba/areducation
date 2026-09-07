@@ -121,10 +121,20 @@ export default function Layout() {
   const isQuizPlayPage = location.pathname.includes('/quiz/') && location.pathname.includes('/play')
   const isQuizResultPage = location.pathname.includes('/result')
   const hideSidebar = isQuizPlayPage || isQuizResultPage
-  // Subject content page manages its own internal scroll (sticky header/tabs,
-  // only the content list scrolls) — so the outer <main> must not also scroll,
-  // or you get a scrollbar-within-a-scrollbar and the sticky header drifts.
-  const isSubjectDetailPage = /\/courses\/[^/]+\/subjects\/[^/]+(\/chapters\/[^/]+)?$/.test(location.pathname)
+  // Pages that own their own internal scroll (sticky header/filters + a
+  // scrollable list beneath) — the outer <main>/wrapper must not also
+  // scroll for these, or you get a scrollbar-within-a-scrollbar and the
+  // sticky part drifts instead of staying put.
+  const SELF_SCROLL_ROUTES = [
+    /^\/courses\/[^/]+\/subjects\/[^/]+(\/chapters\/[^/]+)?$/, // SubjectDetail
+    /^\/my-courses$/,
+    /^\/store$/,
+    /^\/free-courses$/,
+    /^\/courses\/[^/]+\/subjects$/, // Subjects list
+    /^\/watch-history$/,
+    /^\/quiz\/[^/]+$/, // QuizList
+  ]
+  const isSubjectDetailPage = SELF_SCROLL_ROUTES.some((re) => re.test(location.pathname))
 
   // Check maintenance on every page load
   useEffect(() => {
