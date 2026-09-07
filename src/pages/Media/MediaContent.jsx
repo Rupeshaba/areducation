@@ -1,16 +1,18 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import Hls from 'hls.js'
+import { motion } from 'framer-motion'
 import {
   ChevronLeft, Play, Pause, Volume2, VolumeX,
   SkipBack, SkipForward, Settings, X, CheckCircle, AlertTriangle,
-  PictureInPicture2,
+  PictureInPicture2, Maximize, Minimize, FileText, Video, Clock,
 } from 'lucide-react'
 import api from '../../api/axios'
-import { markContentCompleted } from '../../utils/progress'
+import { markContentCompleted, setLastPlayed, isContentCompleted } from '../../utils/progress'
 import PdfReader from '../../components/PdfReader'
 import { goFullscreenLandscape, exitFullscreenAndUnlock } from '../../utils/fullscreen'
+import CardThumbnail from '../../components/CardThumbnail'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function fmtTime(s) {
@@ -67,7 +69,11 @@ function BackIcon({ onClick, visible = true }) {
   )
 }
 
-// ─── Native / HLS video stage (fills the entire screen, no chrome around it) ─
+// ─── Native / HLS video stage — plays inline (16:9 box) by default; only
+// becomes a full-app, landscape-locked overlay when the user explicitly
+// taps the fullscreen button, and returns to the inline box the moment
+// fullscreen is exited (button, Escape, or system back-gesture) — it
+// never navigates away on its own. ─────────────────────────────────────
 function NativeVideoStage({ content, onEnded, onBack, contentId }) {
   const videoRef      = useRef(null)
   const hlsRef        = useRef(null)
@@ -91,6 +97,7 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState(null)
   const [skipFlash,    setSkipFlash]    = useState(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   const url = content.url
 
@@ -203,18 +210,21 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
     }
   }, [onEnded, contentId, content])
 
-  // If the user (or system) exits fullscreen after we've started, treat it as "close the page"
-  // — since there is no navbar/header to fall back on otherwise.
+  // Track fullscreen state so the player can switch its own layout between
+  // the inline 16:9 box and a full-app landscape overlay — exiting
+  // fullscreen (button, Escape, back-gesture) just drops back to inline,
+  // it never navigates away by itself.
   useEffect(() => {
     const onFS = () => {
-      if (!document.fullscreenElement && started) {
+      const isFS = !!document.fullscreenElement
+      setIsFullscreen(isFS)
+      if (!isFS) {
         try { window.screen?.orientation?.unlock?.() } catch (e) {}
-        onBack()
       }
     }
     document.addEventListener('fullscreenchange', onFS)
     return () => document.removeEventListener('fullscreenchange', onFS)
-  }, [started, onBack])
+  }, [])
 
   useEffect(() => () => exitFullscreenAndUnlock(), [])
 
@@ -226,11 +236,18 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
   }, [playing])
   useEffect(() => { if (started) resetHide() }, [playing, started, resetHide])
 
-  const handleStart = async () => {
+  const handleStart = () => {
     setStarted(true)
     const v = videoRef.current
-    await goFullscreenLandscape(containerRef.current, v)
     v?.play().catch(() => {})
+  }
+
+  const toggleFullscreen = async () => {
+    if (document.fullscreenElement) {
+      exitFullscreenAndUnlock()
+    } else {
+      await goFullscreenLandscape(containerRef.current, videoRef.current)
+    }
   }
 
   const togglePlay = () => {
@@ -297,7 +314,10 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
   }
 
   return (
-    <div ref={containerRef} className="fixed inset-0 bg-black">
+    <div
+      ref={containerRef}
+      className={isFullscreen ? 'fixed inset-0 bg-black z-[100]' : 'relative w-full aspect-video bg-black overflow-hidden rounded-2xl'}
+    >
       <div
         className="absolute inset-0 select-none touch-none"
         onMouseMove={() => started && resetHide()}
@@ -312,7 +332,7 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
           onClick={started ? handleVideoTap : undefined}
         />
 
-        {/* Poster / tap-to-play overlay — this is what the user taps to launch fullscreen landscape */}
+        {/* Poster / tap-to-play overlay */}
         {!started && (
           <button
             onClick={handleStart}
@@ -321,8 +341,8 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
             {content.thumbnailUrl && (
               <img src={content.thumbnailUrl} alt="" className="absolute inset-0 w-full h-full object-contain opacity-70" />
             )}
-            <span className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/95 flex items-center justify-center shadow-2xl active:scale-90 transition-transform">
-              <Play size={30} className="fill-black text-black ml-1" />
+            <span className="relative w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-white/95 flex items-center justify-center shadow-2xl active:scale-90 transition-transform">
+              <Play size={26} className="fill-black text-black ml-1" />
             </span>
           </button>
         )}
@@ -388,6 +408,9 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
               <button onClick={e => { e.stopPropagation(); setShowSettings(v => !v) }} className={`mc-btn ${showSettings ? 'text-primary-400' : ''}`}>
                 <Settings size={14} />
               </button>
+              <button onClick={e => { e.stopPropagation(); toggleFullscreen() }} className="mc-btn">
+                {isFullscreen ? <Minimize size={15} /> : <Maximize size={15} />}
+              </button>
             </div>
           </div>
         )}
@@ -423,7 +446,7 @@ function NativeVideoStage({ content, onEnded, onBack, contentId }) {
           </div>
         )}
 
-        <BackIcon onClick={onBack} visible={!started || showCtrl} />
+        <BackIcon onClick={isFullscreen ? toggleFullscreen : onBack} visible={!started || showCtrl} />
 
         <style>{`
           .mc-btn { width:32px; height:32px; display:flex; align-items:center; justify-content:center; color:white; border-radius:8px; transition:color .15s,transform .1s,background .15s; flex-shrink:0; }
@@ -473,24 +496,42 @@ function YouTubeStage({ content, onBack, contentId, onEnded }) {
 
   const [started, setStarted] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showCtrl, setShowCtrl] = useState(true)
+  const hideTimer = useRef(null)
 
   useEffect(() => {
     const onFS = () => {
-      if (!document.fullscreenElement && started) {
+      const isFS = !!document.fullscreenElement
+      setIsFullscreen(isFS)
+      if (!isFS) {
         try { window.screen?.orientation?.unlock?.() } catch (e) {}
-        onBack()
       }
     }
     document.addEventListener('fullscreenchange', onFS)
     return () => document.removeEventListener('fullscreenchange', onFS)
-  }, [started, onBack])
+  }, [])
 
   useEffect(() => () => exitFullscreenAndUnlock(), [])
 
-  const handleStart = async () => {
+  const handleStart = () => {
     setStarted(true)
-    await goFullscreenLandscape(containerRef.current, null)
   }
+
+  const toggleFullscreen = async () => {
+    if (document.fullscreenElement) {
+      exitFullscreenAndUnlock()
+    } else {
+      await goFullscreenLandscape(containerRef.current, null)
+    }
+  }
+
+  const resetHide = useCallback(() => {
+    setShowCtrl(true)
+    clearTimeout(hideTimer.current)
+    hideTimer.current = setTimeout(() => setShowCtrl(false), 2800)
+  }, [])
+  useEffect(() => { if (started) resetHide() }, [started, resetHide])
 
   // Create the real YT.Player once the user taps play.
   useEffect(() => {
@@ -559,7 +600,7 @@ function YouTubeStage({ content, onBack, contentId, onEnded }) {
 
   if (!ytId) {
     return (
-      <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-2">
+      <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden flex flex-col items-center justify-center gap-2">
         <AlertTriangle size={28} className="text-danger-400" />
         <p className="text-gray-400 text-sm">YouTube URL parse nahi hua</p>
         <BackIcon onClick={onBack} />
@@ -568,14 +609,19 @@ function YouTubeStage({ content, onBack, contentId, onEnded }) {
   }
 
   return (
-    <div ref={containerRef} className="fixed inset-0 bg-black">
+    <div
+      ref={containerRef}
+      className={isFullscreen ? 'fixed inset-0 bg-black z-[100]' : 'relative w-full aspect-video bg-black overflow-hidden rounded-2xl'}
+      onMouseMove={() => started && resetHide()}
+      onTouchStart={() => started && resetHide()}
+    >
       {!started ? (
         <button onClick={handleStart} className="absolute inset-0 flex items-center justify-center bg-black">
           {content.thumbnailUrl && (
             <img src={content.thumbnailUrl} alt="" className="absolute inset-0 w-full h-full object-contain opacity-70" />
           )}
-          <span className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/95 flex items-center justify-center shadow-2xl active:scale-90 transition-transform">
-            <Play size={30} className="fill-black text-black ml-1" />
+          <span className="relative w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-white/95 flex items-center justify-center shadow-2xl active:scale-90 transition-transform">
+            <Play size={26} className="fill-black text-black ml-1" />
           </span>
         </button>
       ) : (
@@ -588,9 +634,19 @@ function YouTubeStage({ content, onBack, contentId, onEnded }) {
           <div className="w-full h-full absolute inset-0">
             <div ref={playerElRef} className="w-full h-full" />
           </div>
+
+          {/* Fullscreen toggle — YouTube's own iframe controls handle play/pause/seek */}
+          <button
+            onClick={(e) => { e.stopPropagation(); toggleFullscreen() }}
+            className={`absolute bottom-3 right-3 z-[60] w-10 h-10 flex items-center justify-center rounded-full
+              bg-black/45 backdrop-blur-md text-white transition-opacity duration-300
+              ${showCtrl ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          >
+            {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+          </button>
         </>
       )}
-      <BackIcon onClick={onBack} visible />
+      <BackIcon onClick={isFullscreen ? toggleFullscreen : onBack} visible={!started || showCtrl} />
     </div>
   )
 }
@@ -599,6 +655,114 @@ function YouTubeStage({ content, onBack, contentId, onEnded }) {
 // pinch-zoom, no third-party toolbar / zoom buttons / "open externally" ────
 function PDFStage({ content, onBack }) {
   return <PdfReader url={content.url} title={content.title} onBack={onBack} />
+}
+
+// ─── Content list shown below the player — same subject's videos, with the
+// currently-playing one highlighted and auto-scrolled into view. ──────────
+function ytIdOf(url) {
+  return url?.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1] ?? null
+}
+function ctypeOf(c) {
+  const t = (c.type || '').toLowerCase().trim()
+  if (t === 'pdf') return 'pdf'
+  if (t === 'hls' || c.url?.includes('.m3u8')) return 'hls'
+  if (ytIdOf(c.url)) return 'youtube'
+  return 'video'
+}
+function fmtDurationShort(sec) {
+  if (!sec) return ''
+  const m = Math.floor(sec / 60), s = Math.floor(sec % 60)
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+function PlaylistItem({ item, isActive, onClick }) {
+  const type = ctypeOf(item)
+  const isCompleted = isContentCompleted(item.id)
+
+  return (
+    <button
+      data-content-id={item.id}
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition-all duration-300 ${
+        isActive ? 'ring-2 ring-primary-500/70' : ''
+      }`}
+      style={{
+        background: isActive ? 'rgba(99,102,241,0.08)' : '#F7F8FC',
+        border: isActive ? '1px solid rgba(99,102,241,0.35)' : '1px solid rgba(0,0,0,0.06)',
+      }}
+    >
+      <div className="relative w-20 h-14 sm:w-24 sm:h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+        <CardThumbnail item={item} alt={item.title} />
+        {isActive ? (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            {/* Playing animation — bouncing equalizer bars */}
+            <div className="flex items-end gap-0.5 h-4">
+              <span className="w-1 bg-white rounded-full eq-bar" style={{ animationDelay: '0ms' }} />
+              <span className="w-1 bg-white rounded-full eq-bar" style={{ animationDelay: '150ms' }} />
+              <span className="w-1 bg-white rounded-full eq-bar" style={{ animationDelay: '300ms' }} />
+            </div>
+          </div>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+            <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(99,102,241,0.85)' }}>
+              <Play size={10} fill="white" color="white" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <p className={`text-sm font-semibold line-clamp-2 leading-snug ${isActive ? 'text-primary-700' : 'text-gray-900'}`}>
+          {item.title}
+        </p>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-primary-500">
+            {isActive ? 'Playing' : type === 'hls' ? 'Video' : 'Video'}
+          </span>
+          {item.duration > 0 && (
+            <span className="flex items-center gap-1 text-gray-500" style={{ fontSize: '10px' }}>
+              <Clock size={9} />{fmtDurationShort(item.duration)}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {isCompleted && (
+        <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(16,185,129,0.9)' }}>
+          <CheckCircle size={13} className="text-white" />
+        </div>
+      )}
+
+      <style>{`
+        @keyframes eqBounce { 0%,100% { height: 30%; } 50% { height: 100%; } }
+        .eq-bar { animation: eqBounce 0.9s ease-in-out infinite; }
+      `}</style>
+    </button>
+  )
+}
+
+function findScrollParentEl(node) {
+  let el = node?.parentElement
+  while (el && el !== document.body) {
+    const style = window.getComputedStyle(el)
+    if (/(auto|scroll)/.test(style.overflowY) && el.scrollHeight > el.clientHeight + 1) return el
+    el = el.parentElement
+  }
+  return document.scrollingElement || document.documentElement
+}
+
+function scrollItemIntoView(el) {
+  if (!el) return
+  const container = findScrollParentEl(el)
+  const isRoot = container === (document.scrollingElement || document.documentElement)
+  const elRect = el.getBoundingClientRect()
+  const containerRect = isRoot ? { top: 0, height: window.innerHeight } : container.getBoundingClientRect()
+  const containerHeight = isRoot ? window.innerHeight : containerRect.height
+  const currentScroll = isRoot ? window.scrollY : container.scrollTop
+  const delta = (elRect.top - containerRect.top) - containerHeight / 2 + elRect.height / 2
+  const targetScroll = Math.max(0, currentScroll + delta)
+  if (container.scrollTo) container.scrollTo({ top: targetScroll, behavior: 'smooth' })
+  else container.scrollTop = targetScroll
 }
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────
@@ -619,6 +783,27 @@ export default function MediaContent() {
     },
     enabled: !!contentId,
   })
+
+  // Full subject content list — used to render the playlist below the
+  // player and to find "what plays next" for this video.
+  const { data: subjectData } = useQuery({
+    queryKey: ['subject-detail', subjectId],
+    queryFn: () => api.get(`/subjects/${subjectId}`).then(r => r.data),
+    enabled: !!subjectId,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const subject = subjectData?.subject ?? null
+  const allSubjectContents = useMemo(() => {
+    const chapters = subject?.chapters ?? []
+    if (chapters.length > 0) return chapters.flatMap(ch => (ch.contents ?? []).map(c => ({ ...c, _chapterId: ch.id })))
+    return subject?.contents ?? []
+  }, [subject])
+
+  const videoPlaylist = useMemo(
+    () => allSubjectContents.filter(c => ctypeOf(c) !== 'pdf'),
+    [allSubjectContents]
+  )
 
   const hasMarkedCompleteRef = useRef(false)
   useEffect(() => { hasMarkedCompleteRef.current = false }, [contentId])
@@ -656,6 +841,12 @@ export default function MediaContent() {
     }
   }, [content, contentId, courseId, subjectId, chapterId])
 
+  // Remember this as "last played" for this subject so re-visiting the
+  // subject page auto-scrolls back to it (existing behaviour, unchanged).
+  useEffect(() => {
+    if (contentId) setLastPlayed(contentId, { subjectId, courseId })
+  }, [contentId, subjectId, courseId])
+
   const backUrl = chapterId
     ? `/courses/${courseId}/subjects/${subjectId}/chapters/${chapterId}`
     : `/courses/${courseId}/subjects/${subjectId}`
@@ -665,34 +856,99 @@ export default function MediaContent() {
     navigate(backUrl, { replace: true })
   }, [navigate, backUrl])
 
+  // Switch which content is playing without a full page reload — replaces
+  // the URL so back-navigation still lands on the subject page, not on
+  // every video visited along the way.
+  const playItem = useCallback((item) => {
+    const targetChapterId = item._chapterId ?? null
+    const url = targetChapterId
+      ? `/courses/${courseId}/subjects/${subjectId}/chapters/${targetChapterId}/content/${item.id}?chapterId=${targetChapterId}`
+      : `/courses/${courseId}/subjects/${subjectId}/content/${item.id}`
+    navigate(url, { replace: true })
+  }, [navigate, courseId, subjectId])
+
+  // Auto-scroll the playlist to the currently-playing item whenever it changes.
+  const hasScrolledForRef = useRef(null)
+  useEffect(() => {
+    if (!contentId || hasScrolledForRef.current === contentId) return
+    let attempts = 0
+    let timeoutId = null
+    let cancelled = false
+    const tryScroll = () => {
+      if (cancelled) return
+      const el = document.querySelector(`[data-content-id="${CSS.escape(String(contentId))}"]`)
+      if (el) {
+        hasScrolledForRef.current = contentId
+        scrollItemIntoView(el)
+        return
+      }
+      attempts += 1
+      if (attempts < 20) timeoutId = setTimeout(tryScroll, 100)
+    }
+    timeoutId = setTimeout(tryScroll, 150)
+    return () => { cancelled = true; if (timeoutId) clearTimeout(timeoutId) }
+  }, [contentId, videoPlaylist.length])
+
   if (isLoading) return (
-    <div className="fixed inset-0 bg-black flex items-center justify-center">
+    <div className="flex items-center justify-center py-24">
       <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
     </div>
   )
   if (isError || !content) return (
-    <div className="fixed inset-0 bg-black flex flex-col items-center justify-center gap-3">
-      <AlertTriangle size={32} className="text-gray-500" />
-      <BackIcon onClick={handleBack} visible />
+    <div className="flex flex-col items-center justify-center gap-3 py-24">
+      <AlertTriangle size={32} className="text-gray-400" />
+      <button onClick={handleBack} className="text-sm text-primary-600 font-semibold">Go back</button>
     </div>
   )
 
   const isYT  = isYouTubeURL(content.url)
-  const isHLS = !isYT && (isHLSURL(content.url) || content.type === 'hls')
 
   if (content.type === 'pdf') {
     return <PDFStage content={content} onBack={handleBack} />
   }
 
   if (content.type === 'video' || content.type === 'hls') {
-    return isYT
-      ? <YouTubeStage content={content} onBack={handleBack} contentId={contentId} onEnded={handleEnded} />
-      : <NativeVideoStage content={content} onEnded={handleEnded} onBack={handleBack} contentId={contentId} />
+    return (
+      <div className="max-w-2xl">
+        {/* Header — simple back + title, page scrolls normally */}
+        <div className="flex items-center gap-3 mb-4">
+          <button onClick={handleBack} className="w-9 h-9 flex-shrink-0 rounded-xl flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">
+            <ChevronLeft size={20} />
+          </button>
+          <h1 className="text-base font-bold text-gray-900 line-clamp-1">{content.title}</h1>
+        </div>
+
+        {/* Player */}
+        {isYT
+          ? <YouTubeStage content={content} onBack={handleBack} contentId={contentId} onEnded={handleEnded} />
+          : <NativeVideoStage content={content} onEnded={handleEnded} onBack={handleBack} contentId={contentId} />}
+
+        {/* Playlist — same subject's content, current item highlighted + auto-scrolled to */}
+        {videoPlaylist.length > 0 && (
+          <div className="mt-5">
+            <h2 className="text-sm font-black text-gray-900 mb-2.5 flex items-center gap-2">
+              <Video size={14} className="text-primary-500" />
+              Up next in this subject
+            </h2>
+            <div className="flex flex-col gap-2">
+              {videoPlaylist.map((item) => (
+                <PlaylistItem
+                  key={item.id}
+                  item={item}
+                  isActive={item.id === contentId}
+                  onClick={() => playItem(item)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
-    <div className="fixed inset-0 bg-black flex items-center justify-center">
-      <BackIcon onClick={handleBack} visible />
+    <div className="flex items-center justify-center py-24">
+      <button onClick={handleBack} className="text-sm text-primary-600 font-semibold">Go back</button>
     </div>
   )
 }
