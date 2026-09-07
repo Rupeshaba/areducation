@@ -35,11 +35,6 @@ function ctype(c) {
 function isVideoType(c) { const t = ctype(c); return t === 'video' || t === 'youtube' || t === 'hls' }
 function isPdfType(c) { return ctype(c) === 'pdf' }
 
-/* Thumbnails now come from the shared CardThumbnail component (utils/thumbnail.js),
-   which prefers hqdefault.jpg — reliable for virtually every YouTube video, unlike
-   maxresdefault/sddefault which silently 200-OK with a grey placeholder for videos
-   that don't have that resolution (why thumbnails looked "missing" before). */
-
 /* ═══ TYPE CONFIG ═══ */
 const TYPE_CFG = {
   youtube: { label: 'Video', Icon: Play,     grad: 'rgba(185,28,28,0.35)',  iconColor: '#f87171' },
@@ -69,9 +64,7 @@ function ShimmerRow() {
   )
 }
 
-/* Finds the actual scrollable ancestor of a card and centers it there.
-   Not just window.scrollTo — this app's scroll container is Layout's
-   <main className="overflow-y-auto">, several levels up from any card. */
+/* Finds the actual scrollable ancestor of a card and centers it there. */
 function findScrollParent(node) {
   let el = node.parentElement
   while (el && el !== document.body) {
@@ -405,9 +398,6 @@ export default function SubjectDetail() {
 
   // Once the matching tab's cards are actually mounted, scroll the
   // last-played card into view and give it a brief highlight ring.
-  // Looks the card up by a data-content-id attribute via querySelector
-  // (not a ref map) — refs on list items can silently fail to register
-  // in time when the list re-renders a lot; a live DOM query can't miss.
   useEffect(() => {
     if (!lastPlayedContent || hasScrolledRef.current) return
     const targetTab = isPdfType(lastPlayedContent) ? 'pdf' : 'video'
@@ -451,7 +441,7 @@ export default function SubjectDetail() {
 
   /* ── Loading ── */
   if (isLoading) return (
-    <div className="w-full">
+    <div className="full-bleed w-full bg-[#F7F8FC] px-4">
       <div className="flex items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-3 flex-1">
           <Shimmer className="w-10 h-10 rounded-xl flex-shrink-0" />
@@ -475,7 +465,7 @@ export default function SubjectDetail() {
 
   /* ── Error ── */
   if (isError) return (
-    <div className="flex flex-col items-center py-20 text-center">
+    <div className="full-bleed w-full bg-[#F7F8FC] px-4 flex flex-col items-center py-20 text-center">
       <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
         style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)' }}>
         <AlertCircle size={24} style={{ color: 'rgba(248,113,113,0.7)' }} />
@@ -492,14 +482,14 @@ export default function SubjectDetail() {
 
   /* ── Not found ── */
   if (!subject) return (
-    <div className="flex flex-col items-center py-20 text-center">
+    <div className="full-bleed w-full bg-[#F7F8FC] px-4 flex flex-col items-center py-20 text-center">
       <BookOpen size={28} className="text-gray-400 mb-3" />
       <p className="text-xs text-gray-500">Subject not found.</p>
     </div>
   )
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="full-bleed w-full h-full flex flex-col bg-[#F7F8FC] px-4">
 
       {/* ── STICKY HEADER + TABS (does not scroll with the list) ── */}
       <div className="flex-shrink-0 pt-1 bg-[#F7F8FC] sticky top-0 z-10">
@@ -636,6 +626,11 @@ export default function SubjectDetail() {
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+        .full-bleed {
+          width: 100vw;
+          margin-left: calc(-50vw + 50%);
+          margin-right: calc(-50vw + 50%);
+        }
       `}</style>
     </div>
   )
