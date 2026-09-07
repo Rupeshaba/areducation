@@ -8,25 +8,20 @@ export default {
         xs: '420px',
       },
       colors: {
-        /* ── "Indigo Aurora" design system (v2 — Rupesh Store look) ── */
+        /* ── "Indigo Aurora" design system ───────────────────────── */
         primary: {
-          50: '#EEF2FF',
-          100: '#E0E7FF',
-          400: '#818CF8',
-          500: '#6366F1',
-          600: '#4F46E5',
-          700: '#4338CA',
-          900: '#312E81',
-        },
-        violet: {
-          400: '#A78BFA',
-          500: '#8B5CF6',
-          600: '#7C3AED',
+          50: '#F1EFFE',
+          100: '#E4E0FD',
+          400: '#8B7CFF',
+          500: '#6D5EF5',
+          600: '#5A4AE0',
+          700: '#4738C2',
+          900: '#2A2073',
         },
         mint: {
-          400: '#34D399',
-          500: '#10B981',
-          600: '#059669',
+          400: '#5EEAD4',
+          500: '#2DD4BF',
+          600: '#14B8A6',
         },
         amber: {
           400: '#FFC94D',
