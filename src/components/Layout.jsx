@@ -121,6 +121,10 @@ export default function Layout() {
   const isQuizPlayPage = location.pathname.includes('/quiz/') && location.pathname.includes('/play')
   const isQuizResultPage = location.pathname.includes('/result')
   const hideSidebar = isQuizPlayPage || isQuizResultPage
+  // Subject content page manages its own internal scroll (sticky header/tabs,
+  // only the content list scrolls) — so the outer <main> must not also scroll,
+  // or you get a scrollbar-within-a-scrollbar and the sticky header drifts.
+  const isSubjectDetailPage = /\/courses\/[^/]+\/subjects\/[^/]+(\/chapters\/[^/]+)?$/.test(location.pathname)
 
   // Check maintenance on every page load
   useEffect(() => {
@@ -512,7 +516,7 @@ export default function Layout() {
       )}
 
       {/* ── Main content ─────────────────────────────────────────────────────── */}
-      <main className={`flex-1 overflow-y-auto ${hideSidebar ? '' : 'lg:ml-[248px]'}`}>
+      <main className={`flex-1 ${isSubjectDetailPage ? 'overflow-hidden flex flex-col' : 'overflow-y-auto'} ${hideSidebar ? '' : 'lg:ml-[248px]'}`}>
         {/* Mobile header */}
         {!hideSidebar && (
           <div className="lg:hidden sticky top-0 z-20 flex items-center justify-between px-4 h-16 rounded-b-2xl
@@ -550,8 +554,10 @@ export default function Layout() {
            ⭐ Updated container logic: 
            If hideSidebar is true (Result page), we remove all horizontal padding 
            and width constraints so the UI takes up the full screen perfectly.
+           If isSubjectDetailPage, the page itself owns scrolling (sticky header +
+           scrollable list), so this wrapper just passes through the remaining height.
         */}
-        <div className={`p-4 lg:p-8 pb-28 lg:pb-8 max-w-5xl mx-auto ${hideSidebar ? '!p-0 !max-w-full' : ''}`}>
+        <div className={`max-w-5xl mx-auto ${hideSidebar ? '!p-0 !max-w-full' : 'p-4 lg:p-8 pb-28 lg:pb-8'} ${isSubjectDetailPage ? 'flex-1 min-h-0 flex flex-col !pb-0' : ''}`}>
           <Outlet />
         </div>
       </main>
