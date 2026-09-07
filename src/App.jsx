@@ -54,8 +54,14 @@ function App() {
         {/* All Student Routes - Protected */}
         <Route element={<PrivateRoute role="student" />}>
           {/* Media (video/pdf) routes render OUTSIDE Layout — no navbar/header ever shows */}
+          {/* Single content route — chapterId always travels as a query
+              param (?chapterId=...), never as a path segment. Keeping this
+              to one route pattern means switching between videos (even
+              across chapters) only changes params, so React Router keeps
+              MediaContent mounted instead of unmounting/remounting it —
+              that remount was what looked like a full page refresh when
+              tapping a playlist item. */}
           <Route path="/courses/:courseId/subjects/:subjectId/content/:contentId" element={<MediaContent />} />
-          <Route path="/courses/:courseId/subjects/:subjectId/chapters/:chapterId/content/:contentId" element={<MediaContent />} />
           <Route path="/quiz/analysis/:attemptId" element={<QuizAnalysis />} />
           <Route path="/quiz/practice" element={<QuizPractice />} />
           <Route path="/quiz/:subject/:name/play" element={<QuizPlay />} />
