@@ -158,7 +158,7 @@ export default function Subjects() {
   const subjects = data?.subjects || []
 
   return (
-    <div className="max-w-2xl flex flex-col h-full">
+    <div className="w-full flex flex-col h-full">
 
       {/* ── HEADER (static) ── */}
       <motion.div
