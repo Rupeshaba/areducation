@@ -16,19 +16,6 @@ function buildShareUrl(subject, quizName) {
   return `${window.location.origin}/play/${encodeURIComponent(subject)}/${encodeURIComponent(quizName)}`
 }
 
-function DifficultyBadge({ d }) {
-  const cfg = {
-    easy:   { label: 'Easy',   cls: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' },
-    medium: { label: 'Medium', cls: 'bg-amber-500/10 text-amber-600 border-amber-500/20' },
-    hard:   { label: 'Hard',   cls: 'bg-red-500/10 text-red-600 border-red-500/20' },
-  }[d?.toLowerCase()] || { label: d || 'Standard', cls: 'bg-gray-500/10 text-gray-500 border-gray-500/20' }
-  return (
-    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${cfg.cls}`}>
-      {cfg.label}
-    </span>
-  )
-}
-
 function ScoreRing({ score, size = 40 }) {
   const r = 14, c = 2 * Math.PI * r
   const offset = c - (score / 100) * c
@@ -63,8 +50,6 @@ export default function QuizList() {
   const navigate = useNavigate()
   const [shareTarget, setShareTarget] = useState(null) // { name } of quiz to share
   const [searchTerm, setSearchTerm] = useState('')
-  const [difficultyFilter, setDifficultyFilter] = useState('all')
-  const [sortOption, setSortOption] = useState('default')
 
   const { data, isLoading } = useQuery({
     queryKey: ['quiz-list', subject],
@@ -74,34 +59,13 @@ export default function QuizList() {
   const quizzes = data?.quizzes || []
   const subjectName = data?.subjectName || decodeURIComponent(subject || '')
 
-  // Filter and sort logic
-  const filteredQuizzes = quizzes
-    .filter(quiz => {
-      const matchesSearch = quiz.name.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesDifficulty = difficultyFilter === 'all' || quiz.difficulty?.toLowerCase() === difficultyFilter.toLowerCase()
-      return matchesSearch && matchesDifficulty
-    })
-    .sort((a, b) => {
-      switch (sortOption) {
-        case 'best-score':
-          return (b.myBestScore || 0) - (a.myBestScore || 0)
-        case 'most-attempts':
-          return (b.attempts || 0) - (a.attempts || 0)
-        case 'highest-avg':
-          return (b.avgScore || 0) - (a.avgScore || 0)
-        case 'name':
-          return a.name.localeCompare(b.name)
-        default:
-          return 0
-      }
-    })
-
-  const difficultyFilters = ['all', 'easy', 'medium', 'hard']
+  // Search only — no difficulty filter, no sort dropdown
+  const filteredQuizzes = quizzes.filter(quiz =>
+    quiz.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   const clearFilters = () => {
     setSearchTerm('')
-    setDifficultyFilter('all')
-    setSortOption('default')
   }
 
   if (isLoading) {
@@ -149,53 +113,18 @@ export default function QuizList() {
         </button>
       </motion.div>
 
-      {/* Controls: Search, Filters, Sort */}
-      <div className="mb-5 space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search quizzes..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500/50 text-sm transition-all"
-              aria-label="Search quizzes"
-            />
-          </div>
-
-          {/* Sort dropdown */}
-          <select
-            value={sortOption}
-            onChange={(e) => setSortOption(e.target.value)}
-            className="px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500/50 cursor-pointer"
-            aria-label="Sort quizzes"
-          >
-            <option value="default">Default</option>
-            <option value="best-score">Best Score</option>
-            <option value="most-attempts">Most Attempts</option>
-            <option value="highest-avg">Highest Avg Score</option>
-            <option value="name">Quiz Name</option>
-          </select>
-        </div>
-
-        {/* Difficulty filter buttons */}
-        <div className="flex gap-2 flex-wrap">
-          {difficultyFilters.map(filter => (
-            <button
-              key={filter}
-              onClick={() => setDifficultyFilter(filter)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all capitalize ${
-                difficultyFilter === filter
-                  ? 'bg-primary-500 text-white border-primary-500 shadow-md shadow-primary-500/20'
-                  : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50 hover:text-gray-700'
-              }`}
-              aria-pressed={difficultyFilter === filter}
-            >
-              {filter === 'all' ? 'All' : filter}
-            </button>
-          ))}
+      {/* Search */}
+      <div className="mb-5">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search quizzes..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9 pr-4 py-3 rounded-xl bg-white border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500/50 text-sm transition-all"
+            aria-label="Search quizzes"
+          />
         </div>
       </div>
 
@@ -262,7 +191,6 @@ export default function QuizList() {
                       {quiz.name}
                     </h3>
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                      {quiz.difficulty && <DifficultyBadge d={quiz.difficulty} />}
                       {quiz.questionCount > 0 && (
                         <span className="flex items-center gap-1 text-[11px] text-gray-500">
                           <Target size={11} /> {quiz.questionCount} Qs
