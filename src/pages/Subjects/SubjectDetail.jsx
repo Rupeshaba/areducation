@@ -121,8 +121,11 @@ function ContentCard({ content, courseId, subjectId, chapterId, index, completed
   const { Icon } = cfg
   const isVideo = type !== 'pdf'
 
+  // Always the flat content route — chapterId (when present) travels as a
+  // query param only, so this always matches the same <Route>, keeping
+  // MediaContent mounted when jumping between videos.
   const linkTo = chapterId
-    ? `/courses/${courseId}/subjects/${subjectId}/chapters/${chapterId}/content/${content.id}?chapterId=${chapterId}`
+    ? `/courses/${courseId}/subjects/${subjectId}/content/${content.id}?chapterId=${chapterId}`
     : `/courses/${courseId}/subjects/${subjectId}/content/${content.id}`
 
   // Check if content is completed — single source of truth, local only
