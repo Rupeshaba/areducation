@@ -55,48 +55,48 @@ function CourseCard({ course, isPurchased, onBuy, purchaseStatus }) {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl overflow-hidden group relative min-h-[22rem] flex flex-col justify-end border border-white/5 hover:border-primary-500/25 transition-all"
+      className="rounded-2xl overflow-hidden bg-white border border-black/5 shadow-sm hover:shadow-md transition-all group flex flex-col"
     >
-      {/* Thumbnail fills the entire card */}
-      <CardThumbnail
-        item={course}
-        alt={course.name}
-        className="group-hover:scale-105 transition-transform duration-300"
-      />
-      {/* Gradient so the text stays readable over the image */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-black/10" />
+      {/* Thumbnail — full image visible, no overlay, no crop */}
+      <div className="relative w-full aspect-video bg-gray-50 flex-shrink-0">
+        <CardThumbnail
+          item={course}
+          alt={course.name}
+          className="group-hover:scale-105 transition-transform duration-300"
+        />
 
-      {isPurchased && (
-        <div className="absolute top-3 right-3 bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 z-10">
-          <CheckCircle size={11} /> Enrolled
-        </div>
-      )}
+        {isPurchased && (
+          <div className="absolute top-2.5 right-2.5 bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1 z-10">
+            <CheckCircle size={11} /> Enrolled
+          </div>
+        )}
 
-      {/* Text + actions pinned to the bottom, inside the card, over the image */}
-      <div className="relative z-10 p-4">
-        <h3 className="font-bold text-white mb-1 drop-shadow-md">{course.name}</h3>
-        {course.description && <p className="text-xs text-gray-300 mb-3 line-clamp-2">{course.description}</p>}
+        {course.durationDays && (
+          <div className="absolute top-2.5 left-2.5 flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold backdrop-blur-sm border bg-primary-500/15 text-primary-700 border-primary-500/20 bg-white/80">
+            <Clock size={10} /> {course.durationDays}d
+          </div>
+        )}
+      </div>
+
+      {/* Content — below thumbnail, on plain background */}
+      <div className="p-4 flex flex-col flex-1">
+        <h3 className="font-bold text-gray-900 mb-1">{course.name}</h3>
+        {course.description && <p className="text-xs text-gray-500 mb-3 line-clamp-2">{course.description}</p>}
 
         {/* Subjects list */}
         {course.subjects?.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-3">
             {course.subjects.slice(0, 4).map((s, i) => (
-              <span key={i} className="text-xs px-2 py-0.5 bg-white/10 text-primary-300 rounded-full backdrop-blur-sm">{s}</span>
+              <span key={i} className="text-xs px-2 py-0.5 bg-primary-50 text-primary-600 rounded-full">{s}</span>
             ))}
             {course.subjects.length > 4 && (
-              <span className="text-xs px-2 py-0.5 bg-white/10 text-gray-300 rounded-full backdrop-blur-sm">+{course.subjects.length - 4} more</span>
+              <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">+{course.subjects.length - 4} more</span>
             )}
           </div>
         )}
 
-        {course.durationDays && (
-          <div className="flex items-center gap-1 text-xs text-gray-300 mb-3">
-            <Clock size={11} /> {course.durationDays} days access
-          </div>
-        )}
-
-        <div className="flex items-center justify-between">
-          <div className="text-xl font-bold text-primary-400">₹{course.price}</div>
+        <div className="mt-auto flex items-center justify-between">
+          <div className="text-xl font-bold text-primary-600">₹{course.price}</div>
           <div className="flex gap-2">
             {course.exploreUrl && (
               <button onClick={() => setShowDetail(true)}
@@ -109,7 +109,7 @@ function CourseCard({ course, isPurchased, onBuy, purchaseStatus }) {
                 <Play size={12} /> Start Learning
               </Link>
             ) : purchaseStatus === 'pending' ? (
-              <span className="text-xs px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-400 font-medium">
+              <span className="text-xs px-3 py-1.5 rounded-xl bg-amber-500/15 text-amber-600 font-medium">
                 Pending Review
               </span>
             ) : (
@@ -218,8 +218,8 @@ export default function Store() {
   }
 
   return (
-    <div className="max-w-4xl">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="max-w-4xl flex flex-col h-full">
+      <div className="flex items-center gap-3 mb-6 flex-shrink-0">
         <div className="w-10 h-10 rounded-xl bg-primary-500/15 flex items-center justify-center">
           <ShoppingBag size={20} className="text-primary-400" />
         </div>
@@ -229,24 +229,26 @@ export default function Store() {
         </div>
       </div>
 
-      {courses.length === 0 ? (
-        <div className="text-center py-20 text-gray-500">
-          <ShoppingBag size={40} className="mx-auto mb-3 opacity-30" />
-          <p>No courses available right now.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {courses.map(course => (
-            <CourseCard
-              key={course.id}
-              course={course}
-              isPurchased={getPurchaseStatus(course.id) === 'purchased'}
-              purchaseStatus={getPurchaseStatus(course.id)}
-              onBuy={(c) => { setSelectedCourse(c); setStep('payment') }}
-            />
-          ))}
-        </div>
-      )}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {courses.length === 0 ? (
+          <div className="text-center py-20 text-gray-500">
+            <ShoppingBag size={40} className="mx-auto mb-3 opacity-30" />
+            <p>No courses available right now.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
+            {courses.map(course => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                isPurchased={getPurchaseStatus(course.id) === 'purchased'}
+                purchaseStatus={getPurchaseStatus(course.id)}
+                onBuy={(c) => { setSelectedCourse(c); setStep('payment') }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
