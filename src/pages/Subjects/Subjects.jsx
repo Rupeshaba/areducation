@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  BookOpen, AlertCircle, GraduationCap,
+  BookOpen, AlertCircle,
   Layers, Sparkles, ArrowRight, CheckCircle
 } from 'lucide-react'
 import api from '../../api/axios'
@@ -54,14 +54,12 @@ function SubjectCard({ subject, courseId, index, subjectProgress }) {
             item={subject}
             alt={subject.name}
             fallback={
-              <div className="absolute inset-0 flex items-center justify-center"
-                style={{ background: `linear-gradient(135deg, ${accent}12, ${accent}06)` }}>
-                {subject.icon && subject.icon.length <= 2 ? (
+              subject.icon && subject.icon.length <= 2 ? (
+                <div className="absolute inset-0 flex items-center justify-center"
+                  style={{ background: `linear-gradient(135deg, ${accent}12, ${accent}06)` }}>
                   <span className="text-2xl">{subject.icon}</span>
-                ) : (
-                  <GraduationCap size={22} style={{ color: accent, opacity: 0.4 }} />
-                )}
-              </div>
+                </div>
+              ) : null
             }
           />
           {progress.total > 0 && (
