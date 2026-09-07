@@ -47,16 +47,15 @@ function ScoreRing({ score, size = 40 }) {
 // Skeleton row for loading state
 function SkeletonRow() {
   return (
-    <div className="animate-pulse flex flex-col md:flex-row gap-4 p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
-      <div className="w-full md:w-28 h-20 md:h-20 bg-white/5 rounded-xl"></div>
+    <div className="animate-pulse flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+      <div className="w-16 h-16 sm:w-28 sm:h-20 bg-white/5 rounded-xl flex-shrink-0"></div>
       <div className="flex-1 space-y-2">
         <div className="h-4 bg-white/10 rounded w-2/3"></div>
         <div className="h-3 bg-white/5 rounded w-1/2"></div>
-        <div className="h-3 bg-white/5 rounded w-1/3"></div>
       </div>
-      <div className="flex md:flex-col items-center gap-2">
-        <div className="w-10 h-10 bg-white/10 rounded-full"></div>
-        <div className="w-20 h-8 bg-white/5 rounded-lg"></div>
+      <div className="flex flex-col items-center gap-2 flex-shrink-0">
+        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/10 rounded-full"></div>
+        <div className="w-16 sm:w-20 h-7 sm:h-8 bg-white/5 rounded-lg"></div>
       </div>
     </div>
   )
@@ -240,22 +239,22 @@ export default function QuizList() {
                   }
                 }}
               >
-                <div className="flex flex-col md:flex-row p-4 md:p-5 gap-4">
-                  {/* Thumbnail */}
-                  <div className="flex-shrink-0 w-full md:w-28 h-20 md:h-20 rounded-xl overflow-hidden relative">
+                <div className="flex items-center gap-3 p-3 sm:p-5 sm:gap-4">
+                  {/* Thumbnail — small square/landscape, list-strip style on every screen */}
+                  <div className="flex-shrink-0 w-16 h-16 sm:w-28 sm:h-20 rounded-xl overflow-hidden relative">
                     <CardThumbnail
                       item={quiz}
                       alt={quiz.name}
                       className="group-hover:scale-105 transition-transform duration-500 w-full h-full object-cover"
                       fallback={
                         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-violet-900/40 via-purple-900/30 to-[#0d0d1a]">
-                          <Brain size={24} className="text-violet-500/30" />
+                          <Brain size={20} className="text-violet-500/30" />
                         </div>
                       }
                     />
                     {quiz.youtubeUrl && (
-                      <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm text-violet-300 text-[10px] font-bold px-2 py-1 rounded-full border border-violet-500/30">
-                        <Zap size={9} /> AI
+                      <div className="absolute top-1 left-1 flex items-center gap-0.5 bg-black/60 backdrop-blur-sm text-violet-300 text-[8px] sm:text-[10px] font-bold px-1 sm:px-2 py-0.5 sm:py-1 rounded-full border border-violet-500/30">
+                        <Zap size={8} /> AI
                       </div>
                     )}
                   </div>
@@ -263,31 +262,31 @@ export default function QuizList() {
                   {/* Main content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-bold text-white text-base leading-snug group-hover:text-violet-300 transition-colors truncate">
+                      <h3 className="font-bold text-white text-sm sm:text-base leading-snug group-hover:text-violet-300 transition-colors line-clamp-1">
                         {quiz.name}
                       </h3>
                       {quiz.myBestScore > 0 && (
                         <div className="md:hidden flex-shrink-0">
-                          <ScoreRing score={Math.round(quiz.myBestScore)} size={32} />
+                          <ScoreRing score={Math.round(quiz.myBestScore)} size={28} />
                         </div>
                       )}
                     </div>
 
-                    <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                    <div className="mt-1 sm:mt-1.5 flex items-center gap-1.5 sm:gap-2 flex-wrap">
                       {quiz.difficulty && <DifficultyBadge d={quiz.difficulty} />}
                       {quiz.questionCount > 0 && (
-                        <span className="flex items-center gap-1 text-xs text-gray-400">
-                          <Target size={12} /> {quiz.questionCount} Qs
+                        <span className="flex items-center gap-1 text-[11px] sm:text-xs text-gray-400">
+                          <Target size={11} /> {quiz.questionCount} Qs
                         </span>
                       )}
                       {quiz.duration > 0 && (
-                        <span className="flex items-center gap-1 text-xs text-gray-400">
-                          <Clock size={12} /> {quiz.duration}m
+                        <span className="flex items-center gap-1 text-[11px] sm:text-xs text-gray-400">
+                          <Clock size={11} /> {quiz.duration}m
                         </span>
                       )}
                     </div>
 
-                    <div className="mt-2 flex items-center gap-4 text-xs text-gray-400 flex-wrap">
+                    <div className="mt-1 sm:mt-2 hidden sm:flex items-center gap-4 text-xs text-gray-400 flex-wrap">
                       {quiz.attempts > 0 && (
                         <span className="flex items-center gap-1">
                           <Users size={12} /> {quiz.attempts} attempts
@@ -307,23 +306,23 @@ export default function QuizList() {
                     </div>
                   </div>
 
-                  {/* Right side: Score + Actions (desktop) */}
-                  <div className="flex md:flex-col items-center justify-between gap-3 md:gap-4 md:pl-2 md:border-l md:border-white/5">
+                  {/* Right side: Score + Actions */}
+                  <div className="flex flex-col items-center justify-center gap-2 flex-shrink-0 sm:pl-2 sm:border-l sm:border-white/5">
                     {quiz.myBestScore > 0 && (
                       <div className="hidden md:block">
                         <ScoreRing score={Math.round(quiz.myBestScore)} size={40} />
                       </div>
                     )}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
                           navigate(`/quiz/${encodeURIComponent(subject)}/${encodeURIComponent(quiz.name)}/play`)
                         }}
-                        className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 active:scale-95 text-white text-sm font-bold transition-all shadow-lg shadow-violet-500/20 flex items-center gap-1.5"
+                        className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-violet-600 hover:bg-violet-500 active:scale-95 text-white text-xs sm:text-sm font-bold transition-all shadow-lg shadow-violet-500/20 flex items-center gap-1 sm:gap-1.5"
                       >
-                        <Play size={14} className="fill-current" />
-                        {quiz.myBestScore > 0 ? 'Retry' : 'Start'}
+                        <Play size={12} className="fill-current" />
+                        <span className="hidden xs:inline">{quiz.myBestScore > 0 ? 'Retry' : 'Start'}</span>
                       </button>
                       <button
                         onClick={(e) => {
@@ -331,9 +330,9 @@ export default function QuizList() {
                           setShareTarget({ name: quiz.name })
                         }}
                         aria-label="Share quiz"
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/[0.06] hover:bg-violet-500/20 border border-white/10 hover:border-violet-500/40 text-gray-300 hover:text-violet-300 active:scale-95 transition-all"
+                        className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-xl bg-white/[0.06] hover:bg-violet-500/20 border border-white/10 hover:border-violet-500/40 text-gray-300 hover:text-violet-300 active:scale-95 transition-all"
                       >
-                        <Share2 size={16} />
+                        <Share2 size={14} />
                       </button>
                     </div>
                   </div>
