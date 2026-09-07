@@ -158,8 +158,7 @@ export default function Subjects() {
   const subjects = data?.subjects || []
 
   return (
-    <div className="w-full flex flex-col h-full">
-
+    <div className="w-full flex flex-col h-full -mx-4">
       {/* ── HEADER (static) ── */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
@@ -191,7 +190,7 @@ export default function Subjects() {
         )}
       </motion.div>
 
-      {/* ── SCROLLABLE AREA (now allows full-bleed list) ── */}
+      {/* ── SCROLLABLE AREA ── */}
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
         {/* ── LOADING ── */}
         {isLoading && (
@@ -206,9 +205,9 @@ export default function Subjects() {
         {/* ── EMPTY ── */}
         {!isLoading && !isError && subjects.length === 0 && <EmptyState />}
 
-        {/* ── LIST (full width breakout using negative margin) ── */}
+        {/* ── LIST (no negative margin needed now, it's full width of the root) ── */}
         {!isLoading && !isError && subjects.length > 0 && (
-          <div className="flex flex-col gap-2.5 pb-4 -mx-4">
+          <div className="flex flex-col gap-2.5 pb-4">
             {subjects.map((subject, i) => (
               <SubjectCard key={subject.id} subject={subject} courseId={courseId} index={i} subjectProgress={subjectProgress} />
             ))}
