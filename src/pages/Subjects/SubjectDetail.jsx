@@ -56,12 +56,12 @@ function Shimmer({ className = '' }) {
   )
 }
 
-function ShimmerCard() {
+function ShimmerRow() {
   return (
-    <div className="rounded-2xl overflow-hidden"
+    <div className="flex items-center gap-3 p-2.5 rounded-2xl"
       style={{ background: '#F0F1F6', border: '1px solid rgba(0,0,0,0.06)' }}>
-      <Shimmer className="w-full aspect-[16/9]" style={{ borderRadius: 0 }} />
-      <div className="p-2.5 space-y-1.5">
+      <Shimmer className="w-20 h-14 sm:w-24 sm:h-16 rounded-xl flex-shrink-0" />
+      <div className="flex-1 space-y-1.5">
         <Shimmer className="h-3.5 w-4/5 rounded" />
         <Shimmer className="h-3 w-2/5 rounded" />
       </div>
@@ -169,90 +169,83 @@ function ContentCard({ content, courseId, subjectId, chapterId, index, completed
   return (
     <motion.div
       data-content-id={content.id}
-      initial={{ opacity: 0, y: 14 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index * 0.025, 0.25), duration: 0.28, ease: 'easeOut' }}
+      transition={{ delay: Math.min(index * 0.02, 0.2), duration: 0.25, ease: 'easeOut' }}
       className={`relative rounded-2xl transition-shadow duration-500 ${isHighlighted ? 'ring-2 ring-offset-2 ring-offset-transparent' : ''}`}
       style={isHighlighted ? { boxShadow: '0 0 0 2px rgba(99,102,241,0.9), 0 0 22px rgba(99,102,241,0.45)' } : undefined}
     >
-      <div
-        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full flex items-center justify-center transition-all z-10"
-        style={{
-          background: isCompleted ? 'rgba(16,185,129,0.9)' : 'rgba(255,255,255,0.1)',
-          border: '1px solid rgba(255,255,255,0.2)',
-        }}
-        onClick={(e) => {
-          e.stopPropagation()
-          handleMarkCompleted()
-        }}
+      <Link
+        to={linkTo}
+        className="group relative flex items-center gap-3 overflow-hidden rounded-2xl p-2.5 transition-all duration-300 active:scale-[0.98]"
+        style={{ background: '#F7F8FC', border: '1px solid rgba(0,0,0,0.06)' }}
+        onClick={() => setLastPlayed(content.id, { subjectId, courseId })}
         onContextMenu={handleContextMenu}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchEnd}
       >
-        <CheckCircle size={12} className={isCompleted ? 'text-white' : 'text-white/40'} />
-      </div>
-
-      <Link
-        to={linkTo}
-        className="group block focus:outline-none"
-        onClick={() => setLastPlayed(content.id, { subjectId, courseId })}
-      >
-        <div className="relative rounded-2xl overflow-hidden transition-all duration-300 active:scale-[0.97] aspect-[3/4]"
-          style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
-
-          {/* Thumbnail fills the entire card */}
+        {/* Small landscape thumbnail — list-strip style, not a poster tile */}
+        <div className="relative w-20 h-14 sm:w-24 sm:h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
           <CardThumbnail
             item={content}
             alt={content.title}
-            className="group-hover:scale-105 transition-transform duration-500"
             fallback={
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5"
+              <div className="absolute inset-0 flex items-center justify-center"
                 style={{ background: `radial-gradient(ellipse at center, ${cfg.grad}, rgba(10,10,26,0.97))` }}>
-                <Icon size={24} style={{ color: cfg.iconColor }} strokeWidth={1.5} />
-                <span className="text-[9px] font-bold uppercase tracking-widest opacity-50"
-                  style={{ color: cfg.iconColor }}>{cfg.label}</span>
+                <Icon size={18} style={{ color: cfg.iconColor }} strokeWidth={1.5} />
               </div>
             }
           />
-
-          {/* Gradient so the text stays readable over the image */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-
-          {/* Play overlay */}
+          {/* Play overlay for video types */}
           {isVideo && (
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center"
-                style={{ background: 'rgba(99,102,241,0.85)', backdropFilter: 'blur(4px)' }}>
-                <Play size={12} fill="white" color="white" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center"
+                style={{ background: 'rgba(99,102,241,0.85)' }}>
+                <Play size={10} fill="white" color="white" />
               </div>
             </div>
           )}
-
-          {/* Type badge */}
-          <div className="absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-md z-10"
+          {/* Type badge, small corner tag */}
+          <div className="absolute top-1 left-1 flex items-center gap-0.5 px-1 py-0.5 rounded"
             style={{
-              background: type === 'pdf' ? 'rgba(120,53,15,0.8)' : 'rgba(49,46,129,0.8)',
-              backdropFilter: 'blur(6px)',
-              border: `1px solid ${cfg.iconColor}25`,
+              background: type === 'pdf' ? 'rgba(120,53,15,0.85)' : 'rgba(49,46,129,0.85)',
             }}>
-            <Icon size={8} style={{ color: cfg.iconColor }} />
-            <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: cfg.iconColor }}>
+            <Icon size={7} style={{ color: cfg.iconColor }} />
+          </div>
+        </div>
+
+        {/* Text content — takes remaining width */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold line-clamp-2 leading-snug text-gray-900">
+            {content.title}
+          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: cfg.iconColor }}>
               {cfg.label}
             </span>
-          </div>
-
-          {/* Title + duration — pinned to the bottom, over the image */}
-          <div className="absolute inset-x-0 bottom-0 px-2.5 py-2 z-10">
-            <p className="text-[11.5px] font-semibold line-clamp-2 leading-snug text-white drop-shadow-md">
-              {content.title}
-            </p>
             {content.duration > 0 && (
-              <p className="flex items-center gap-1 mt-1 text-white/50" style={{ fontSize: '10px' }}>
+              <p className="flex items-center gap-1 text-gray-500" style={{ fontSize: '10px' }}>
                 <Clock size={9} />{fmtDuration(content.duration)}
               </p>
             )}
           </div>
+        </div>
+
+        {/* Completion toggle */}
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all z-10"
+          style={{
+            background: isCompleted ? 'rgba(16,185,129,0.9)' : 'rgba(0,0,0,0.06)',
+            border: '1px solid rgba(0,0,0,0.08)',
+          }}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            handleMarkCompleted()
+          }}
+        >
+          <CheckCircle size={14} className={isCompleted ? 'text-white' : 'text-gray-400'} />
         </div>
       </Link>
 
@@ -303,7 +296,7 @@ function ContentGrid({ contents, tab, courseId, subjectId, completedContentIds, 
   )
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+    <div className="flex flex-col gap-2.5">
       {filtered.map((c, i) => (
         <ContentCard
           key={c.id}
@@ -476,8 +469,8 @@ export default function SubjectDetail() {
         <Shimmer className="h-9 w-28 rounded-xl" />
         <Shimmer className="h-9 w-24 rounded-xl" />
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-        {Array.from({ length: 6 }).map((_, i) => <ShimmerCard key={i} />)}
+      <div className="flex flex-col gap-2.5">
+        {Array.from({ length: 6 }).map((_, i) => <ShimmerRow key={i} />)}
       </div>
       <style>{`@keyframes shimmerPulse{0%,100%{opacity:.4}50%{opacity:.9}}`}</style>
     </div>
