@@ -37,8 +37,12 @@ const Home = lazy(() => import("./pages/Home/Home"))
 
 function PageFallback() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-      <div style={{ fontSize: 14, opacity: 0.6 }}>Loading…</div>
+    <div className="flex flex-col items-center justify-center gap-4" style={{ minHeight: '60vh' }}>
+      <div className="relative w-12 h-12">
+        <div className="absolute inset-0 rounded-full border-4 border-primary-100" />
+        <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary-500 animate-spin" />
+      </div>
+      <p className="text-sm font-medium text-primary-900/50">Loading…</p>
     </div>
   )
 }
