@@ -4,7 +4,7 @@
   "description": "Competitive Exam Preparation Platform",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F7F8FC",
+  "background_color": "#0B0E1A",
   "theme_color": "#6366f1",
   "orientation": "portrait",
   "icons": [
