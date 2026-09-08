@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import Hls from 'hls.js'
 import { motion } from 'framer-motion'
 import {
@@ -815,6 +815,13 @@ export default function MediaContent() {
       return api.get(`/content/${contentId}?${params.toString()}`).then(r => r.data)
     },
     enabled: !!contentId,
+    // Keep showing the previous video's data while the next one loads
+    // instead of dropping to `undefined`. This is what stops the whole
+    // player+playlist tree from unmounting (which looked like a page
+    // refresh / white flash) every time a playlist item is tapped for
+    // the first time. The player itself shows its own small buffering
+    // spinner while the new source loads — much smoother.
+    placeholderData: keepPreviousData,
   })
 
   // Full subject content list — used to render the playlist below the
