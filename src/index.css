@@ -14,9 +14,17 @@
     min-height: 100vh;
   }
 
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { @apply bg-gray-100; }
-  ::-webkit-scrollbar-thumb { @apply bg-primary-400 rounded-full; }
+  /* Scrollbars fully hidden app-wide — scrolling still works everywhere,
+     just no visible bar (Chrome/Safari/Edge + Firefox + old IE/Edge). */
+  html {
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;    /* old IE/Edge */
+  }
+  *::-webkit-scrollbar { width: 0; height: 0; }  /* Chrome/Safari/Edge/Opera */
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
 
   :focus-visible {
     outline: 2px solid theme('colors.primary.400');
