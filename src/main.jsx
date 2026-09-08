@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
@@ -28,6 +28,25 @@ fetch('/api/public/logo')
     document.head.appendChild(link)
   })
   .catch(() => {})
+
+// ── Splash hand-off ───────────────────────────────────────────────────
+// index.html paints a static splash immediately (before this file even
+// loads) and defines window.__hideAppSplash with the timing rules:
+//   • first-ever visit → stays up a minimum of 3s
+//   • repeat visit     → hides the instant we call it, no artificial wait
+// We call it here once the app has actually mounted and the browser has
+// painted — two rAFs is the standard way to wait for "painted", not just
+// "committed" (a single rAF can still fire before paint).
+function SplashGate({ children }) {
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.__hideAppSplash && window.__hideAppSplash()
+      })
+    })
+  }, [])
+  return children
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,7 +86,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         },
       }}
     >
-      <App />
+      <SplashGate>
+        <App />
+      </SplashGate>
       <Toaster
         position="top-right"
         toastOptions={{
